@@ -7,6 +7,12 @@ This repository hosts the web-based user interface for [Skred](https://github.co
 Try the interactive environment in your browser:  
 👉 **[https://octetta.github.io/skred-web/](https://octetta.github.io/skred-web/)**
 
+### Additional Tools & Pages
+
+- **[Learn Skred](https://octetta.github.io/skred-web/learn.html)**: Interactive tutorial notebook to learn Skred.
+- **[Tokyo ADC Stage](https://octetta.github.io/skred-web/tokyo-adc-stage.html)**: Presentation slides and live demos.
+- **[Help / Reference](https://octetta.github.io/skred-web/help.html)**: Quick command reference.
+
 ## Local Development
 
 If you want to run the web interface locally, follow these steps:
