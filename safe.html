@@ -970,8 +970,8 @@ async function mountZipViaDialog() {
         try {
             const bytes = new Uint8Array(await file.arrayBuffer());
             Module.FS.writeFile(file.name, bytes);
-            sendSkredCommand(`%z ${file.name}`);
-            centerSpan.innerText = `%z ${file.name}`;
+            sendSkredCommand(`[${file.name}] %z`);
+            centerSpan.innerText = `[${file.name}] %z`;
         } catch (err) {
             console.error(`Failed to mount ${file.name}:`, err);
             printToTerminal(`# zip mount failed: ${file.name}`, "error");
