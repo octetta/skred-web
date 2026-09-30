@@ -697,7 +697,6 @@ cmdInput.addEventListener('keydown', (e) => {
 function ensureBooted() {
     if (running) return true;
     try {
-        printToTerminal(logo, 'info');
         const result = Module._skred_start(bufsize, nvoices, 0); 
         
         statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
@@ -725,7 +724,6 @@ function processCommand(cmd) {
                 Module._skred_stop();
                 running = 0;
             }
-            printToTerminal(logo, 'info');
             if (arg.length > 1) {
                 var n = Number(arg[1]);
                 if (n > 0 && n <= 64) nvoices = n;
@@ -994,6 +992,7 @@ function unmountZipBundle() {
     printToTerminal(`# vfs ${status}`, "system");
     centerSpan.innerText = "%zu";
 }
+    printToTerminal(logo, 'info');
 </script>
 </body>
 </html>
