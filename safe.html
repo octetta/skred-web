@@ -288,7 +288,7 @@ body {
         <div id="output">
           <div class="terminal-spacer"></div>
 Welcome to the skred shell
-Type any command to automatically initialize the audio engine.
+Type <span class="system">'-restart'</span> to initialize audio engine.
 Type <span class="system">'-help'</span> for basic things.
         </div>
 
@@ -640,10 +640,7 @@ function appendVoiceGraph(graph) {
 }
 
 function showVoiceGraph(voice, depth) {
-    if (!running) {
-        printToTerminal("Error: Engine must be 'boot'ed first.", 'error');
-        return;
-    }
+    if (!ensureBooted()) return;
     if (!Number.isInteger(voice) || voice < 0 || voice >= nvoices ||
         !Number.isInteger(depth) || depth < 0) {
         printToTerminal('Usage: graph [voice [depth]]', 'error');
