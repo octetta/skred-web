@@ -969,29 +969,12 @@ async function mountZipViaDialog() {
 
         try {
             const bytes = new Uint8Array(await file.arrayBuffer());
-            ptr = Module._malloc(bytes.length);
-            if (!ptr) throw new Error("malloc failed");
-            heapU8.set(bytes, ptr);
-
-            const ok = Module.ccall(
-                'skred_vfs_mount_zip_memory',
-                'number',
-                ['number', 'number', 'string'],
-                [ptr, bytes.length, file.name]
-            );
-            if (!ok) {
-                printToTerminal(`# cannot mount ${file.name}`, "error");
-                return;
-            }
-            const statusPtr = Module._skred_vfs_status();
-            const status = statusPtr ? Module.UTF8ToString(statusPtr) : file.name;
-            printToTerminal(`# vfs ${status}`, "system");
+            Module.FS.writeFile(file.name, bytes);
+            sendSkredCommand(`%z ${file.name}`);
             centerSpan.innerText = `%z ${file.name}`;
         } catch (err) {
             console.error(`Failed to mount ${file.name}:`, err);
             printToTerminal(`# zip mount failed: ${file.name}`, "error");
-        } finally {
-            if (ptr) Module._free(ptr);
         }
     };
     input.click();
