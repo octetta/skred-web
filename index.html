@@ -9,6 +9,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
+    --main-font: 'Press Start 2P', cursive;
     --atari-blue: #0042ff;
     --atari-dark: #001a66;
     --atari-gold: #ffd700;
@@ -96,7 +97,7 @@ body {
     border: none;
     border-right: 1px solid rgba(144, 176, 255, 0.2);
     color: var(--atari-light);
-    font-family: 'Press Start 2P', cursive;
+    font-family: var(--main-font, 'Press Start 2P', cursive);
     font-size: 11px;
     cursor: pointer;
     flex: 1;
@@ -110,7 +111,7 @@ body {
     border: none;
     border-right: 1px solid rgba(144, 176, 255, 0.2);
     color: #ffffff;
-    font-family: 'Press Start 2P', cursive;
+    font-family: var(--main-font, 'Press Start 2P', cursive);
     font-size: 10px;
     outline: none;
     height: 100%;
@@ -147,7 +148,7 @@ body {
 }
 
 #output, #cmdInput, .prompt, .status-bar, .extra-line {
-    font-family: 'Press Start 2P', cursive;
+    font-family: var(--main-font, 'Press Start 2P', cursive);
     font-size: 16px; 
     color: var(--atari-light);
 }
@@ -204,7 +205,7 @@ body {
     border: none;
     color: #cc0033;
     cursor: pointer;
-    font-family: 'Press Start 2P', cursive;
+    font-family: var(--main-font, 'Press Start 2P', cursive);
     font-size: 14px;
     line-height: 1;
     padding: 0;
@@ -303,7 +304,7 @@ body {
 
 .voice-graph-edge-label {
     fill: #ffffff;
-    font-family: 'Press Start 2P', cursive;
+    font-family: var(--main-font, 'Press Start 2P', cursive);
     font-size: 6px;
     text-anchor: middle;
     paint-order: stroke;
@@ -325,7 +326,7 @@ body {
 
 .voice-graph-node text {
     fill: #ffffff;
-    font-family: 'Press Start 2P', cursive;
+    font-family: var(--main-font, 'Press Start 2P', cursive);
     font-size: 8px;
     text-anchor: middle;
     dominant-baseline: central;
@@ -422,6 +423,7 @@ function usage() {
   printToTerminal("/ain off # disable input");
   printToTerminal("/a? # show audio status");
   printToTerminal("-graph (voice) (depth) # draw voice dependencies");
+  printToTerminal("-font # toggle terminal font");
   printToTerminal("-learn # open skode tutorial");
   printToTerminal("-ksynth # open k-synth tool");
   printToTerminal("-load # select a wav file");
@@ -796,6 +798,18 @@ function processCommand(cmd) {
             statusSpan.style.color = "#0042ff";
             running = 0;
             break;
+                case '-':
+        case '.':
+        case '-font':
+        case '.font':
+            if (document.documentElement.style.getPropertyValue('--main-font') === 'monospace') {
+                document.documentElement.style.setProperty('--main-font', "'Press Start 2P', cursive");
+                printToTerminal("Font: Press Start 2P", 'system');
+            } else {
+                document.documentElement.style.setProperty('--main-font', "monospace");
+                printToTerminal("Font: monospace", 'system');
+            }
+            break;
         case '-help':
         case '.help': usage(); break;
         case '-load':
@@ -820,7 +834,7 @@ function processCommand(cmd) {
             break;
         case '-learn':
         case '.learn':
-          window.open('learn.html', "_blank");
+          window.open('https://octetta.github.io/skred-web/learn.html', "_blank");
           break;
         case '-ksynth':
         case '.ksynth':
