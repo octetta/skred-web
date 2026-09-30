@@ -415,18 +415,18 @@ var running = 0;
 
 function usage() {
   printToTerminal("QUICK REF", 'info');
-  printToTerminal("boot (voice-count) (frame-count)");
+  printToTerminal("-restart (voice-count) (frame-count)");
   printToTerminal("/als # refresh and list audio devices");
   printToTerminal("/aout 2 # select output device");
   printToTerminal("/ain 1 # select input device");
   printToTerminal("/ain off # disable input");
   printToTerminal("/a? # show audio status");
-  printToTerminal("graph (voice) (depth) # draw voice dependencies");
+  printToTerminal("-graph (voice) (depth) # draw voice dependencies");
   printToTerminal("learn # open skode tutorial");
-  printToTerminal("ksynth # open k-synth tool");
-  printToTerminal("load # select a wav file");
-  printToTerminal("zip # select and mount a zip asset bundle");
-  printToTerminal("unzip # unmount zip asset bundle");
+  printToTerminal("-ksynth # open k-synth tool");
+  printToTerminal("-load # select a wav file");
+  printToTerminal("-zip # select and mount a zip asset bundle");
+  printToTerminal("-unzip # unmount zip asset bundle");
   printToTerminal(`v(0..${nvoices}) # select voice`);
   printToTerminal("w(0..999)     # select waveform");
   printToTerminal("a(-90..10)    # set amplitide (dB)");
@@ -748,18 +748,38 @@ cmdInput.addEventListener('keydown', (e) => {
     }
 });
 
+
+function ensureBooted() {
+    if (running) return true;
+    try {
+        printToTerminal(logo, 'info');
+        const result = Module._skred_start(bufsize, nvoices, 0); 
+        printToTerminal(`skred_start() = ${result}`, 'system');
+        statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
+        statusSpan.style.color = "#0042ff";
+        const ptr = Module._skred_features();
+        printToTerminal(`${Module.UTF8ToString(ptr)}`);
+        Module.ccall('skred_command', null, ['string'], ["log 1"]);
+        centerSpan.innerText = "log 1";
+        running = 1;
+        return true;
+    } catch(e) {
+        printToTerminal(`Error: Could not boot.`, 'error');
+        return false;
+    }
+}
+
 function processCommand(cmd) {
     const action = cmd.split(' ')[0].toLowerCase();
     var arg = cmd.split(' ');
 
     switch(action) {
-        case 'boot':
+        case '-restart':
+        case '.restart':
             if (running) {
-                printToTerminal(`Error: already running.`, 'error');
-                return;
+                Module._skred_stop();
+                running = 0;
             }
-            // Module._skred_enumerate_devices(0);
-            // Module._skred_enumerate_devices(1);
             printToTerminal(logo, 'info');
             if (arg.length > 1) {
                 var n = Number(arg[1]);
@@ -769,62 +789,51 @@ function processCommand(cmd) {
                     if (n >= 128) bufsize = n;
                 }
             }
-            try {
-                const result = Module._skred_start(bufsize, nvoices, 0); 
-                printToTerminal(`skred_start() = ${result}`, 'system');
-                statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
-                statusSpan.style.color = "#0042ff";
-                const ptr = Module._skred_features();
-                printToTerminal(`${Module.UTF8ToString(ptr)}`);
-                Module.ccall('skred_command', null, ['string'], ["log 1"]);
-                centerSpan.innerText = "log 1";
-                running = 1;
-            } catch(e) {
-                printToTerminal(`Error: Could not boot.`, 'error');
-            }
+            ensureBooted();
             break;
 
-        case 'stop':
-            if (!running) {
-                printToTerminal("Error: Engine is not running.", "error");
-                return;
-            }
+        case '-stop':
+        case '.stop':
+            if (!ensureBooted()) return;
             Module._skred_stop();
             printToTerminal("System: Engine stopped.", "system");
             statusSpan.innerText = "AUDIO OFF";
             statusSpan.style.color = "#0042ff";
             running = 0;
             break;
-        case 'help': usage(); break;
-        case 'load':
-            if (!running) {
-                printToTerminal("Error: Engine must be 'boot'ed first.", "error");
-                return;
-            }
+        case '-help':
+        case '.help': usage(); break;
+        case '-load':
+        case '.load':
+            if (!ensureBooted()) return;
             addWavViaDialog();
             break;
-        case 'zip':
+        case '-zip':
+        case '.zip':
             mountZipViaDialog();
             break;
-        case 'unzip':
+        case '-unzip':
+        case '.unzip':
             unmountZipBundle();
             break;
-        case 'clear': output.innerHTML = ''; break;
-        case 'graph':
+        case '-clear':
+        case '.clear': output.innerHTML = ''; break;
+        case '-graph':
+        case '.graph':
             showVoiceGraph(arg.length > 1 ? Number(arg[1]) : 0,
                 arg.length > 2 ? Number(arg[2]) : 0);
             break;
-        case 'learn':
+        case '-learn':
+        case '.learn':
           window.open('https://octetta.github.io/pulp/doc/learn.html', "_blank");
           break;
-        case 'ksynth':
+        case '-ksynth':
+        case '.ksynth':
           window.open('https://octetta.github.io/k-synth', "_blank");
           break;
 
         default:
-            if (!running) {
-                printToTerminal("Error: Engine must be 'boot'ed first.");
-            } else {
+            if (ensureBooted()) {
                 Module.ccall('skred_command', null, ['string'], [cmd]);
                 const log = skredLogString();
                 if (log != "") printToTerminal(log, 'info');
@@ -834,10 +843,7 @@ function processCommand(cmd) {
 }
 
 function sendSkredCommand(cmd) {
-    if (!running) {
-        printToTerminal("Error: Engine must be 'boot'ed first.", "error");
-        return false;
-    }
+    if (!ensureBooted()) return false;
     Module.ccall('skred_command', null, ['string'], [cmd]);
     const log = skredLogString();
     if (log !== "") {
