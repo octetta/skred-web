@@ -288,8 +288,8 @@ body {
         <div id="output">
           <div class="terminal-spacer"></div>
 Welcome to the skred shell
-Type <span class="system">'boot'</span> to initialize audio engine.
-Type <span class="system">'help'</span> for basic things.
+Type any command to automatically initialize the audio engine.
+Type <span class="system">'-help'</span> for basic things.
         </div>
 
         <div class="input-line">
@@ -702,7 +702,7 @@ function ensureBooted() {
     try {
         printToTerminal(logo, 'info');
         const result = Module._skred_start(bufsize, nvoices, 0); 
-        printToTerminal(`skred_start() = ${result}`, 'system');
+        
         statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
         statusSpan.style.color = "#0042ff";
         const ptr = Module._skred_features();
