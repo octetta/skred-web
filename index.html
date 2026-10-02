@@ -490,11 +490,63 @@ function outputNearBottom() {
     return output.scrollHeight - output.scrollTop - output.clientHeight < 24;
 }
 
+function ansi256ToRGB(code) {
+    if (code < 16) {
+        const colors = [
+            '#000000', '#cd0000', '#00cd00', '#cdcd00', '#0000ee', '#cd00cd', '#00cdcd', '#e5e5e5',
+            '#7f7f7f', '#ff0000', '#00ff00', '#ffff00', '#5c5cff', '#ff00ff', '#00ffff', '#ffffff'
+        ];
+        return colors[code];
+    } else if (code >= 16 && code <= 231) {
+        const c = code - 16;
+        const b = (c % 6) * 51;
+        const g = (Math.floor(c / 6) % 6) * 51;
+        const r = (Math.floor(c / 36) % 6) * 51;
+        return `rgb(${r},${g},${b})`;
+    } else if (code >= 232 && code <= 255) {
+        const g = (code - 232) * 10 + 8;
+        return `rgb(${g},${g},${g})`;
+    }
+    return '';
+}
+
 function printToTerminal(text, className = '') {
     const shouldFollow = outputNearBottom();
     const line = document.createElement('div');
     if (className) line.className = className;
-    line.textContent = text;
+
+    const parts = text.split(/\x1b\[([0-9;]+)m/);
+    if (parts.length === 1) {
+        line.textContent = text;
+    } else {
+        let currentSpan = document.createElement('span');
+        line.appendChild(currentSpan);
+
+        for (let i = 0; i < parts.length; i++) {
+            if (i % 2 === 0) {
+                if (parts[i]) currentSpan.appendChild(document.createTextNode(parts[i]));
+            } else {
+                const codes = parts[i].split(';');
+                currentSpan = document.createElement('span');
+                line.appendChild(currentSpan);
+
+                if (codes[0] === '38' && codes[1] === '2' && codes.length === 5) {
+                    currentSpan.style.color = `rgb(${codes[2]},${codes[3]},${codes[4]})`;
+                } else if (codes[0] === '38' && codes[1] === '5' && codes.length === 3) {
+                    currentSpan.style.color = ansi256ToRGB(Number(codes[2]));
+                } else if (codes[0] === '0') {
+                    // Reset to parent style
+                } else if (codes.length === 1 && codes[0] >= 30 && codes[0] <= 37) {
+                    // Standard 16 colors (foreground)
+                    currentSpan.style.color = ansi256ToRGB(codes[0] - 30);
+                } else if (codes.length === 1 && codes[0] >= 90 && codes[0] <= 97) {
+                    // High-intensity 16 colors (foreground)
+                    currentSpan.style.color = ansi256ToRGB(codes[0] - 90 + 8);
+                }
+            }
+        }
+    }
+
     output.appendChild(line);
     if (shouldFollow) output.scrollTop = output.scrollHeight;
 }
