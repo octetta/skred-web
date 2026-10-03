@@ -519,29 +519,39 @@ function printToTerminal(text, className = '') {
     if (parts.length === 1) {
         line.textContent = text;
     } else {
-        let currentSpan = document.createElement('span');
-        line.appendChild(currentSpan);
+        let fgColor = '';
+        let bgColor = '';
 
         for (let i = 0; i < parts.length; i++) {
             if (i % 2 === 0) {
-                if (parts[i]) currentSpan.appendChild(document.createTextNode(parts[i]));
+                if (parts[i]) {
+                    const span = document.createElement('span');
+                    if (fgColor) span.style.color = fgColor;
+                    if (bgColor) span.style.backgroundColor = bgColor;
+                    span.appendChild(document.createTextNode(parts[i]));
+                    line.appendChild(span);
+                }
             } else {
                 const codes = parts[i].split(';');
-                currentSpan = document.createElement('span');
-                line.appendChild(currentSpan);
-
                 if (codes[0] === '38' && codes[1] === '2' && codes.length === 5) {
-                    currentSpan.style.color = `rgb(${codes[2]},${codes[3]},${codes[4]})`;
+                    fgColor = `rgb(${codes[2]},${codes[3]},${codes[4]})`;
+                } else if (codes[0] === '48' && codes[1] === '2' && codes.length === 5) {
+                    bgColor = `rgb(${codes[2]},${codes[3]},${codes[4]})`;
                 } else if (codes[0] === '38' && codes[1] === '5' && codes.length === 3) {
-                    currentSpan.style.color = ansi256ToRGB(Number(codes[2]));
+                    fgColor = ansi256ToRGB(Number(codes[2]));
+                } else if (codes[0] === '48' && codes[1] === '5' && codes.length === 3) {
+                    bgColor = ansi256ToRGB(Number(codes[2]));
                 } else if (codes[0] === '0') {
-                    // Reset to parent style
+                    fgColor = '';
+                    bgColor = '';
                 } else if (codes.length === 1 && codes[0] >= 30 && codes[0] <= 37) {
-                    // Standard 16 colors (foreground)
-                    currentSpan.style.color = ansi256ToRGB(codes[0] - 30);
+                    fgColor = ansi256ToRGB(codes[0] - 30);
+                } else if (codes.length === 1 && codes[0] >= 40 && codes[0] <= 47) {
+                    bgColor = ansi256ToRGB(codes[0] - 40);
                 } else if (codes.length === 1 && codes[0] >= 90 && codes[0] <= 97) {
-                    // High-intensity 16 colors (foreground)
-                    currentSpan.style.color = ansi256ToRGB(codes[0] - 90 + 8);
+                    fgColor = ansi256ToRGB(codes[0] - 90 + 8);
+                } else if (codes.length === 1 && codes[0] >= 100 && codes[0] <= 107) {
+                    bgColor = ansi256ToRGB(codes[0] - 100 + 8);
                 }
             }
         }
