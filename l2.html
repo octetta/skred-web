@@ -181,7 +181,7 @@ Commands like `debug` or `status` (depending on your build) might return multi-l
 
         btnStart.onclick = () => {
             if (typeof Module !== 'undefined' && Module._skred_start) {
-                Module._skred_start(128, 16, 0);
+                Module._skred_start(128, 256, 0);
                 isRunning = true;
                 btnStart.disabled = true;
                 btnStop.disabled = false;

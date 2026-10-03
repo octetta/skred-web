@@ -360,7 +360,7 @@ Type <span class="system">'-help'</span> for basic things.
 
 <script>
 var bufsize = 256;
-var nvoices = 16;
+var nvoices = 256;
 var running = 0;
 
 function usage() {
@@ -728,7 +728,7 @@ function processCommand(cmd) {
             }
             if (arg.length > 1) {
                 var n = Number(arg[1]);
-                if (n > 0 && n <= 64) nvoices = n;
+                if (n > 0 && n <= 256) nvoices = n;
                 if (arg.length > 2) {
                     n = Number(arg[2]);
                     if (n >= 128) bufsize = n;

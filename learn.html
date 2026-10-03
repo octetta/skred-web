@@ -877,7 +877,7 @@ V=54272:POKE V+24,15:POKE V+5,8:POKE V+6,0:POKE V,214:POKE V+1,28:POKE V+4,17
   btnStart.onclick = () => {
     if (typeof Module !== 'undefined' && Module._skred_start) {
       Module._skred_set_audio_device(0, 0); // hack... force standard in/out devices?!?
-      Module._skred_start(128, 16, 0);
+      Module._skred_start(128, 256, 0);
       isRunning = true;
       btnStart.disabled = true; btnStop.disabled = false;
       statusDot.classList.add('active');
