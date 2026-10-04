@@ -11,7 +11,7 @@ Try the interactive environment in your browser:
 
 - **[Learn Skred](https://octetta.github.io/skred-web/learn.html)**: Interactive tutorial notebook to learn Skred.
 - **[Tokyo ADC Stage](https://octetta.github.io/skred-web/tokyo-adc-stage.html)**: Presentation slides and live demos.
-- **[Help / Reference](https://octetta.github.io/skred-web/help.html)**: Quick command reference.
+- **[Minimal WASM Example](https://octetta.github.io/skred-web/help.html)**: Boilerplate integration example for web developers.
 
 ## Local Development
 

@@ -1,49 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Skred WASM Test</title>
+    <title>Skred API Minimal Example</title>
+    <style>
+        body { font-family: monospace; max-width: 800px; margin: 40px auto; line-height: 1.6; }
+        .box { border: 1px solid #ccc; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+        pre { background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; }
+        input[type="text"] { width: 350px; padding: 4px; font-family: monospace; }
+        button { padding: 6px 12px; font-family: monospace; cursor: pointer; }
+        #output { height: 250px; overflow-y: scroll; background: #222; color: #0f0; padding: 8px; font-family: monospace; white-space: pre-wrap; }
+    </style>
 </head>
 <body>
-    <h1>Skred Engine (WASM)</h1>
+    <h1>Skred WASM Integration Example</h1>
+    <p>This is a minimal example demonstrating how to embed the Skred WebAssembly engine into a web application. View the page source for the complete boilerplate code.</p>
     
-    <button id="startBtn">1. Start Engine</button>
-    <hr>
+    <div class="box">
+        <h3>1. Engine Lifecycle</h3>
+        <button id="startBtn">Start Engine</button>
+        <button id="stopBtn" disabled>Stop Engine</button>
+    </div>
     
-    <input type="text" id="cmdInput" placeholder="Enter command (e.g. f 440)">
-    <button id="sendBtn">2. Send Command</button>
-    
-    <hr>
-    <button id="stopBtn">Stop Engine</button>
+    <div class="box">
+        <h3>2. Send Commands</h3>
+        <input type="text" id="cmdInput" placeholder="Enter Skode command (e.g. ?? or v0 f440 a0 l1)" disabled>
+        <button id="sendBtn" disabled>Send</button>
+    </div>
 
-    <script src="skred_api.js?v=0.71.0"></script>
+    <div class="box">
+        <h3>3. Command Output</h3>
+        <div id="output"></div>
+    </div>
 
+    <!-- 1. Load the Emscripten generated JS bindings -->
+    <script src="skred_api.js?v=0.75.0"></script>
+
+    <!-- 2. Wire up the API -->
     <script>
         const startBtn = document.getElementById('startBtn');
-        const sendBtn = document.getElementById('sendBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const sendBtn = document.getElementById('sendBtn');
         const cmdInput = document.getElementById('cmdInput');
+        const outputDiv = document.getElementById('output');
 
-        // Note: Emscripten adds a '_' prefix to C functions automatically
-        
+        function printLog(text) {
+            if (!text) return;
+            const line = document.createElement('div');
+            line.textContent = text;
+            outputDiv.appendChild(line);
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        // Initialize audio engine
         startBtn.onclick = () => {
-            // Start the engine
+            // skred_start(buffer_frames, max_voices, udp_port)
             const result = Module._skred_start(128, 256, 0);
-            console.log("Engine Start Result:", result);
+            printLog("Engine Started. Return code: " + result);
+            
+            // Turn on API logging so we can read the response text
+            Module.ccall('skred_command', null, ['string'], ["log 1"]);
+            
             startBtn.disabled = true;
+            stopBtn.disabled = false;
+            sendBtn.disabled = false;
+            cmdInput.disabled = false;
+            cmdInput.focus();
         };
 
+        // Send commands and read the response
         sendBtn.onclick = () => {
-            const cmd = cmdInput.value;
-            // Use ccall to handle the string conversion safely
+            const cmd = cmdInput.value.trim();
+            if (!cmd) return;
+            
+            printLog("> " + cmd);
+            
+            // Execute the command string safely
             Module.ccall('skred_command', null, ['string'], [cmd]);
-            console.log("Sent command:", cmd);
-            cmdInput.value = ''; // clear input
+            
+            // Check if the command produced any text output
+            const ptr = Module._skred_log();
+            const response = ptr ? Module.UTF8ToString(ptr) : "";
+            if (response) {
+                printLog(response);
+            }
+            
+            cmdInput.value = '';
         };
 
+        // Optional: allow pressing Enter to send
+        cmdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendBtn.click();
+        });
+
+        // Stop the engine and release the audio device
         stopBtn.onclick = () => {
             Module._skred_stop();
-            console.log("Engine Stopped");
+            printLog("Engine Stopped.");
+            
             startBtn.disabled = false;
+            stopBtn.disabled = true;
+            sendBtn.disabled = true;
+            cmdInput.disabled = true;
         };
     </script>
 </body>
