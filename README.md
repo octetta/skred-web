@@ -12,6 +12,7 @@ Try the interactive environment in your browser:
 - **[Learn Skred](https://octetta.github.io/skred-web/learn.html)**: Interactive tutorial notebook to learn Skred.
 - **[Tokyo ADC Stage](https://octetta.github.io/skred-web/tokyo-adc-stage.html)**: Presentation slides and live demos.
 - **[Minimal WASM Example](https://octetta.github.io/skred-web/help.html)**: Boilerplate integration example for web developers.
+- **[Code BEAM Presentation](https://octetta.github.io/skred-web/codebeam.html)**: Slide deck mapping Pulp's architecture to the BEAM philosophy.
 
 ## Local Development
 

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulp: Easy Audio for the BEAM</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/night.min.css" id="theme">
+    
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { color: #facc15; }
+        .sound-btn { background: #0ea5e9; color: white; border: none; padding: 10px 20px; font-size: 24px; cursor: pointer; border-radius: 8px; margin: 10px; }
+        .sound-btn:hover { background: #0284c7; }
+        #repl-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #111; padding: 15px; display: flex; z-index: 1000; border-top: 1px solid #333; align-items: center; justify-content: center; font-family: monospace; }
+        #repl-input { width: 50%; font-size: 20px; padding: 8px; font-family: monospace; background: #222; color: #0f0; border: 1px solid #555; }
+        #repl-send { font-size: 20px; padding: 8px 16px; margin-left: 10px; cursor: pointer; background: #444; color: white; border: 1px solid #666; }
+        #repl-log { margin-left: 20px; color: #aaa; width: 300px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .highlight-text { color: #38bdf8; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <section>
+                <h1>Pulp</h1>
+                <h3>Adding audio to your BEAM apps doesn't have to be hard.</h3>
+                <br>
+                <button class="sound-btn" onclick="startAudio()">1. Initialize Audio Engine</button>
+                <p style="font-size: 20px; color: #888;">(Click before presentation)</p>
+            </section>
+            
+            <section>
+                <h2>1. The Hook</h2>
+                <p>Everything you've heard is generated in real-time.</p>
+                <p>The engine uses <span class="highlight-text">< 1MB of RAM</span>.</p>
+                <p>It is driven entirely by <span class="highlight-text">tiny strings of text</span>.</p>
+                
+                <button class="sound-btn" onclick="doSkode('v0 w0 f440 a0 t .01 1 0 0 l1'); doSkode('+0.5 v0 f660 l1'); doSkode('+1.0 v0 f880 l1')">Play Sequence</button>
+            </section>
+            
+            <section>
+                <h2>2. The Problem</h2>
+                <p>Audio programming is usually terrifying.</p>
+                <ul>
+                    <li>Frontend: Complex WebAudio JS graphs.</li>
+                    <li>Backend: Thread-blocking, GC pauses, DSP math.</li>
+                </ul>
+                <br><br>
+                <p style="font-style: italic;">"If your Phoenix server pauses for garbage collection, the audio glitches."</p>
+            </section>
+
+            <section>
+                <h2>3. The BEAM-like Solution</h2>
+                <p>Pulp is designed exactly like an Erlang/Elixir Actor.</p>
+                <ul>
+                    <li><span class="highlight-text">Message Passing:</span> Send immutable strings ("v0 f440 a0 l1").</li>
+                    <li><span class="highlight-text">Isolated State:</span> The audio thread is lock-free and never parses text or allocates memory.</li>
+                    <li><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, Pulp keeps playing.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>4. Zero to Sound</h2>
+                <p>We can control it via UDP from Elixir, or via WebSockets to WASM.</p>
+                <p>Try the REPL below!</p>
+                <br>
+                <pre style="width: 80%; margin: auto;"><code data-trim data-noescape>
+# In Elixir
+udp_socket = :gen_udp.open(0)
+:gen_udp.send(udp_socket, 'localhost', 8000, "v0 f440 a0 l1")
+                </code></pre>
+            </section>
+
+            <section>
+                <h2>5. The Inspiration</h2>
+                <p>What will you build?</p>
+                <br>
+                <ul>
+                    <li><span class="highlight-text">Data Sonification:</span> High server traffic increases the tempo. Errors trigger heavy FM synths in the dashboard.</li>
+                    <li><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny Skode strings to trigger WASM sound effects for all players.</li>
+                    <li><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates Skode safely.</li>
+                </ul>
+            </section>
+
+        </div>
+    </div>
+
+    <div id="repl-bar">
+        <strong style="color: white; margin-right: 15px;">Skode REPL:</strong>
+        <input type="text" id="repl-input" placeholder="e.g. v0 w0 f220 a0 l1" disabled>
+        <button id="repl-send" disabled>Send</button>
+        <div id="repl-log">Waiting for engine...</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.js"></script>
+    <script src="skred_api.js?v=0.75.0"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: true
+        });
+
+        let engineStarted = false;
+
+        function startAudio() {
+            if (engineStarted) return;
+            if (typeof Module !== 'undefined' && Module._skred_start) {
+                const res = Module._skred_start(128, 256, 0);
+                engineStarted = true;
+                doSkode('log 1');
+                document.getElementById('repl-log').textContent = "Engine Started!";
+                document.getElementById('repl-input').disabled = false;
+                document.getElementById('repl-send').disabled = false;
+            }
+        }
+
+        function doSkode(cmd) {
+            if (!engineStarted) return;
+            Module.ccall('skred_command', null, ['string'], [cmd]);
+            
+            const ptr = Module._skred_log();
+            const response = ptr ? Module.UTF8ToString(ptr) : "";
+            if (response) {
+                document.getElementById('repl-log').textContent = response;
+            } else {
+                document.getElementById('repl-log').textContent = "Sent: " + cmd;
+            }
+        }
+
+        document.getElementById('repl-send').onclick = () => {
+            const input = document.getElementById('repl-input');
+            const cmd = input.value.trim();
+            if (cmd) {
+                doSkode(cmd);
+                input.value = '';
+            }
+        };
+
+        document.getElementById('repl-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') document.getElementById('repl-send').click();
+        });
+    </script>
+</body>
+</html>
