@@ -51,8 +51,8 @@
                 <h2>2. The Problem</h2>
                 <p>Audio programming is usually terrifying.</p>
                 <ul>
-                    <li>Frontend: Complex WebAudio JS graphs.</li>
-                    <li>Backend: Thread-blocking, GC pauses, DSP math.</li>
+                    <li class="fragment">Frontend: Complex WebAudio JS graphs.</li>
+                    <li class="fragment">Backend: Thread-blocking, GC pauses, DSP math.</li>
                 </ul>
                 <br><br>
                 <p style="font-style: italic;">"If your Phoenix server pauses for garbage collection, the audio glitches."</p>
@@ -62,9 +62,9 @@
                 <h2>3. The BEAM-like Solution</h2>
                 <p>Skred is designed exactly like an Erlang/Elixir Actor.</p>
                 <ul>
-                    <li><span class="highlight-text">Message Passing:</span> Send immutable strings (<span class="skred-cmd">v0 f440 a0 l1</span>).</li>
-                    <li><span class="highlight-text">Isolated State:</span> The audio thread is lock-free and never parses text or allocates memory.</li>
-                    <li><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, Skred keeps playing.</li>
+                    <li class="fragment"><span class="highlight-text">Message Passing:</span> Send immutable strings (<span class="skred-cmd">v0 f440 a0 l1</span>).</li>
+                    <li class="fragment"><span class="highlight-text">Isolated State:</span> The audio thread is lock-free and never parses text or allocates memory.</li>
+                    <li class="fragment"><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, Skred keeps playing.</li>
                 </ul>
             </section>
 
@@ -72,9 +72,9 @@
                 <h2>4. A 30-Second Guide to Skred</h2>
                 <p style="font-size: 24px; color: #ccc;">Skred isn't random line noise; it follows intentional design idioms:</p>
                 <ul style="font-size: 28px;">
-                    <li><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code class="skred-cmd">v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
-                    <li><span class="highlight-text">Case implies context:</span> <code>f</code> (direct freq) vs <code>F</code> (freq modulation)</li>
-                    <li><span class="highlight-text">Punctuation implies intent:</span> <code>?</code> (inspect), <code>/</code> (subsystem control), <code>></code> (routing)</li>
+                    <li class="fragment"><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code class="skred-cmd">v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
+                    <li class="fragment"><span class="highlight-text">Case implies context:</span> <code>f</code> (direct freq) vs <code>F</code> (freq modulation)</li>
+                    <li class="fragment"><span class="highlight-text">Punctuation implies intent:</span> <code>?</code> (inspect), <code>/</code> (subsystem control), <code>></code> (routing)</li>
                 </ul>
             </section>
 
@@ -95,9 +95,9 @@ udp_socket = :gen_udp.open(0)
                 <p>What will you build?</p>
                 <br>
                 <ul>
-                    <li><span class="highlight-text">Data Sonification:</span> High server traffic increases the tempo. Errors trigger heavy FM synths in the dashboard.</li>
-                    <li><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny Skred strings to trigger WASM sound effects for all players.</li>
-                    <li><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates Skred safely.</li>
+                    <li class="fragment"><span class="highlight-text">Data Sonification:</span> High server traffic increases the tempo. Errors trigger heavy FM synths in the dashboard.</li>
+                    <li class="fragment"><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny Skred strings to trigger WASM sound effects for all players.</li>
+                    <li class="fragment"><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates Skred safely.</li>
                 </ul>
             </section>
 
