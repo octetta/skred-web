@@ -38,6 +38,15 @@ If you want to run the web interface locally, follow these steps:
 
 4. Open `http://localhost:8080` in your web browser.
 
+### Real-Time Presentation Editing
+
+If you are editing presentations (like `codebeam.html` or `tokyo-adc-stage.html`) and want a real-time hot-reloading preview as you type, you can use `live-server` via `npx` (which bypasses the need for the Python server for pure UI edits):
+
+```bash
+npx live-server .
+```
+This will automatically open your default browser. Any changes you save in your text editor will instantly refresh the browser page, making it much easier to tweak slide layouts and fix wording.
+
 ## Deployment
 
 This repository uses GitHub Actions to automatically fetch the pinned `skred_api.wasm` and deploy it along with the static HTML files to GitHub Pages. To update the version of the WASM backend used by the web UI, edit `WASM_VERSION.txt` and push to the `main` branch.
