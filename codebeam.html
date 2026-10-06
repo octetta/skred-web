@@ -62,7 +62,17 @@
             </section>
 
             <section>
-                <h2>4. Zero to Sound</h2>
+                <h2>4. A 30-Second Guide to Skode</h2>
+                <p style="font-size: 24px; color: #ccc;">Skode looks like line noise until you learn the grammar:</p>
+                <ul style="font-size: 28px;">
+                    <li><span class="highlight-text">Single letters</span> are for what you touch constantly:<br> <code>v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
+                    <li><span class="highlight-text">Case changes context:</span> <code>f</code> (set freq) vs <code>F</code> (freq modulation)</li>
+                    <li><span class="highlight-text">Punctuation is semantic:</span> <code>?</code> (inspect), <code>/</code> (system control), <code>></code> (movement)</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>5. Zero to Sound</h2>
                 <p>We can control it via UDP from Elixir, or via WebSockets to WASM.</p>
                 <p>Try the REPL below!</p>
                 <br>
@@ -74,7 +84,7 @@ udp_socket = :gen_udp.open(0)
             </section>
 
             <section>
-                <h2>5. The Inspiration</h2>
+                <h2>6. The Inspiration</h2>
                 <p>What will you build?</p>
                 <br>
                 <ul>
