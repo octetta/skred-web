@@ -80,12 +80,18 @@
 
             <section>
                 <h2>5. Zero to Sound</h2>
-                <p>We can control it via UDP from Elixir, or via WebSockets to WASM.</p>
-                <p>Try the REPL below!</p>
+                <p>WebAudio requires 50 lines of JS. In Skred, a sound effect is one string.</p>
+                <br>
+                <div style="display: flex; justify-content: center; gap: 10px;">
+                    <button class="sound-btn" style="font-size: 20px; background: #22c55e;" onclick="doSkred('v0 w0 f523.25 a-6 t .01 .1 0 0 l1'); doSkred('+0.1 v0 f659.25 l1'); doSkred('+0.2 v0 f783.99 t .01 .5 0 0 l1')">App: Success Chime</button>
+                    <button class="sound-btn" style="font-size: 20px; background: #ef4444;" onclick="doSkred('v0 w1 f150 a-6 t .01 .2 0 0 l1'); doSkred('+0.2 v0 f150 l1'); doSkred('+0.4 v0 f150 l1')">App: Error Alarm</button>
+                    <button class="sound-btn" style="font-size: 20px; background: #a855f7;" onclick="doSkred('v0 w2 f800 a-6 t .01 .1 0 0 fb 1200 fbp .1 l1')">Game: Coin Pickup</button>
+                </div>
+                <br>
                 <pre style="width: 80%; margin: auto;"><code data-trim data-noescape>
-# In Elixir
+# Trigger via Elixir
 udp_socket = :gen_udp.open(0)
-:gen_udp.send(udp_socket, 'localhost', 8000, "v0 f440 a0 l1")
+:gen_udp.send(udp_socket, 'localhost', 8000, "v0 w0 f523.25 a-6 l1")
                 </code></pre>
             </section>
 
