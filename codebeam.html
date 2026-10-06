@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pulp: Easy Audio for the BEAM</title>
+    <title>Skred: Easy Audio for the BEAM</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/night.min.css" id="theme">
@@ -24,7 +24,7 @@
         <div class="slides">
             
             <section>
-                <h1>Pulp</h1>
+                <h1>Skred</h1>
                 <h3>Adding audio to your BEAM apps doesn't have to be hard.</h3>
                 <br>
                 <button class="sound-btn" onclick="startAudio()">1. Initialize Audio Engine</button>
@@ -37,7 +37,7 @@
                 <p>The engine uses <span class="highlight-text">< 1MB of RAM</span>.</p>
                 <p>It is driven entirely by <span class="highlight-text">tiny strings of text</span>.</p>
                 
-                <button class="sound-btn" onclick="doSkode('v0 w0 f440 a0 t .01 1 0 0 l1'); doSkode('+0.5 v0 f660 l1'); doSkode('+1.0 v0 f880 l1')">Play Sequence</button>
+                <button class="sound-btn" onclick="doSkred('v0 w0 f440 a0 t .01 1 0 0 l1'); doSkred('+0.5 v0 f660 l1'); doSkred('+1.0 v0 f880 l1')">Play Sequence</button>
             </section>
             
             <section>
@@ -53,17 +53,17 @@
 
             <section>
                 <h2>3. The BEAM-like Solution</h2>
-                <p>Pulp is designed exactly like an Erlang/Elixir Actor.</p>
+                <p>Skred is designed exactly like an Erlang/Elixir Actor.</p>
                 <ul>
                     <li><span class="highlight-text">Message Passing:</span> Send immutable strings ("v0 f440 a0 l1").</li>
                     <li><span class="highlight-text">Isolated State:</span> The audio thread is lock-free and never parses text or allocates memory.</li>
-                    <li><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, Pulp keeps playing.</li>
+                    <li><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, Skred keeps playing.</li>
                 </ul>
             </section>
 
             <section>
-                <h2>4. A 30-Second Guide to Skode</h2>
-                <p style="font-size: 24px; color: #ccc;">Skode isn't random line noise; it follows intentional design idioms:</p>
+                <h2>4. A 30-Second Guide to Skred</h2>
+                <p style="font-size: 24px; color: #ccc;">Skred isn't random line noise; it follows intentional design idioms:</p>
                 <ul style="font-size: 28px;">
                     <li><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code>v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
                     <li><span class="highlight-text">Case implies context:</span> <code>f</code> (direct freq) vs <code>F</code> (freq modulation)</li>
@@ -89,8 +89,8 @@ udp_socket = :gen_udp.open(0)
                 <br>
                 <ul>
                     <li><span class="highlight-text">Data Sonification:</span> High server traffic increases the tempo. Errors trigger heavy FM synths in the dashboard.</li>
-                    <li><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny Skode strings to trigger WASM sound effects for all players.</li>
-                    <li><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates Skode safely.</li>
+                    <li><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny Skred strings to trigger WASM sound effects for all players.</li>
+                    <li><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates Skred safely.</li>
                 </ul>
             </section>
 
@@ -98,7 +98,7 @@ udp_socket = :gen_udp.open(0)
     </div>
 
     <div id="repl-bar">
-        <strong style="color: white; margin-right: 15px;">Skode REPL:</strong>
+        <strong style="color: white; margin-right: 15px;">Skred REPL:</strong>
         <input type="text" id="repl-input" placeholder="e.g. v0 w0 f220 a0 l1" disabled>
         <button id="repl-send" disabled>Send</button>
         <div id="repl-log">Waiting for engine...</div>
@@ -121,14 +121,14 @@ udp_socket = :gen_udp.open(0)
             if (typeof Module !== 'undefined' && Module._skred_start) {
                 const res = Module._skred_start(128, 256, 0);
                 engineStarted = true;
-                doSkode('log 1');
+                doSkred('log 1');
                 document.getElementById('repl-log').textContent = "Engine Started!";
                 document.getElementById('repl-input').disabled = false;
                 document.getElementById('repl-send').disabled = false;
             }
         }
 
-        function doSkode(cmd) {
+        function doSkred(cmd) {
             if (!engineStarted) return;
             Module.ccall('skred_command', null, ['string'], [cmd]);
             
@@ -145,7 +145,7 @@ udp_socket = :gen_udp.open(0)
             const input = document.getElementById('repl-input');
             const cmd = input.value.trim();
             if (cmd) {
-                doSkode(cmd);
+                doSkred(cmd);
                 input.value = '';
             }
         };
