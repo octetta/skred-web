@@ -24,6 +24,7 @@
         .highlight-text { color: #38bdf8; font-weight: bold; }
         .skred-cmd, code, pre, #repl-input, #repl-log { font-family: 'Fira Code', monospace !important; }
         .skred-cmd { background-color: #222; padding: 2px 8px; border-radius: 4px; color: #4ade80; }
+        .reveal { height: calc(100vh - 75px) !important; }
     </style>
 </head>
 <body>
@@ -33,7 +34,6 @@
             <section>
                 <h1>Skred</h1>
                 <h3>Adding audio to your BEAM apps doesn't have to be hard.</h3>
-                <br>
                 <button class="sound-btn" onclick="startAudio()">1. Initialize Audio Engine</button>
                 <p style="font-size: 20px; color: #888;">(Click before presentation)</p>
             </section>
@@ -70,8 +70,8 @@
 
             <section>
                 <h2>4. A 30-Second Guide to Skred</h2>
-                <p style="font-size: 24px; color: #ccc;">Skred isn't random line noise; it follows intentional design idioms:</p>
-                <ul style="font-size: 28px;">
+                <p style="color: #ccc; font-size: 0.9em;">Skred isn't random line noise; it follows intentional design idioms:</p>
+                <ul style="font-size: 0.9em;">
                     <li class="fragment"><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code class="skred-cmd">v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
                     <li class="fragment"><span class="highlight-text">Case implies context:</span> <code>f</code> (direct freq) vs <code>F</code> (freq modulation)</li>
                     <li class="fragment"><span class="highlight-text">Punctuation implies intent:</span> <code>?</code> (inspect), <code>/</code> (subsystem control), <code>></code> (routing)</li>
@@ -82,7 +82,6 @@
                 <h2>5. Zero to Sound</h2>
                 <p>We can control it via UDP from Elixir, or via WebSockets to WASM.</p>
                 <p>Try the REPL below!</p>
-                <br>
                 <pre style="width: 80%; margin: auto;"><code data-trim data-noescape>
 # In Elixir
 udp_socket = :gen_udp.open(0)
@@ -93,7 +92,6 @@ udp_socket = :gen_udp.open(0)
             <section>
                 <h2>6. The Inspiration</h2>
                 <p>What will you build?</p>
-                <br>
                 <ul>
                     <li class="fragment"><span class="highlight-text">Data Sonification:</span> High server traffic increases the tempo. Errors trigger heavy FM synths in the dashboard.</li>
                     <li class="fragment"><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny Skred strings to trigger WASM sound effects for all players.</li>
@@ -118,7 +116,10 @@ udp_socket = :gen_udp.open(0)
             hash: true,
             controls: true,
             progress: true,
-            center: true
+            center: true,
+            margin: 0.15,          // Gives 15% margin all around to prevent spilling
+            width: 960,            // Standard logical width
+            height: 700            // Standard logical height
         });
 
         let engineStarted = false;
