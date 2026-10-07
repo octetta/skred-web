@@ -114,6 +114,8 @@
                     <a href="https://github.com/octetta/skred-web" target="_blank"><img src="qr-repo.svg" alt="GitHub Repository QR Code" style="width: 250px; border-radius: 12px; border: 2px solid #333; margin: 0 auto; display: block;"></a>
                     <br>
                     <a href="https://github.com/octetta/skred-web" target="_blank" style="font-size: 32px; color: #0ea5e9; text-decoration: none; font-family: 'Fira Code', monospace;">github.com/octetta/skred-web</a>
+                    <br><br>
+                    <button id="outro-btn" class="sound-btn" style="background: #a855f7; font-size: 20px;" onclick="toggleOutro()">Play Outro Beat</button>
                 </div>
             </section>
 
@@ -142,6 +144,36 @@
         });
 
         let engineStarted = false;
+        let outroPlaying = false;
+        let outroSetup = false;
+
+        function toggleOutro() {
+            if (!engineStarted) return;
+            if (!outroSetup) {
+                // Initialize voices
+                doSkred('v1 w82 a20');
+                doSkred('v2 w83 a10');
+                doSkred('v3 w84 a20');
+                
+                // Set up pattern 0: Kick on 0, Snare on 2, modulo 4
+                doSkred('y0 [v1l1]x0 [v2l1]x2 %4');
+                
+                // Set up pattern 1: Hat on every step, modulo 4
+                doSkred('y1 [v3l1]x0 [v3l1]x1 [v3l1]x2 [v3l1]x3 %4');
+                
+                outroSetup = true;
+            }
+            
+            if (outroPlaying) {
+                doSkred('y0z0 y1z0');
+                document.getElementById('outro-btn').textContent = 'Play Outro Beat';
+                outroPlaying = false;
+            } else {
+                doSkred('y0z1 y1z1');
+                document.getElementById('outro-btn').textContent = 'Stop Outro Beat';
+                outroPlaying = true;
+            }
+        }
 
         function startAudio() {
             if (engineStarted) return;
