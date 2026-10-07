@@ -1,0 +1,3364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Skode User Command Reference</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
+  <style>
+    body { background-color: #0d1117; margin: 0; padding: 40px; }
+    .markdown-body {
+      box-sizing: border-box;
+      min-width: 200px;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 45px;
+      background-color: #0d1117;
+    }
+    @media (max-width: 767px) {
+      .markdown-body {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="markdown-body">
+    <h1 id="skode-user-command-reference">Skode User Command
+    Reference</h1>
+    <p>This is a practical reference for writing Skode. It describes
+    command parameters and what each command does to voices, sounds,
+    patterns, or queued events. For implementation details, see <a
+    href="SKODE_COMMANDS.md">SKODE_COMMANDS.md</a>.</p>
+    <p>Voice groups, polyphonic/monophonic pools, allocation policies,
+    and dependency graphs have a dedicated guide: <a
+    href="POLYPHONY.md">POLYPHONY.md</a>.</p>
+    <h2 id="reading-skode">Reading Skode</h2>
+    <p>Skode is case-sensitive. Commands may be separated by spaces or
+    written together:</p>
+    <pre class="text"><code>v0 w1 n60 a0 l1
+v0w1n60a0l1</code></pre>
+    <p>Numeric arguments may be separated by commas or spaces. Square
+    brackets place text in the parser’s string buffer (maximum length
+    65,535 characters):</p>
+    <pre class="text"><code>[v0 n60 l1] R4,.25</code></pre>
+    <p><code>$N</code> reads shared register <code>N</code>. Compiled
+    patterns and events read registers when the command executes rather
+    than when it is compiled:</p>
+    <pre class="text"><code>=0,60 v0 n$0 l1</code></pre>
+    <p>The <code>Schedulable</code> column means a command can be used
+    in pattern steps, defers, repeats, and compiled external macros. A
+    compiled step or event can contain at most 32 operations.</p>
+    <h2 id="voice-and-pitch">Voice and Pitch</h2>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    <th>Schedulable</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>v voice</code></td>
+    <td>Integer voice index</td>
+    <td>Selects the voice affected by following commands. A pattern
+    remembers its selected voice between steps.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>f hz</code></td>
+    <td>Frequency in hertz</td>
+    <td>Sets the selected voice directly to an oscillator
+    frequency.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>fb val</code></td>
+    <td>Frequency bend normalized value (<code>-1..1</code>)</td>
+    <td>Bends the selected voice frequency in real-time according to its
+    range/offset.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>fbp range[,offset]</code></td>
+    <td>Range (semitones) and optional offset</td>
+    <td>Configures the frequency bend range in semitones (default
+    <code>2.0</code>) and offset (default <code>0.0</code>).</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>n note[,cents]</code></td>
+    <td>MIDI note number; optional cents offset</td>
+    <td>Tunes the selected voice to a MIDI pitch. Fractional notes are
+    accepted. <code>n-</code> reuses the last note. Notes also reach
+    voices linked with <code>G</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>N semitones[,cents]</code></td>
+    <td>Transposition and fine detune</td>
+    <td>Offsets later <code>n</code> pitches for the selected voice.
+    <code>N-</code> preserves the current semitone setting while
+    allowing cents to be changed.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>g seconds</code></td>
+    <td>Glide time; <code>0</code> disables</td>
+    <td>Glides from the current pitch to later pitch changes instead of
+    jumping immediately. Requires <code>GLISS</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>G voice[,voice...]</code></td>
+    <td>Up to four voice indices</td>
+    <td>Sends later <code>n</code> pitch changes to the listed voices as
+    well as the selected voice. A new <code>G</code> replaces the old
+    link list.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>&gt; destination</code></td>
+    <td>Destination voice index</td>
+    <td>Copies the selected voice’s synthesis settings to another voice.
+    The destination becomes an independent copy.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>S voice</code></td>
+    <td>Explicit voice index</td>
+    <td>Resets that voice’s oscillator and synthesis state. An
+    out-of-range index currently resets all voices; this is
+    compatibility behavior rather than a dedicated command.</td>
+    <td>Yes</td>
+    </tr>
+    </tbody>
+    </table>
+    <h2 id="level-position-and-triggering">Level, Position, and
+    Triggering</h2>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    <th>Schedulable</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>a dB</code></td>
+    <td>Amplitude in decibels</td>
+    <td>Sets voice loudness. <code>a0</code> is the normal synth-patch
+    level; negative values attenuate. Long normalized one-shots and
+    Ksynth drums conventionally use <code>a10</code>, with final
+    listening level controlled by <code>V</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>ab val</code></td>
+    <td>Amplitude bend normalized value (<code>-1..1</code>)</td>
+    <td>Bends the selected voice amplitude in real-time according to its
+    range/offset.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>abp range[,offset]</code></td>
+    <td>Range (dB) and optional offset</td>
+    <td>Configures the amplitude bend range in dB (default
+    <code>12.0</code>) and offset (default <code>0.0</code>).</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>V dB</code></td>
+    <td>Master amplitude in decibels</td>
+    <td>Changes the final output level for the entire synth, not just
+    the selected voice.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>p pan</code></td>
+    <td>Stereo position from <code>-1</code> to <code>1</code></td>
+    <td>Moves the voice across the stereo field. <code>-1</code> is
+    left, <code>0</code> is center, and <code>1</code> is right.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>ds amount</code></td>
+    <td>Send <code>0..1</code> or <code>0..15</code></td>
+    <td>Sends the selected voice’s mono signal to the delay owned by its
+    record/scope track. The voice must be routed with
+    <code>r1</code>..<code>r4</code>, centered with <code>p0</code>, and
+    have no pan modulation.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>DL track,coarse,fine,feedback,modfreq,moddepth,level</code></td>
+    <td>Track <code>1..4</code>, DW-style delay parameters</td>
+    <td>Sets the mono-send/stereo-return delay attached to one
+    record/scope track. Parameter ranges are <code>0..7</code>,
+    <code>0..15</code>, <code>0..15</code>, <code>0..31</code>,
+    <code>0..31</code>, <code>0..15</code>.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>DG track [bits] [native]</code></td>
+    <td>Track <code>1..4</code></td>
+    <td>Sets the track delay bit-depth and optional quantization bypass.
+    <code>bits</code> defaults to 12.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>?dl [track]</code></td>
+    <td>Optional track <code>1..4</code></td>
+    <td>Displays one track delay, or all four track delays, as
+    copy/pasteable <code>DL...</code> commands.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>GS [full]</code></td>
+    <td>Optional boolean</td>
+    <td>Displays copy/pasteable global synth state and the build
+    version. With a value greater than <code>0</code>, also prints a
+    larger text snapshot for saving/reloading.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename.zip] GS&gt;</code></td>
+    <td>String filename</td>
+    <td>Saves a versioned, restorable REPL session as an ordinary ZIP
+    archive.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>[filename.zip] GS&lt;</code></td>
+    <td>String filename</td>
+    <td>Validates and restores a session ZIP into the current REPL
+    context.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>m state</code></td>
+    <td><code>0</code> or nonzero</td>
+    <td>Removes or restores the voice in the master output without
+    deleting its settings. A muted voice assigned with
+    <code>r1</code>..<code>r4</code> remains available in that dry
+    record/scope stem.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>l velocity</code></td>
+    <td>Envelope velocity</td>
+    <td>Triggers or updates the voice envelope with the supplied
+    velocity. It also affects voices linked with <code>H</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>T</code></td>
+    <td>None</td>
+    <td>Retriggers the selected voice at velocity <code>1</code>,
+    including velocity-linked voices.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>L seconds</code></td>
+    <td>Trigger delay; <code>0</code> disables</td>
+    <td>Delays velocity/envelope triggering for the selected voice. This
+    is a per-voice trigger delay, distinct from queue defers.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>H voice[,voice...]</code></td>
+    <td>Up to four voice indices</td>
+    <td>Sends later <code>l</code> and <code>T</code> envelope triggers
+    to the listed voices. A new <code>H</code> replaces the old link
+    list.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>s amount</code></td>
+    <td>Smoothing amount; <code>0</code> disables</td>
+    <td>Smooths amplitude changes to reduce abrupt level transitions.
+    Requires <code>SMOOTHER</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>vc state</code></td>
+    <td><code>0</code> or nonzero</td>
+    <td>Disables or enables synth-generated control-plane events for the
+    selected voice. Disabled by default. Voice show commands include
+    <code>vc1</code> only when enabled.</td>
+    <td>No</td>
+    </tr>
+    </tbody>
+    </table>
+    <h2 id="voice-groups-and-polyphony">Voice Groups and Polyphony</h2>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    <th>Schedulable</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>/pg group,source,width[,root]</code></td>
+    <td>Integer group/layout values</td>
+    <td>Defines a contiguous multi-voice prototype and its root
+    offset.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>/pg! group</code></td>
+    <td>Group index</td>
+    <td>Refreshes free instances in every pool using the group.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/pp pool,group,base,count[,policy]</code></td>
+    <td>Integer pool/layout values</td>
+    <td>Clones a group into a physical voice pool. Policy defaults to
+    <code>0</code>.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>/pp! pool</code></td>
+    <td>Pool index</td>
+    <td>Refreshes the pool’s free instances.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/pm pool,mode[,priority[,articulation]]</code></td>
+    <td>Numeric mode values</td>
+    <td>Selects polyphonic or monophonic behavior.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>?pg [group]</code></td>
+    <td>Optional group</td>
+    <td>Shows copy/pasteable group definitions.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>?pp [pool]</code></td>
+    <td>Optional pool</td>
+    <td>Shows configuration and live allocation state.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>gn pool,key,note,velocity[,cents]</code></td>
+    <td>Numeric note identity and performance values</td>
+    <td>Allocates or updates a group instance and performs note-on.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>gr pool,key[,release-velocity]</code></td>
+    <td>Numeric note identity</td>
+    <td>Releases the allocation; unknown/stolen keys are harmless.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>gb pool,key,semitones[,cents]</code></td>
+    <td>Numeric note identity and bend</td>
+    <td>Bends one allocation; key <code>-1</code> bends the whole
+    pool.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/vg voice[,format[,depth]]</code></td>
+    <td>Format <code>0</code> ASCII or <code>1</code> graph text</td>
+    <td>Shows the reachable voice dependency graph.</td>
+    <td>No</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Steal policy values are <code>0</code> release-oldest,
+    <code>1</code> oldest, <code>2</code> round-robin, <code>3</code>
+    quietest, and <code>4</code> no-steal. Pool modes are <code>0</code>
+    polyphonic and <code>1</code> monophonic; <code>2</code> is reserved
+    for arpeggiation. See the dedicated guide for mono priority,
+    articulation, refresh, cloning, graph protocol, and full
+    examples.</p>
+    <h2 id="wave-playback">Wave Playback</h2>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    <th>Schedulable</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>w wave[,interpolate[,mode]]</code></td>
+    <td>Wave index and optional flags</td>
+    <td>Selects a wavetable. Interpolation smooths movement between
+    samples. Mode is <code>0</code> for a repeating cycle or
+    <code>1</code> for one-shot playback; omit it to inherit the mode
+    stored by the loader.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>/</code></td>
+    <td>None</td>
+    <td>Restores the selected voice’s default waveform settings.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>b [direction]</code></td>
+    <td><code>0</code> forward, <code>1</code> backward, <code>2</code>
+    ping-pong; no argument toggles between <code>0</code> and
+    <code>1</code></td>
+    <td>Changes the direction mode used to read the selected wave.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>B [loop]</code></td>
+    <td><code>0</code> off, <code>1</code> on; no argument toggles</td>
+    <td>Controls whether wave playback wraps at its end. This is most
+    noticeable with sampled or one-shot waves.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>BC count</code></td>
+    <td>Nonnegative integer; <code>0</code> means unlimited</td>
+    <td>Enables looping and limits a one-shot voice to
+    <code>count</code> wraps after its first pass through the loop. The
+    configured count is captured on <code>l</code> or <code>T</code>;
+    changing it does not alter a note already playing.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>WL wave,start,end</code></td>
+    <td>Wave index and sample boundaries</td>
+    <td>Sets the wave’s loop start and end boundary. <code>start</code>
+    is inclusive, <code>end</code> is exclusive, and <code>end</code>
+    may equal the wave sample count.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>VS start,end</code></td>
+    <td>Sample boundaries on the selected voice</td>
+    <td>Overrides the selected voice’s playable sample range after
+    <code>w</code> has assigned a wave. <code>VS</code> with no
+    arguments resets the voice to the full current wave range.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>VL start,end</code></td>
+    <td>Sample boundaries on the selected voice</td>
+    <td>Overrides the selected voice’s loop points after <code>w</code>
+    has assigned a wave. <code>VL</code> with no arguments resets the
+    voice to the current wave’s <code>WL</code> defaults.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>bc [bits] [curve]</code></td>
+    <td>Bit-depth and quantization curve</td>
+    <td>Quantizes the waveform and adds bit-crusher distortion.
+    <code>curve</code> is <code>0</code> (linear), <code>1</code>
+    (companded), or <code>2</code> (dithered). Requires
+    <code>CRUSH</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>h [ratio] [mode]</code></td>
+    <td>Sample-hold ratio</td>
+    <td>Holds oscillator values as a decimal fraction of the wave cycle,
+    producing stepped or sample-and-hold distortion. <code>mode</code>
+    is <code>0</code> (hard), <code>1</code> (smoothed), or
+    <code>2</code> (jittered). Requires <code>SAH</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[name] vt</code></td>
+    <td>String</td>
+    <td>Gives the selected voice a display label. It does not alter
+    sound.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>[name] wt wave</code></td>
+    <td>String and wave index</td>
+    <td>Gives a wavetable a display label. It does not alter sound.</td>
+    <td>No</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>A cycle wave should contain one complete period, with its end
+    prepared to join smoothly back to its beginning. Full-range, forward
+    cycle playback with no active loop automatically uses the pared-down
+    oscillator path; table length does not need to be a special value.
+    Direction changes, subranges, explicit loops, and one-shots continue
+    to use the general playback path.</p>
+    <p>Delay sends tap the selected voice after its oscillator, filter,
+    envelope, and amplitude, but before pan. The record/scope route owns
+    the delay identity: <code>r1</code> sends to track delay
+    <code>1</code>, <code>r2</code> sends to track delay <code>2</code>,
+    and so on through <code>r4</code>. <code>ds</code> sets only the
+    send amount for the selected voice. A send is active only while the
+    voice is routed to <code>r1</code>..<code>r4</code>, centered with
+    <code>p0</code>, and has no pan modulation. Track delay returns are
+    added both to the main stereo mix and to the matching record/scope
+    stem. Track delays with no incoming send are skipped by the audio
+    callback until a voice feeds them, so unused delays have little to
+    no CPU cost. Modulation intensity spreads the left and right delay
+    taps, and modulation frequency animates that stereo spread.</p>
+    <pre class="skode"><code># Track 1: short, bright slapback. Voice 0 sends at full amount.
+DL1,0,8,3,0,0,12
+v0 r1 p0 ds15 l1
+
+# Track 2: longer modulated stereo delay. Voice 1 sends at half amount.
+DL2,4,12,8,10,20,11
+v1 r2 p0 ds.5 l1
+
+# Track 3: darker repeat bed with no modulation.
+DL3,5,4,10,0,0,8
+v2 r3 p0 ds6 l1
+
+# This voice is panned, so its track delay send is intentionally ignored.
+v3 r1 p.5 ds15 l1
+
+# This voice has no record/scope track, so ds has no track delay to feed.
+v4 r0 p0 ds15 l1
+
+# Show copy/pasteable version, master volume, tempo, and track delay commands.
+GS
+
+# Show a larger text snapshot for saving to a `.sk` file.
+GS1</code></pre>
+    <p><code>GS1</code> includes pasteable global settings, macros,
+    labels and <code>WL</code> loop metadata for user-loaded wavetables,
+    record/scope track routing when available, active voice definitions,
+    and sequencer patterns. Wavetable sample data is not embedded; the
+    snapshot includes a comment to make that limitation visible in saved
+    files. Defined polyphony groups and pools are emitted after voice
+    definitions so pool prototypes are rebuilt from the restored
+    voices.</p>
+    <h3 id="complete-session-archives">Complete Session Archives</h3>
+    <p>Use <code>GS&gt;</code> when the text-only <code>GS1</code>
+    snapshot is not enough:</p>
+    <pre class="text"><code>[working-session.zip] GS&gt;
+[working-session.zip] GS&lt;</code></pre>
+    <p>The result is an ordinary ZIP and can also be mounted and
+    inspected through the VFS:</p>
+    <pre class="text"><code>[working-session.zip] %z
+%ls
+[state.sk] %cat
+%zu</code></pre>
+    <p>A session contains a readable <code>manifest.txt</code> and
+    <code>state.sk</code>, plus exact binary entries for state that
+    cannot be represented safely or compactly as Skode text. The saved
+    state includes:</p>
+    <ul>
+    <li>global synth, voice, track-delay, pattern, and named-macro state
+    from <code>GS1</code>;</li>
+    <li>all 128 shared <code>$N</code> registers and the current parser
+    data array;</li>
+    <li>all populated numbered external entries stored with
+    <code>e&gt;N</code> and invoked by <code>e!N</code>;</li>
+    <li>parser-local <code>s&gt;N</code> string slots and the selected
+    voice, pattern, and step;</li>
+    <li>parser flag, trace, and verbose settings;</li>
+    <li>every populated writable/non-native wavetable, with unchanged
+    float samples, rate, playback mode, loop metadata, direction, pitch
+    metadata, and label;</li>
+    <li>the completed <code>&lt;r</code> recording buffer, including
+    mono/stereo layout, source, offset, and trim;</li>
+    <li>KSynth <code>A</code> through <code>Z</code> variables,
+    including numeric vectors and function variables, plus the latest
+    KSynth result when <code>KSYNTH</code> is available;</li>
+    <li>control-event response bindings and their <code>/cer</code>
+    enabled state;</li>
+    <li>MIDI voice/pool routes, MIDI-to-Skode bindings, event mask, and
+    debug state.</li>
+    </ul>
+    <p>Physical MIDI and audio device handles are not saved: numeric
+    device indices are machine-specific, and Web MIDI access must still
+    originate from a browser user gesture. Active UDP endpoints and
+    scope/recorder publications are not reopened. Outstanding control
+    notifications, pending scheduled events, active or armed recording,
+    oscillator phase, envelope progress, and delay-line contents are
+    also not replayed. A restored session recreates the REPL and patch
+    configuration, rather than continuing at the identical audio
+    sample.</p>
+    <p><code>GS&lt;</code> validates the archive format, enabled
+    build-feature set, sample rate, configured voice/wave capacity,
+    binary entry sizes, and available KSynth support before clearing the
+    current session. Writable waves are installed before
+    <code>state.sk</code>; control and MIDI mappings are restored
+    afterward, and the control dispatcher is enabled last. Loading a
+    session should be treated like loading a <code>.sk</code> program:
+    use archives from sources you trust.</p>
+    <p>When audio is running, <code>GS&lt;</code> disconnects the active
+    device for the committed restore and reconnects it afterward so the
+    callback cannot retain pointers to replaced wave memory. Restoration
+    is rejected while <code>&lt;r</code> capture or <code>/rg</code>
+    multitrack recording is armed, recording, or stopping.</p>
+    <h3 id="direction-looping-and-triggering">Direction, Looping, and
+    Triggering</h3>
+    <p><code>b</code>, <code>B</code>, <code>BC</code>, and
+    <code>l</code> describe different parts of one playback
+    lifecycle:</p>
+    <ul>
+    <li><code>b</code> selects reading direction. <code>b0</code> moves
+    toward the wave or loop end; <code>b1</code> moves toward its start;
+    <code>b2</code> is ping-pong mode. It does not enable looping or
+    trigger playback.</li>
+    <li><code>B</code> selects whether playback wraps at the active loop
+    boundary. <code>B1</code> enables wrapping and <code>B0</code>
+    disables it. With no argument, <code>B</code> toggles the setting.
+    This applies immediately to the current playback as well as later
+    triggers.</li>
+    <li><code>BC</code> enables looping and optionally bounds it for
+    one-shot waves. <code>BC0</code> means unlimited wrapping. A
+    positive value counts additional boundary traversals after the first
+    traversal of the loop region, so <code>BC1</code> plays that region
+    twice: the initial traversal, then one repeat. In <code>b2</code>
+    ping-pong mode, each trip from one boundary to the other counts as
+    one traversal.</li>
+    <li>A positive <code>l</code> value, or <code>T</code>, starts or
+    retriggers a one-shot, initializes runtime looping from
+    <code>B</code>, snapshots the current <code>BC</code> bound, resets
+    the remaining wrap count, and triggers its envelopes. Changing
+    <code>BC</code> during playback affects the next trigger; changing
+    <code>B</code> affects the current one. Forward one-shot playback
+    starts at physical sample <code>0</code>, reaches the loop end
+    boundary, then wraps back to the loop start. Backward playback
+    starts at the physical last sample, reaches the loop start boundary,
+    then wraps back to the loop end. Ping-pong playback starts forward,
+    reverses at <code>loop_end</code>, reverses again at
+    <code>loop_start</code>, and repeats.</li>
+    <li><code>l0</code> releases active envelopes immediately. For a
+    looping one-shot it also requests a clean loop exit: playback leaves
+    the loop when it next reaches the boundary selected by
+    <code>b</code>, then continues through any remaining wave tail.
+    Forward playback exits at the loop end boundary and continues toward
+    the physical wave end; backward playback exits at the loop start
+    boundary and continues toward the physical wave beginning. Ping-pong
+    exits at whichever loop boundary the current leg reaches next, then
+    continues toward the physical tail in that same direction.</li>
+    </ul>
+    <p>Sample ranges and loop points are layered.
+    <code>VS start,end</code> narrows the selected voice’s playable wave
+    range after <code>w</code>; plain <code>VS</code> restores the full
+    current wave range. <code>WL wave,start,end</code> stores loop
+    defaults on the wavetable, <code>w</code> copies those defaults into
+    the selected voice, and <code>VL start,end</code> overrides the
+    selected voice after the wave assignment. A later <code>WL</code>
+    update follows voices that still use wave defaults, but leaves
+    voices with <code>VL</code> overrides alone. Plain <code>VL</code>
+    clears the override and copies the current wave defaults back into
+    the voice when they fit inside the active <code>VS</code> range;
+    otherwise the active <code>VS</code> range is used as the loop
+    region. <code>VS</code> and <code>VL</code> only change regions; use
+    <code>B1</code> or <code>BC count</code> to enable looping before
+    <code>l1</code>.</p>
+    <p>When a positive <code>BC</code> count is exhausted without
+    <code>l0</code>, the oscillator leaves the loop at that boundary and
+    emits one <code>VOICE_RELEASE</code> control-plane event while
+    continuing through the physical tail. Explicit <code>l0</code> emits
+    its release event immediately and does not emit a duplicate release
+    when the loop boundary is reached. Ordinary cyclic wavetables can
+    still use <code>b</code> and <code>B</code>, but bounded loop
+    completion and one-shot retriggering apply only to one-shots. For
+    forward playback, loop exhaustion exits at <code>loop_end</code> and
+    continues toward the physical sample end; for backward playback,
+    exhaustion exits at <code>loop_start</code> and continues toward
+    sample <code>0</code>; for ping-pong playback, exhaustion exits at
+    the next reached boundary in the current ping-pong leg.</p>
+    <pre class="text"><code>v0 w300 b0 BC1 t.01,.1,.8,.3 l1</code></pre>
+    <p>This reads forward, traverses the loop region once, wraps once
+    for a second traversal, releases the envelope at the next loop
+    boundary, and plays the wave tail. Sending <code>l0</code> before
+    that boundary releases the envelope early and uses the same
+    boundary-and-tail exit.</p>
+    <h2 id="envelopes-and-filters">Envelopes and Filters</h2>
+    <h3 id="amplitude-adsr">Amplitude ADSR</h3>
+    <p>The <code>t</code> command defines an amplitude envelope as
+    <code>attack,decay,sustain,release</code>:</p>
+    <ul>
+    <li><strong>Attack</strong> is the time in seconds taken to rise
+    from the current envelope level to full level (<code>1</code>).
+    Retriggering during a note begins from the envelope’s current
+    level.</li>
+    <li><strong>Decay</strong> is the time in seconds taken to fall from
+    full level to the sustain level.</li>
+    <li><strong>Sustain</strong> is the level held after decay. It is a
+    level, not a duration, and is clamped to the range <code>0</code>
+    through <code>1</code>.</li>
+    <li><strong>Release</strong> is the time in seconds taken to fall
+    from the current level to silence after a release command.</li>
+    </ul>
+    <p><code>l velocity</code> starts or retriggers both the amplitude
+    and filter envelopes. The envelope output is multiplied by the
+    supplied velocity. <code>l0</code> releases the envelopes; a nonzero
+    sustain continues indefinitely until that release occurs.
+    <code>T</code> retriggers at velocity <code>1</code>.</p>
+    <p>Changing <code>t</code> or <code>kt</code> while an envelope is
+    active does not reshape or restart that envelope. The new settings
+    are stored and take effect on the next <code>l</code> or
+    <code>T</code> trigger.</p>
+    <p>The Wave Playback section describes how <code>l</code>,
+    <code>B</code>, and <code>BC</code> coordinate envelope release with
+    a one-shot loop boundary and waveform tail.</p>
+    <p>For example:</p>
+    <pre class="text"><code>v0 t.01,.2,.6,.5 n60 l1</code></pre>
+    <p>This attacks in 10 ms, decays over 200 ms to 60% level, holds
+    there, then takes 500 ms to fade after <code>l0</code>.</p>
+    <h3 id="filter-modes-cutoff-and-resonance">Filter Modes, Cutoff, and
+    Resonance</h3>
+    <p><code>j</code>, <code>k</code>, and <code>q</code> describe one
+    filter:</p>
+    <ul>
+    <li><code>j</code> selects the filter response or bypasses it.</li>
+    <li><code>k</code> sets its cutoff or center frequency in
+    hertz.</li>
+    <li><code>q</code> sets its quality factor. <code>q0.707</code> is a
+    useful neutral starting point. Higher positive values make the
+    response narrower and more resonant around <code>k</code>; very low
+    values make it broader and more damped.</li>
+    </ul>
+    <p>Practical cutoff values are generally between <code>20</code> and
+    <code>20000</code> Hz, subject to the output sample rate.
+    <code>q</code> must be positive; values around <code>0.1</code>
+    through <code>10</code> cover most conventional uses, though the
+    implementation does not impose that range.</p>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th><code>j</code> mode</th>
+    <th>Filter</th>
+    <th>How <code>k</code> and <code>q</code> affect the sound</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>0</code></td>
+    <td>Bypass</td>
+    <td>The filter is not processed. Stored <code>k</code> and
+    <code>q</code> values remain available when filtering is enabled
+    again.</td>
+    </tr>
+    <tr class="even">
+    <td><code>1</code></td>
+    <td>Low-pass</td>
+    <td><code>k</code> is the cutoff: frequencies above it are reduced.
+    Raising <code>q</code> emphasizes the cutoff, adding bite or
+    ringing.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>2</code></td>
+    <td>High-pass</td>
+    <td><code>k</code> is the cutoff: frequencies below it are reduced.
+    Raising <code>q</code> emphasizes the cutoff.</td>
+    </tr>
+    <tr class="even">
+    <td><code>3</code></td>
+    <td>Band-pass</td>
+    <td><code>k</code> is the center frequency that remains prominent.
+    Raising <code>q</code> narrows the audible band.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>4</code></td>
+    <td>Notch</td>
+    <td><code>k</code> is the center of the rejected frequency band.
+    Raising <code>q</code> narrows the notch.</td>
+    </tr>
+    <tr class="even">
+    <td><code>5</code></td>
+    <td>All-pass</td>
+    <td>The magnitude is broadly retained while phase changes around
+    <code>k</code>; <code>q</code> controls the width of that phase
+    transition. This is most audible through interaction, modulation, or
+    mixing.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Examples:</p>
+    <pre class="text"><code>j1 k800 q.707   # smooth low-pass
+j1 k800 q5      # resonant low-pass
+j2 k200 q.707   # remove low-frequency content
+j3 k1200 q4     # narrow band centered near 1.2 kHz
+j4 k1000 q2     # notch around 1 kHz</code></pre>
+    <h3 id="filter-adsr">Filter ADSR</h3>
+    <p><code>kt attack,decay,sustain,release</code> defines a second
+    ADSR with the same time and level meanings as <code>t</code>.
+    <code>kd depth</code> adds the envelope to the base <code>k</code>
+    frequency:</p>
+    <pre class="text"><code>effective cutoff = k + (filter envelope * kd)</code></pre>
+    <p><code>kd</code> is therefore measured in hertz. A positive depth
+    sweeps upward from <code>k</code>; a negative depth sweeps downward.
+    While the filter envelope is active, the effective cutoff is clamped
+    between <code>20</code> and <code>20000</code> Hz.</p>
+    <pre class="text"><code>v0 j1 k300 q2 kt.01,.3,.1,.4 kd2500 n48 l1</code></pre>
+    <p>This starts a low-pass sweep above the 300 Hz base cutoff, decays
+    toward a smaller sustained offset, and returns toward the base
+    cutoff after <code>l0</code>. <code>ft0,0,1,0</code> disables
+    filter-envelope processing on the next trigger. An envelope already
+    in progress continues with the settings captured when it was
+    triggered.</p>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    <th>Schedulable</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>t attack,decay,sustain,release</code></td>
+    <td>Times in seconds; sustain level <code>0..1</code></td>
+    <td>Sets the amplitude envelope triggered by <code>l</code> and
+    <code>T</code> and released by <code>l0</code>. Requires
+    <code>ADSR</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>am mode</code></td>
+    <td>Integer stored mode</td>
+    <td>Stores and reports the amplitude-envelope mode. The current
+    envelope calculation does not branch on this value, so it presently
+    has no audible effect. Requires <code>ADSR</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>j [mode] [character]</code></td>
+    <td>Selects response and character</td>
+    <td><code>mode</code> is <code>0</code> (bypass), <code>1</code>
+    (LP), <code>2</code> (HP), <code>3</code> (BP), <code>4</code>
+    (Notch), <code>5</code> (All-pass). <code>character</code> is
+    <code>0</code> (clean), <code>1</code> (driven), <code>2</code>
+    (screamer). Requires <code>FILT</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>k hz</code></td>
+    <td>Cutoff or center frequency in hertz</td>
+    <td>Sets the frequency interpreted according to <code>j</code>.
+    Requires <code>FILT</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>q quality</code></td>
+    <td>Positive quality factor</td>
+    <td>Sets resonance or bandwidth around <code>k</code>;
+    <code>0.707</code> is a useful neutral value. Requires
+    <code>FILT</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>kt attack,decay,sustain,release</code></td>
+    <td>Times in seconds; sustain level <code>0..1</code></td>
+    <td>Sets the filter envelope triggered and released with the
+    amplitude envelope. Requires <code>FILT</code> and
+    <code>FADSR</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>kd depth</code></td>
+    <td>Cutoff movement in hertz</td>
+    <td>Adds a positive or negative envelope-controlled offset to
+    <code>k</code>. Requires <code>FILT</code> and
+    <code>FADSR</code>.</td>
+    <td>Yes</td>
+    </tr>
+    </tbody>
+    </table>
+    <h2 id="modulation-and-timbre">Modulation and Timbre</h2>
+    <p>For <code>A</code>, <code>F</code>, and <code>P</code>,
+    <code>voice</code> selects the modulator voice and the control
+    signal is:</p>
+    <pre class="text"><code>control = modulator sample * depth + offset</code></pre>
+    <p>The modulator sample is the actual output of that voice, so its
+    waveform, amplitude, envelope, and other processing affect the
+    modulation. A simple bipolar oscillator commonly moves around
+    <code>-1</code> through <code>1</code>, but louder or otherwise
+    processed modulators may exceed that range.</p>
+    <ul>
+    <li><strong>Depth</strong> scales how strongly the modulator moves
+    the destination parameter. A negative depth reverses the direction
+    of movement.</li>
+    <li><strong>Offset</strong> is the control value around which
+    modulation occurs. It shifts the whole modulation range without
+    changing its width.</li>
+    <li>Omitting offset uses <code>0</code>.</li>
+    <li>Supplying too few arguments to <code>A</code>, <code>F</code>,
+    or <code>P</code> disables that modulation.</li>
+    </ul>
+    <h3 id="amplitude-modulation">Amplitude Modulation</h3>
+    <p>For <code>A voice,depth,offset</code>, the control value directly
+    multiplies the destination voice’s amplitude:</p>
+    <pre class="text"><code>output amplitude = normal amplitude * control</code></pre>
+    <p>With a nominal <code>-1..1</code> modulator:</p>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Settings</th>
+    <th>Approximate multiplier</th>
+    <th>Result</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>A1,.5,.5</code></td>
+    <td><code>0..1</code></td>
+    <td>Tremolo from silence to normal level</td>
+    </tr>
+    <tr class="even">
+    <td><code>A1,.25,.75</code></td>
+    <td><code>.5..1</code></td>
+    <td>Gentler tremolo without reaching silence</td>
+    </tr>
+    <tr class="odd">
+    <td><code>A1,1,0</code></td>
+    <td><code>-1..1</code></td>
+    <td>Bipolar AM with phase inversion and stronger sidebands</td>
+    </tr>
+    <tr class="even">
+    <td><code>A1,0,1</code></td>
+    <td>Constant <code>1</code></td>
+    <td>No audible modulation, though the route remains enabled</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>An offset of <code>0</code> is true bipolar amplitude modulation
+    rather than conventional volume-only tremolo. Negative control
+    values invert waveform polarity.</p>
+    <h3 id="pan-modulation">Pan Modulation</h3>
+    <p>For <code>P voice,depth,offset</code>, the control value becomes
+    the pan position:</p>
+    <pre class="text"><code>-1 = left, 0 = center, 1 = right</code></pre>
+    <p>With a nominal <code>-1..1</code> modulator, <code>P1,1,0</code>
+    moves across the full stereo field, <code>P1,.5,0</code> moves
+    between half-left and half-right, and <code>P1,.25,.5</code> moves
+    on the right side around pan <code>0.5</code>. Pan modulation is not
+    clamped internally; keeping the resulting control near
+    <code>-1..1</code> avoids channel gain or polarity behavior outside
+    the normal pan range.</p>
+    <h3 id="frequency-modulation">Frequency Modulation</h3>
+    <p><code>F voice,depth,offset</code> first calculates the same
+    control value, but <code>FF</code> changes its meaning:</p>
+    <table>
+    <colgroup>
+    <col style="width: 50%" />
+    <col style="width: 50%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Mode</th>
+    <th>Interpretation</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>FF0</code></td>
+    <td>Adds frequency movement to the carrier. Depth and offset scale
+    the modulator oscillator’s frequency, so the result depends on both
+    the modulator pitch and sample value. This is the original
+    relative-FM mode.</td>
+    </tr>
+    <tr class="even">
+    <td><code>FF1</code></td>
+    <td>Treats the control value as the carrier’s instantaneous
+    frequency in hertz. Offset is the center frequency and depth is
+    approximately the frequency deviation for a nominal
+    <code>-1..1</code> modulator.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>FF2</code></td>
+    <td>Adds the control value directly to the wavetable lookup phase in
+    radians. The carrier’s persistent phase continues at its base
+    frequency, producing stable DX-style phase modulation.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Approximately, for ordinary oscillator waves:</p>
+    <pre class="text"><code>FF0 frequency = carrier Hz + modulator Hz * control
+FF1 frequency = control
+FF2 lookup phase = carrier phase + control radians</code></pre>
+    <p>For example:</p>
+    <pre class="text"><code>v1 f5                    # slow modulator
+v0 FF1 F1,20,220         # carrier sweeps approximately 200..240 Hz</code></pre>
+    <p>In <code>FF1</code>, use a positive offset large enough that
+    <code>offset - abs(depth)</code> does not drive the instantaneous
+    frequency below zero. At audio-rate modulator frequencies,
+    increasing depth produces progressively richer FM sidebands.</p>
+    <p>In <code>FF2</code>, <code>depth</code> is the phase-modulation
+    index in radians. A sine modulator with <code>F1,1</code> moves the
+    lookup phase by up to approximately one radian; increasing the index
+    adds progressively stronger sidebands without changing the carrier’s
+    base phase increment. <code>offset</code> is a constant phase offset
+    and is normally left at zero.</p>
+    <p><code>FB amount</code> adds operator self-feedback in
+    <code>FF2</code>, from <code>0</code> (off) through <code>7</code>
+    (strong). Feedback uses the average of the operator’s previous two
+    post-envelope samples as an additional phase offset:</p>
+    <pre class="text"><code>feedback phase = average(previous two outputs) * FB</code></pre>
+    <p>Feedback history is cleared by <code>FB0</code>, by leaving
+    <code>FF2</code>, and at each positive trigger. <code>FB</code> is
+    stored in other modes but affects sound only in <code>FF2</code>.
+    Feedback belongs on the operator whose spectrum should brighten;
+    that operator can then modulate another voice through
+    <code>F</code>.</p>
+    <h3 id="phase-distortion-modulation">Phase-Distortion
+    Modulation</h3>
+    <p><code>c mode,amount</code> sets a signed phase-distortion amount
+    in <code>-1..1</code>. Zero is the exact undistorted phase for every
+    mode. <code>C voice,depth</code> adds bipolar oscillator modulation,
+    while <code>ct attack,decay,sustain,release</code> and
+    <code>cd depth</code> add a triggered envelope:</p>
+    <pre class="text"><code>effective amount = clamp(c amount + modulator sample * C depth
+                         + ct envelope * cd depth, -1, 1)</code></pre>
+    <p><code>C</code> has no separate offset because the base amount
+    from <code>c</code> serves that role. Negative <code>c</code>,
+    <code>C</code>, or <code>cd</code> values reverse their
+    contribution. <code>ct</code> follows voice note-on/note-off just
+    like the amplitude and filter envelopes, and the neutral
+    <code>ct 0 0 1 0</code> disables it.</p>
+    <h3 id="ring-modulation">Ring Modulation</h3>
+    <p><code>XM voice[,amount]</code> multiplies the destination
+    oscillator sample by the modulator sample. This is bipolar
+    multiplication, producing sum-and-difference frequencies rather than
+    ordinary volume tremolo. In the current implementation the optional
+    <code>amount</code> is stored and displayed but is not applied to
+    the audio; selecting the modulator voice enables full-strength ring
+    modulation.</p>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    <th>Schedulable</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>A voice,depth[,offset]</code></td>
+    <td>Amplitude multiplier scale and bias</td>
+    <td>Multiplies amplitude by <code>sample * depth + offset</code>.
+    Requires <code>AM</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>F voice,depth[,offset]</code></td>
+    <td>Relative scale, hertz control, or phase index</td>
+    <td>Modulates according to <code>FF</code>. In <code>FF2</code>,
+    depth and offset are radians. Requires <code>FM</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>FF mode</code></td>
+    <td><code>0</code> relative, <code>1</code> absolute hertz,
+    <code>2</code> phase</td>
+    <td>Selects frequency or lookup-phase modulation. Requires
+    <code>FM</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>FB amount</code></td>
+    <td><code>0..7</code></td>
+    <td>Adds two-sample operator feedback in <code>FF2</code>; zero
+    clears its history. Requires <code>FM</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>P voice,depth[,offset]</code></td>
+    <td>Pan scale and center</td>
+    <td>Sets pan to <code>sample * depth + offset</code>. Requires
+    <code>PANMOD</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>c [mode[,amount]]</code></td>
+    <td>Phase-distortion mode and signed base amount</td>
+    <td>Reshapes oscillator phase. No arguments disables it; an omitted
+    amount defaults to the neutral value <code>0</code>. Requires
+    <code>PD</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>C voice,depth</code></td>
+    <td>Phase-distortion modulation scale</td>
+    <td>Adds <code>sample * depth</code> to the amount set by
+    <code>c</code>. Fewer than two arguments disables it. Requires
+    <code>PD</code>.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>XM voice[,amount]</code></td>
+    <td>Ring-modulator voice; currently unused amount</td>
+    <td>Multiplies the selected oscillator by another oscillator at full
+    strength. Requires <code>XM</code>.</td>
+    <td>Yes</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Phase-distortion modes:</p>
+    <table>
+    <thead>
+    <tr class="header">
+    <th>Mode</th>
+    <th>Shape</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>0</code></td>
+    <td>Off</td>
+    </tr>
+    <tr class="even">
+    <td><code>1</code></td>
+    <td>Saw to pulse</td>
+    </tr>
+    <tr class="odd">
+    <td><code>2</code></td>
+    <td>Folded sine</td>
+    </tr>
+    <tr class="even">
+    <td><code>3</code></td>
+    <td>Triangle</td>
+    </tr>
+    <tr class="odd">
+    <td><code>4</code></td>
+    <td>Double sine</td>
+    </tr>
+    <tr class="even">
+    <td><code>5</code></td>
+    <td>Saw to triangle</td>
+    </tr>
+    <tr class="odd">
+    <td><code>6</code></td>
+    <td>Resonant shape 1</td>
+    </tr>
+    <tr class="even">
+    <td><code>7</code></td>
+    <td>Resonant shape 2</td>
+    </tr>
+    </tbody>
+    </table>
+    <h2 id="timing-and-events">Timing and Events</h2>
+    <p><code>+</code> uses musical timing and follows the current tempo.
+    A value of <code>1</code> is one beat. <code>~</code> always uses
+    seconds. Pattern steps are based on quarter-beat master ticks and
+    their <code>%</code> modulus, so their duration is not necessarily
+    one beat.</p>
+    <h3 id="timing-accuracy">Timing Accuracy</h3>
+    <p>Queued events and pattern ticks use the synth’s absolute sample
+    counter at the active engine/device rate (44.1 kHz by default). The
+    audio callback renders adaptively: when a timing boundary falls
+    inside a device block, it renders up to that sample, executes the
+    due commands, and then renders the rest of the block. Blocks without
+    internal boundaries are rendered normally in one call.</p>
+    <p>Events scheduled at integer sample times affect that exact
+    sample. Tempo boundaries that fall between samples are rounded
+    forward, giving less than one sample of sequencing error (under
+    0.023 ms at the default 44.1 kHz) during normal operation. This
+    improves event placement inside the audio stream; it does not remove
+    output-device or hardware buffering latency.</p>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>M bpm [subdivision]</code></td>
+    <td><code>1</code> through <code>960</code> BPM</td>
+    <td>Sets master tempo (BPM) with optional step subdivision per
+    quarter note (default <code>16</code> for 16th-note drum machine
+    steps; <code>8</code> for 8th notes, <code>4</code> for quarter
+    notes, <code>32</code> for 32nd-note rolls).</td>
+    </tr>
+    <tr class="even">
+    <td><code>+beats commands</code></td>
+    <td>Beat delay followed by commands</td>
+    <td>Compiles the remaining commands and schedules them after a
+    tempo-relative delay.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>~seconds commands</code></td>
+    <td>Second delay followed by commands</td>
+    <td>Compiles the remaining commands and schedules them after a
+    real-time delay.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[commands] R count,seconds[,tag]</code></td>
+    <td>Repeat count, interval, optional tag</td>
+    <td>Queues the command program <code>count</code> times, starting
+    immediately and spacing starts by seconds.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[commands] RR count,beats[,tag]</code></td>
+    <td>Repeat count, beat interval, optional tag</td>
+    <td>Queues the program repeatedly using tempo-relative spacing.</td>
+    </tr>
+    <tr class="even">
+    <td><code>eR macro,count,seconds[,tag]</code></td>
+    <td>Macro index, repeat count, interval, optional tag</td>
+    <td>Compiles an external macro once and queues <code>count</code>
+    invocations, starting immediately and spacing starts by
+    seconds.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>eRR macro,count,beats[,tag]</code></td>
+    <td>Macro index, repeat count, beat interval, optional tag</td>
+    <td>Compiles an external macro once and queues repeated invocations
+    using tempo-relative spacing.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[commands] DO? value[,tag]</code></td>
+    <td>Condition and optional tag</td>
+    <td>Queues the program once when <code>value</code> is greater than
+    zero.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>R! tag</code></td>
+    <td>Integer event tag</td>
+    <td>Removes queued events carrying that tag. Already executed events
+    are unaffected.</td>
+    </tr>
+    <tr class="even">
+    <td><code>R!!</code></td>
+    <td>None</td>
+    <td>Clears all queued events. It does not erase patterns or reset
+    voices.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>ce id[,a,b,c]</code></td>
+    <td>Integer event id and up to three numeric values</td>
+    <td>Emits a <code>SKRED_CONTROL_EVENT_USER</code> control-plane
+    event. This command is schedulable, so defers, repeats, patterns,
+    and macros can send host-visible markers.</td>
+    </tr>
+    <tr class="even">
+    <td><code>?q</code></td>
+    <td>None</td>
+    <td>Displays queued compiled events waiting in the sequencer
+    queue.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>?ce</code></td>
+    <td>None</td>
+    <td>Displays outstanding control-plane events without consuming
+    them.</td>
+    </tr>
+    <tr class="even">
+    <td><code>?ce!</code></td>
+    <td>None</td>
+    <td>Clears outstanding control-plane events without resetting voices
+    or patterns.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>?o</code></td>
+    <td>None</td>
+    <td>Compatibility alias for queued compiled events.</td>
+    </tr>
+    <tr class="even">
+    <td><code>?o pattern[,step]</code></td>
+    <td>Pattern and optional step</td>
+    <td>Displays the opcodes compiled for pattern steps.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/SS stream</code></td>
+    <td>Stream index (<code>0-127</code>)</td>
+    <td>Populates <code>stream</code> from the current data array (e.g.,
+    <code>( 1 2 3 ) /SS 1</code>). Immediate only.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/SC dst_stream,src_stream</code></td>
+    <td>Destination and source indices</td>
+    <td>Copies the contents, mode, and position of
+    <code>src_stream</code> to <code>dst_stream</code>.
+    Schedulable.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/SM stream,mode</code></td>
+    <td>Stream index and playback mode</td>
+    <td>Sets stream playback mode (<code>0</code>=wrap fwd,
+    <code>1</code>=wrap rev, <code>2</code>=pingpong,
+    <code>3</code>=clamp). Schedulable.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/SP stream,pos</code></td>
+    <td>Stream index and position</td>
+    <td>Sets stream playback position index. Schedulable.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>wait ms</code></td>
+    <td>Nonnegative milliseconds</td>
+    <td>Blocks the command/control thread. It does not create a musical
+    event and should not be used for audio-rate scheduling.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Deferred and repeated programs can contain only schedulable
+    commands.</p>
+    <p><code>?q</code> and <code>?ce</code> show different views.
+    <code>?q</code> reports pending scheduled opcode events that have
+    not executed yet. <code>?ce</code> peeks at the control-plane
+    notification ring and reports things the synth has already observed
+    without clearing them. Use <code>?ce!</code> when you explicitly
+    want to discard outstanding control-plane notifications.
+    <code>ce id[,a,b,c]</code> writes to that control-plane stream
+    immediately or when its scheduled opcode executes; pollers see the
+    event id plus up to three numeric values.</p>
+    <h3 id="control-event-response-dispatcher">Control-Event Response
+    Dispatcher</h3>
+    <p>Skode can bind control-plane events to Skode commands. These are
+    parser slash commands handled by Skode itself, not ad-hoc mini-skred
+    syntax:</p>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>/cer state</code></td>
+    <td><code>0</code> or nonzero</td>
+    <td>Stops or starts the API control-event dispatcher thread.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[command] /ceb type key</code></td>
+    <td>Skode response command, numeric event type, event key</td>
+    <td>Runs <code>command</code> whenever a matching control event is
+    received.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/cex external,type,key</code></td>
+    <td>External string slot, event type, event key</td>
+    <td>Binds an external string slot as a response command. Useful for
+    multi-step chains without nested bracket strings.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/ce! type key</code></td>
+    <td>Numeric event type and key</td>
+    <td>Removes matching bindings.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/ce!</code></td>
+    <td>None</td>
+    <td>Removes all responder bindings.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/ce?</code></td>
+    <td>None</td>
+    <td>Displays responder state and bindings.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Event type numbers are the public
+    <code>SKRED_CONTROL_EVENT_*</code> enum values:</p>
+    <table>
+    <thead>
+    <tr class="header">
+    <th>Number</th>
+    <th>Event</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>1</code></td>
+    <td><code>SKRED_CONTROL_EVENT_VOICE_TRIGGER</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>2</code></td>
+    <td><code>SKRED_CONTROL_EVENT_VOICE_RELEASE</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>3</code></td>
+    <td><code>SKRED_CONTROL_EVENT_VOICE_FINISHED</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>4</code></td>
+    <td><code>SKRED_CONTROL_EVENT_USER</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>5</code></td>
+    <td><code>SKRED_CONTROL_EVENT_PATTERN_START</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>6</code></td>
+    <td><code>SKRED_CONTROL_EVENT_PATTERN_END</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>7</code></td>
+    <td><code>SKRED_CONTROL_EVENT_MIDI</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>8</code></td>
+    <td><code>SKRED_CONTROL_EVENT_PATTERN_WAIT</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>9</code></td>
+    <td><code>SKRED_CONTROL_EVENT_PATTERN_STEP</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>10</code></td>
+    <td><code>SKRED_CONTROL_EVENT_PATTERN_CHANGE</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p><code>key</code> is the event id for
+    <code>SKRED_CONTROL_EVENT_USER</code>, the pattern number for
+    pattern events, and the voice number for voice events. Use
+    <code>-1</code> as a wildcard key. Event tags do not participate in
+    responder matching; tags are source metadata from queued/repeated
+    programs and are still useful for <code>R! tag</code> cancellation
+    and host-side correlation.</p>
+    <p>User-event example:</p>
+    <pre class="text"><code>[v4 l1] /ceb 4 42
+[v5 l1] /ceb 4 43
+/cer 1
+ce 42
+ce 43</code></pre>
+    <p>Here both bindings listen for type <code>4</code>,
+    <code>SKRED_CONTROL_EVENT_USER</code>. The key is the
+    <code>ce</code> id. <code>ce 42</code> runs <code>v4 l1</code>;
+    <code>ce 43</code> runs <code>v5 l1</code>.</p>
+    <p>Voice-event example:</p>
+    <pre class="text"><code>v0 vc1
+v1 vc1
+[v2 l1] /ceb 1 0
+[v3 l1] /ceb 1 1
+/cer 1
+v0 l1
+v1 l1</code></pre>
+    <p>Type <code>1</code> is
+    <code>SKRED_CONTROL_EVENT_VOICE_TRIGGER</code>. The key is the
+    triggering voice number. Because voice <code>0</code> and voice
+    <code>1</code> both have <code>vc1</code>, <code>v0 l1</code> emits
+    a trigger event with key <code>0</code> and runs <code>v2 l1</code>;
+    <code>v1 l1</code> emits key <code>1</code> and runs
+    <code>v3 l1</code>. Voices without <code>vc1</code> do not emit
+    lifecycle events.</p>
+    <p>Voice-event responses run with the event voice selected. That
+    makes release events useful for chaining regions of the same sampled
+    wave:</p>
+    <pre class="text"><code>v5 w300 VS0,12000 VL2000,9000 BC1 l1
+[VS12000,22000 VL14000,21000 BC1 l1] /ceb 2 5
+/cer 1</code></pre>
+    <p>Type <code>2</code> is
+    <code>SKRED_CONTROL_EVENT_VOICE_RELEASE</code>. When voice
+    <code>5</code> emits that release event, the response command
+    updates <code>VS</code> and <code>VL</code> on voice <code>5</code>
+    and retriggers it. Add an explicit <code>vN</code> to the response
+    command only when you want the event from one voice to control a
+    different voice.</p>
+    <p>Longer chains use the same mechanism: a response can install the
+    next response with <code>/ceb</code> before it retriggers the voice.
+    The API integration guide shows the self-rebinding form for
+    multi-step region chains.</p>
+    <p>There is no fixed chain length for one voice: each step replaces
+    the current <code>/ceb 2 voice</code> binding, so a same-voice chain
+    normally uses one responder slot. The practical limits are the 64
+    total responder bindings and the 512-byte stored command limit for
+    each step.</p>
+    <p>For example, this REPL sequence loads a large audio file into
+    wave <code>300</code>, plays an intro region once without looping,
+    plays a middle region three times, then plays an outro region once.
+    External string slots avoid nested bracket strings, so the response
+    dispatcher can read the next step even though it runs in its own
+    Skode context:</p>
+    <pre class="text"><code>[large-take.wav] /ws 300,0
+v5 w300,1,1 vc1
+
+[ /ce! 3 5 /cex1,2,5 VS10000,20000 VL10000,20000 BC2 l1 ] e&gt;0
+[ /ce! 2 5 B0 VS20000,30000 l1 ] e&gt;1
+
+/cex0,3,5
+/cer 1
+B0 VS0,10000 l1</code></pre>
+    <p>The intro is non-looping, so it hands off with type
+    <code>3</code>, <code>SKRED_CONTROL_EVENT_VOICE_FINISHED</code>.
+    External string <code>0</code> removes that finished binding,
+    installs external string <code>1</code> as the next type
+    <code>2</code> release response, sets both <code>VS</code> and
+    <code>VL</code> to <code>[10000..20000)</code>, and uses
+    <code>BC2</code> to play that region three times: the first
+    traversal plus two repeats. When the bounded loop count is
+    exhausted, type <code>2</code>,
+    <code>SKRED_CONTROL_EVENT_VOICE_RELEASE</code>, fires. External
+    string <code>1</code> removes the release binding, turns looping off
+    with <code>B0</code>, switches to the outro range
+    <code>[20000..30000)</code>, and retriggers it once.</p>
+    <p>To reset the chain from the REPL, run <code>/cex0,3,5</code>
+    again and trigger the intro with <code>B0 VS0,10000 l1</code>. To
+    stop the chain immediately, run:</p>
+    <pre class="text"><code>/ce! 3 5
+/ce! 2 5</code></pre>
+    <p><code>/ce!</code> with no arguments clears all responder
+    bindings. <code>?ce!</code> clears queued control events, but does
+    not remove response bindings.</p>
+    <p>Pattern-event example:</p>
+    <pre class="text"><code>y0 yc1
+[ce 100] x0
+[-] x1
+y1 yc1
+[ce 200] x0
+[-] x1
+[v6 l1] /ceb 5 0
+[v7 l1] /ceb 5 1
+[v8 l1] /ceb 6 0
+[v9 l1] /ceb 6 1
+/cer 1</code></pre>
+    <p>Type <code>5</code> is
+    <code>SKRED_CONTROL_EVENT_PATTERN_START</code>; type <code>6</code>
+    is <code>SKRED_CONTROL_EVENT_PATTERN_END</code>. The key is the
+    pattern number. Pattern <code>0</code> start runs
+    <code>v6 l1</code>, pattern <code>1</code> start runs
+    <code>v7 l1</code>, pattern <code>0</code> end runs
+    <code>v8 l1</code>, and pattern <code>1</code> end runs
+    <code>v9 l1</code>. The <code>ce 100</code> and <code>ce 200</code>
+    commands inside the patterns are separate user events whose
+    responder key would be <code>100</code> or <code>200</code> if you
+    bind type <code>4</code>.</p>
+    <p><code>/cer 1</code> starts SKRED’s API-level dispatcher thread.
+    That thread sleeps on the public control-event wait object, drains
+    events when woken, and runs matching Skode commands from a dedicated
+    Skode context. <code>/cer 0</code> stops it, and
+    <code>skred_stop()</code> stops it during engine teardown.
+    Mini-Skred does not implement a separate parser or responder loop;
+    it submits these commands through <code>skred_command()</code> like
+    any other Skode text. Dispatcher service consumes events from the
+    same ring inspected by <code>?ce</code>, so use <code>?ce</code>
+    before enabling the dispatcher when you want to see pending events
+    non-destructively.</p>
+    <h3 id="foreign-c-function-calls">Foreign C Function Calls</h3>
+    <p>Applications using <code>api.h</code> can bind C callbacks to
+    <code>/ff0</code> through <code>/ff9</code>. Unbound slots do
+    nothing and do not report an error.</p>
+    <pre class="text"><code>(10,20,30) [marker] /ff0 1,2,3</code></pre>
+    <p>The callback receives the slot number, numeric arguments
+    <code>1,2,3</code>, parser string <code>marker</code>, parser data
+    <code>10,20,30</code>, and the current voice/pattern/step context.
+    The slot digit is not part of the numeric argument list;
+    <code>/ff3 10,20</code> calls slot <code>3</code> with two callback
+    arguments, <code>10</code> and <code>20</code>. The string and data
+    are borrowed from the parser for the duration of the call.</p>
+    <h2 id="patterns">Patterns</h2>
+    <p>Skode provides 128 patterns, numbered <code>0</code> through
+    <code>127</code>. Each pattern holds up to 128 steps, also numbered
+    <code>0</code> through <code>127</code>.</p>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>y pattern</code></td>
+    <td>Pattern index</td>
+    <td>Selects the pattern edited by <code>x</code>, <code>xa</code>,
+    <code>yt</code>, <code>ym</code>, <code>%</code>, <code>z%</code>,
+    <code>zg</code>, <code>zq</code>, and <code>z</code>.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[name] yt</code></td>
+    <td>String</td>
+    <td>Sets the selected pattern’s display name.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[commands] x step</code></td>
+    <td>Step index</td>
+    <td>Compiles and stores a specific step. Replacing a step replaces
+    both its source text and compiled program.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[commands] x-</code></td>
+    <td>No explicit step</td>
+    <td>Advances the edit cursor and stores the step there.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[commands] xa</code></td>
+    <td>String</td>
+    <td>Appends a compiled step after the pattern’s current end.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[] x step</code></td>
+    <td>Empty string and step</td>
+    <td>Clears a step. An empty step inside the existing pattern length
+    consumes time but performs no operation; empty trailing steps do not
+    extend the pattern.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[-] x step</code></td>
+    <td>Stop marker and step</td>
+    <td>Stores the pattern stop marker. Playback stops when it reaches
+    that step.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[-N] x step</code></td>
+    <td>Wait marker (<code>-0</code>..<code>-127</code>)</td>
+    <td>Holds/pauses pattern <code>p</code> at this step until target
+    pattern <code>N</code> reaches step <code>0</code> (downbeat).
+    Enables lockstep polymetric drum fills. Emits
+    <code>SKRED_CONTROL_EVENT_PATTERN_WAIT</code> (code 8).</td>
+    </tr>
+    <tr class="odd">
+    <td><code>&lt;x step</code></td>
+    <td>Step index</td>
+    <td>Copies a step’s source text into the parser string buffer for
+    inspection or editing.</td>
+    </tr>
+    <tr class="even">
+    <td><code>zg step</code>, <code>z g step</code></td>
+    <td>Step index</td>
+    <td>Immediately jumps the selected pattern’s playback pointer to the
+    specified step.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>zq state</code></td>
+    <td><code>0</code> or <code>1</code></td>
+    <td>Queues selected pattern start (<code>zq1</code>) or stop
+    (<code>zq0</code>) to trigger on the next downbeat boundary
+    (<code>seq_pointer[0] == 0</code>).</td>
+    </tr>
+    <tr class="even">
+    <td><code>% modulus</code>, <code>z% modulus</code></td>
+    <td>Positive integer; minimum <code>1</code></td>
+    <td>Sets the selected pattern’s step clock division modulo. Default
+    is <code>1</code> (1 step per master clock tick from
+    <code>M &lt;BPM&gt; 16</code>). <code>z%16</code> runs standard 16th
+    notes, <code>z%8</code> runs half-speed 8th notes, and
+    <code>z%32</code> runs double-speed 32nd notes.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>z* count</code></td>
+    <td>Positive integer (<code>2</code>..<code>16</code>)</td>
+    <td>Step ratchet opcode. Subdivides step duration into
+    <code>count</code> equal micro-triggers (<code>z*2</code>
+    double-tap, <code>z*3</code> triplet, <code>z*4</code> 32nd-note
+    burst, <code>z*8</code> 64th-note roll).</td>
+    </tr>
+    <tr class="even">
+    <td><code>ym state</code></td>
+    <td><code>0</code> or nonzero</td>
+    <td>Mutes pattern execution while retaining its contents and
+    playback state.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>yc state</code></td>
+    <td><code>0</code> or nonzero</td>
+    <td>Disables or enables pattern boundary control-plane events for
+    the selected pattern. Disabled by default. Pattern show commands
+    include <code>yc1</code> only when enabled.</td>
+    </tr>
+    <tr class="even">
+    <td><code>Y pattern</code></td>
+    <td>Pattern index</td>
+    <td>Clears the pattern, stops it, and resets its persistent playback
+    voice to voice <code>0</code>.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>z state</code></td>
+    <td><code>0</code> stop, <code>1</code> start, <code>2</code> pause,
+    <code>3</code> resume</td>
+    <td>Changes the selected pattern’s playback state. With no argument,
+    displays summary for the selected pattern.</td>
+    </tr>
+    <tr class="even">
+    <td><code>z?</code></td>
+    <td>None</td>
+    <td>Displays the selected pattern and its steps.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>Z state</code></td>
+    <td><code>0</code> stop, <code>1</code> start, <code>2</code> pause,
+    <code>3</code> resume</td>
+    <td>Applies playback state to all patterns (<code>Z1</code> starts
+    all active patterns; <code>Z0</code> stops all patterns). With no
+    argument (<code>Z</code>), displays summaries for all populated
+    patterns (empty pattern slots omitted).</td>
+    </tr>
+    <tr class="even">
+    <td><code>Z?</code>, <code>z??</code></td>
+    <td>None</td>
+    <td>Displays all populated patterns with their steps (empty pattern
+    slots omitted).</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Pattern source text is retained for display, but playback uses
+    the compiled snapshot. Editing an external macro later does not
+    alter a pattern step that was already compiled from it.</p>
+    <p>With <code>yc1</code>, a pattern emits
+    <code>SKRED_CONTROL_EVENT_PATTERN_START</code> when playback lands
+    on step <code>0</code>,
+    <code>SKRED_CONTROL_EVENT_PATTERN_WAIT</code> when waiting on a
+    <code>-N</code> step, and
+    <code>SKRED_CONTROL_EVENT_PATTERN_END</code> when it reaches a stop
+    marker or the last playable step before wrap.</p>
+    <h2 id="named-macros">Named Macros</h2>
+    <p>Named macros are global four-character commands defined directly
+    in Skode:</p>
+    <pre class="text"><code>[name]: body;</code></pre>
+    <p>A macro’s defined body can be up to 2,047 characters long.</p>
+    <p>Names longer than four characters are truncated. Valid name
+    characters are letters, punctuation, and the symbols <code>\</code>,
+    <code>|</code>, and <code>`</code> (backslash, vertical pipe, and
+    backquote). Names cannot contain digits. Parameters are written as
+    <code>$$0</code> through <code>$$7</code>; <code>@N</code> is not a
+    parameter alias—it reads a return value. For example:</p>
+    <pre class="text"><code>[tone]: v $$0 n $$1 a $$2;
+tone 2,60,-9</code></pre>
+    <p>Every definition is checked immediately using the real Skode
+    compiler:</p>
+    <ul>
+    <li><code>realtime</code>: the body compiles entirely to bounded
+    scheduled opcodes. It is cached as a dictionary program and can be
+    used interactively or anywhere schedulable Skode is accepted.</li>
+    <li><code>immediate</code>: the macro is valid but requires
+    parser/control-thread behavior. It retains text-expansion semantics
+    and cannot be placed on the scheduled real-time path.</li>
+    <li><code>invalid</code> or <code>too-large</code>: compilation
+    failed or exceeded the bounded program size.</li>
+    </ul>
+    <p>Inspect and manage definitions with:</p>
+    <table>
+    <colgroup>
+    <col style="width: 50%" />
+    <col style="width: 50%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Effect</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>?m</code></td>
+    <td>Show every named macro, parameter count, and capability
+    status.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[name] /m</code></td>
+    <td>Remove one named macro and any cached dictionary program.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/m!</code></td>
+    <td>Clear all named macros and cached programs.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Redefinition replaces the stored text, classification, and cached
+    program. Named macros loaded from Skode files are global and remain
+    available for later commands.</p>
+    <h3 id="returning-values-from-named-macros">Returning values from
+    named macros</h3>
+    <p>Use <code>*R</code> as the final command of an immediate macro to
+    return up to ten values:</p>
+    <pre class="text"><code>[bounds]: *R .1 .9;
+bounds
+?R
+# returns @0=0.1 @1=0.9
+@0 a</code></pre>
+    <p><code>@0</code> through <code>@9</code> supply a returned value
+    as a numeric argument. <code>?R</code> displays the current tuple
+    without consuming it. Return values are parser-local and
+    immediate-only; a macro containing <code>*R</code> or
+    <code>@N</code> is therefore classified <code>immediate</code>.</p>
+    <h2 id="external-numbered-macros">External Numbered Macros</h2>
+    <p>There are 128 external string buffers, numbered <code>0</code>
+    through <code>127</code>. Each stores up to 255 text characters plus
+    its terminator.</p>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    <th>Schedulable</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>[commands] e&gt;N</code></td>
+    <td>Literal buffer index</td>
+    <td>Stores the current string as external macro <code>N</code>.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>&lt;e N</code></td>
+    <td>Buffer index</td>
+    <td>Copies external macro <code>N</code> into the parser string
+    buffer without executing it.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>e? [N]</code></td>
+    <td>Optional buffer index</td>
+    <td>Displays one macro, or every nonempty macro when no index is
+    given.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>e!N</code></td>
+    <td>Literal buffer index</td>
+    <td>Compiles and executes macro <code>N</code>. When used inside
+    another compiled program, its opcodes are inlined as a
+    snapshot.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="odd">
+    <td><code>eR N,count,seconds[,tag]</code></td>
+    <td>Literal buffer index, count, interval, optional tag</td>
+    <td>Compiles macro <code>N</code> once and repeats that snapshot at
+    real-time intervals.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>eRR N,count,beats[,tag]</code></td>
+    <td>Literal buffer index, count, beat interval, optional tag</td>
+    <td>Compiles macro <code>N</code> once and repeats that snapshot at
+    tempo-relative intervals.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[commands] e!</code></td>
+    <td>Current parser string</td>
+    <td>Compiles and executes the current string immediately.
+    Argumentless <code>e!</code> itself cannot be nested in a compiled
+    program.</td>
+    <td>No</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Literal <code>e!N</code> calls may be used inside patterns,
+    defers, repeats, and other external macros. Recursive macro cycles,
+    undefined macros, runtime-selected <code>e!$N</code>, and expansions
+    beyond 32 operations are rejected.</p>
+    <p><code>eR</code> and <code>eRR</code> are control-thread
+    scheduling commands. The macro is copied and compiled once when the
+    command is issued, so later edits do not affect queued invocations.
+    The 32-operation limit applies to one compiled invocation, not the
+    repeat count.</p>
+    <h2 id="registers-and-data">Registers and Data</h2>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    <th>Schedulable</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>=N,value</code></td>
+    <td>Register index and value</td>
+    <td>Writes shared register <code>N</code>. In a compiled program,
+    the write happens when the opcode executes.</td>
+    <td>Yes</td>
+    </tr>
+    <tr class="even">
+    <td><code>=N</code></td>
+    <td>Register index</td>
+    <td>Displays a register in the immediate command interface.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>=</code></td>
+    <td>None</td>
+    <td>Displays registers in the immediate command interface.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>*=N,a,b</code></td>
+    <td>Register and operands</td>
+    <td>Stores <code>a * b</code> in a shared register.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/=N,a,b</code></td>
+    <td>Register and operands</td>
+    <td>Stores <code>a / b</code> when <code>b</code> is nonzero.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>a=N,a,b</code></td>
+    <td>Register and operands</td>
+    <td>Stores <code>a + b</code>.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>s=N,a,b</code></td>
+    <td>Register and operands</td>
+    <td>Stores <code>a - b</code>.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>*R [values...]</code></td>
+    <td>Up to ten values</td>
+    <td>Returns its arguments as <code>@0</code>, <code>@1</code>, and
+    so on; see “Named Macros.”</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>@N</code></td>
+    <td>Return slot <code>0</code> through <code>9</code></td>
+    <td>Supplies return value <code>N</code> as a numeric argument to
+    the next command.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>?R</code></td>
+    <td>None</td>
+    <td>Displays all current return values without consuming or changing
+    them.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>(values...)</code></td>
+    <td>Numeric list</td>
+    <td>Replaces the parser’s data array.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>D [capacity]</code>, <code>/D [capacity]</code></td>
+    <td>Optional element capacity</td>
+    <td>Displays or enlarges the parser data allocation.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>?d</code></td>
+    <td>None</td>
+    <td>Displays the current data array.</td>
+    <td>No</td>
+    </tr>
+    <tr class="even">
+    <td><code>d* index</code></td>
+    <td>Data index</td>
+    <td>Displays one data value.</td>
+    <td>No</td>
+    </tr>
+    <tr class="odd">
+    <td><code>=d register,index</code></td>
+    <td>Register and data index</td>
+    <td>Copies a data value into a shared register.</td>
+    <td>No</td>
+    </tr>
+    </tbody>
+    </table>
+    <h2 id="samples-waves-and-recording">Samples, Waves, and
+    Recording</h2>
+    <p>These commands operate on files or sample memory and therefore
+    run immediately on the control thread.</p>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>[filename] /ws wave[,channel]</code></td>
+    <td>File name, writable destination wave, channel</td>
+    <td>Loads an audio file into the requested wavetable slot. Slots
+    occupied by read-only built-in waves or active voices are
+    rejected.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/w file[,wave[,channel]]</code></td>
+    <td>Numbered file and optional destination</td>
+    <td>Loads a numbered audio file.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>w&gt;d wave</code></td>
+    <td>Wave index</td>
+    <td>Copies wavetable samples into the parser data array.</td>
+    </tr>
+    <tr class="even">
+    <td><code>w&gt;r wave</code></td>
+    <td>Wave index</td>
+    <td>Copies wavetable samples into the temporary recording
+    buffer.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename] w&gt;w wave</code></td>
+    <td>File name and wave index</td>
+    <td>Writes the wavetable directly as mono floating-point WAV data,
+    unchanged, using its stored sample rate.</td>
+    </tr>
+    <tr class="even">
+    <td><code>d&gt;r</code></td>
+    <td>None</td>
+    <td>Copies parser data into the temporary recording buffer.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>r&gt;d [channel]</code></td>
+    <td>Optional channel <code>-1</code>, <code>0</code>, or
+    <code>1</code></td>
+    <td>Copies the trimmed temporary recording into parser data without
+    normalization. Stereo defaults to a mono downmix (<code>-1</code>);
+    <code>0</code> or <code>1</code> selects a channel.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/r [slot[,mode[,channel]]]</code></td>
+    <td>Wave destination and options</td>
+    <td>Loads the temporary recording into a mono wavetable. Mode is
+    <code>0</code> cycle or <code>1</code> one-shot (default). Stereo
+    recordings default to a mono downmix; channel <code>0</code> or
+    <code>1</code> selects left or right.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/d [slot[,rate[,mode[,offset]]]]</code></td>
+    <td>Wave destination and options</td>
+    <td>Loads parser data into a wavetable at the requested sample rate.
+    Mode is <code>0</code> cycle (default) or <code>1</code>
+    one-shot.</td>
+    </tr>
+    <tr class="even">
+    <td><code>rs [frames]</code></td>
+    <td>Start offset adjustment</td>
+    <td>Moves the temporary recording’s start point.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>re [frames]</code></td>
+    <td>End trim adjustment</td>
+    <td>Changes how many frames are removed from the recording end.</td>
+    </tr>
+    <tr class="even">
+    <td><code>w&lt;&gt; [threshold[,end-threshold[,margin-frames]]]</code></td>
+    <td>Detection thresholds and optional frame margin</td>
+    <td>Finds useful start and end trim points from signal level. For
+    stereo, either channel can make a frame audible. Defaults to a small
+    silence threshold of <code>0.001</code>.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>w!</code></td>
+    <td>None</td>
+    <td>Applies current recording offsets and trims.</td>
+    </tr>
+    <tr class="even">
+    <td><code>w*</code></td>
+    <td>None</td>
+    <td>Resets recording offsets and trims.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/wex wave</code></td>
+    <td>Dynamic wave index <code>200</code> through
+    <code>999</code></td>
+    <td>Expands storage for a dynamic wavetable slot.</td>
+    </tr>
+    <tr class="even">
+    <td><code>a&gt;r seconds[,source[,voice]]</code>,
+    <code>^r ...</code></td>
+    <td>Duration, source mode, optional source voice</td>
+    <td>Records source <code>0</code> dry mono, <code>1</code> one
+    selected voice, or <code>2</code> the audible stereo master. Source
+    defaults to <code>0</code>; source <code>1</code> requires the voice
+    argument.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename] &gt;r</code></td>
+    <td>File name</td>
+    <td>Normalizes the completed temporary recording and writes it as a
+    mono or stereo WAV at the main sample rate.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[filename] /rg [max-seconds]</code></td>
+    <td>Output filename and optional limit</td>
+    <td>Starts multitrack WAV recording. Requires
+    <code>RECORD</code>.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/rs</code></td>
+    <td>None</td>
+    <td>Stops multitrack recording. Requires <code>RECORD</code>.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/r?</code></td>
+    <td>None</td>
+    <td>Displays multitrack recorder status. Requires
+    <code>RECORD</code>.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>r track</code></td>
+    <td><code>0</code> none, <code>1</code> through <code>4</code>
+    stem</td>
+    <td>Routes the selected voice into a multitrack stem. Requires
+    <code>RECORD</code> or <code>SCOPE</code>.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[name] rt track</code></td>
+    <td>String plus track number</td>
+    <td>Names record/scope stem tracks 1 through 4.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>rv track,dB</code></td>
+    <td>Track number plus dB</td>
+    <td>Sets the final stem level for record/scope tracks 1 through 4.
+    Defaults to <code>-20 dB</code>.</td>
+    </tr>
+    <tr class="even">
+    <td><code>?r</code></td>
+    <td>None</td>
+    <td>Shows stem names and <code>#</code> followed by the voices
+    assigned to each track.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[name] /sg [channel-mask[,buffer-seconds]]</code></td>
+    <td>Shared-memory name, channel bit mask, ring duration</td>
+    <td>Starts live publication of the ten-channel master/stem bus.
+    Defaults to <code>skred-scope</code>, all channels, and one second.
+    Requires <code>SCOPE</code>.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/ss</code></td>
+    <td>None</td>
+    <td>Stops publication and unlinks the shared-memory name. Existing
+    mappings remain readable and report inactive. Requires
+    <code>SCOPE</code>.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/s?</code></td>
+    <td>None</td>
+    <td>Displays scope name, format, mask, capacity, and absolute frame
+    counter. Requires <code>SCOPE</code>.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>For example, <code>[periodic.wav] w&gt;w300</code> exports wave
+    300 without changing its sample values, while
+    <code>[take.wav] &gt;r</code> exports and normalizes the temporary
+    recording. The supplied filename is used literally, so include the
+    <code>.wav</code> extension when desired.</p>
+    <p><code>&lt;r 5</code> and <code>&lt;r 5,0</code> capture five
+    seconds of the current dry mono voice sum, before panning, delay
+    returns, and master volume. <code>&lt;r 5,1,12</code> captures voice
+    12 after its voice processing but before pan and master volume.
+    <code>&lt;r 5,2</code> captures the audible stereo master after
+    panning, delay returns, and master volume. The older
+    <code>a&gt;r seconds,voice</code> form is intentionally replaced by
+    the unambiguous source-mode syntax.</p>
+    <p>When <code>/r</code> installs a one-shot recording, it
+    automatically records the duration-derived pitch metadata that makes
+    MIDI note 69 play it at its natural rate. The former, misleading
+    <code>offset</code> argument is no longer exposed.</p>
+    <p>Scope channel-mask bits follow the file layout: bits
+    <code>0</code> and <code>1</code> are master left/right, bits
+    <code>2</code> and <code>3</code> are stem 1, through bits
+    <code>8</code> and <code>9</code> for stem 4. For example, mask
+    <code>3</code> publishes master L/R and mask <code>15</code>
+    advertises master plus stem 1. The shared ring remains ten-channel
+    interleaved float data; the mask tells consumers which channels were
+    requested for display. The shared-memory header also includes
+    per-track names and dB levels for the master slot and stems 1
+    through 4.</p>
+    <h3 id="multichannel-wav-walkthrough">Multichannel WAV
+    Walkthrough</h3>
+    <p>Build and launch Mini-Skred with recording support:</p>
+    <div class="sourceCode" id="cb29"><pre
+    class="sourceCode sh"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> parts</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> maxed</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./build_maxed/mini-skred</span></span></code></pre></div>
+    <p>Configure two voices, assign them to stereo stems, and start
+    recording:</p>
+    <pre class="text"><code>v0 r1 w0 f440 a0 t.01,.2,.7,.3
+v1 r2 w1 f660 a0 t.01,.2,.6,.3
+[take.wav]/rg
+v0 l1
+v1 l1
+/r?
+/rs</code></pre>
+    <p><code>/rs</code> drains the writer queue and finalizes the WAV
+    header before returning. The output uses the active engine/device
+    sample rate (44.1 kHz by default), 32-bit float samples, and ten
+    channels in this order:</p>
+    <table>
+    <thead>
+    <tr class="header">
+    <th>Channel</th>
+    <th>Signal</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td>0, 1</td>
+    <td>Master left, right</td>
+    </tr>
+    <tr class="even">
+    <td>2, 3</td>
+    <td>Stem 1 left, right</td>
+    </tr>
+    <tr class="odd">
+    <td>4, 5</td>
+    <td>Stem 2 left, right</td>
+    </tr>
+    <tr class="even">
+    <td>6, 7</td>
+    <td>Stem 3 left, right</td>
+    </tr>
+    <tr class="odd">
+    <td>8, 9</td>
+    <td>Stem 4 left, right</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Every unmuted voice is present in the master. <code>r1</code>
+    through <code>r4</code> additionally route the selected voice into a
+    stem; <code>r0</code> removes that extra route. <code>m1</code>
+    removes the voice from the master but preserves its dry stem route,
+    allowing isolated stem recording or monitoring. To stop
+    automatically after five seconds, use
+    <code>[take.wav]/rg5</code>.</p>
+    <h3 id="shared-memory-scope-walkthrough">Shared-Memory Scope
+    Walkthrough</h3>
+    <p>Start the default one-second, all-channel publisher in
+    Mini-Skred:</p>
+    <pre class="text"><code>/sg
+/s?</code></pre>
+    <p>In another terminal, run the bundled consumer:</p>
+    <div class="sourceCode" id="cb32"><pre
+    class="sourceCode sh"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> parts</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./build_maxed/scope_reader</span> skred-scope 2048</span></code></pre></div>
+    <p>The final argument is the number of newest frames copied for each
+    display update. The example reader prints peak and RMS measurements;
+    a graphical consumer can use <code>scope_ipc_reader_latest()</code>
+    from <code>scope-ipc.h</code> and draw the same frames.</p>
+    <p>To publish only master L/R with a 250 ms ring:</p>
+    <pre class="text"><code>[my-scope]/sg3,.25</code></pre>
+    <p>Then connect with:</p>
+    <div class="sourceCode" id="cb34"><pre
+    class="sourceCode sh"><code class="sourceCode bash"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./build_maxed/scope_reader</span> my-scope 2048</span></code></pre></div>
+    <p>Use <code>/ss</code> to mark the mapping inactive and unlink its
+    name. An already-mapped reader can observe the inactive flag and
+    close cleanly. Scope publication and multichannel WAV recording can
+    be active simultaneously.</p>
+    <h2 id="numeric-opcode-escape-exec">Numeric Opcode Escape
+    (<code>EXEC</code>)</h2>
+    <p>The <code>EXEC</code> command provides direct access to Skode’s
+    internal numeric opcodes. It takes an opcode ID (0-255) followed by
+    its arguments. This is an advanced compiler escape rather than an
+    ordinary command.</p>
+    <p><code>EXEC {opcode_id} {args...}</code></p>
+    <pre class="text"><code>v0 EXEC 3 -6.0      // sets amplitude to -6 dB using SKODE_OP_AMP (3)</code></pre>
+    <p>Opcodes &gt; 255 are rejected at compile time as they fall
+    outside the real-time executable namespace limit.</p>
+    <h2 id="inspection-and-runtime-control">Inspection and Runtime
+    Control</h2>
+    <h3 id="audio-device-selection">Audio Device Selection</h3>
+    <p>Audio device operations are immediate Skode commands and can be
+    used interactively, in <code>.sk</code> files, or from immediate
+    macros:</p>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>/als</code></td>
+    <td>None</td>
+    <td>Refresh and list output and input devices.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/a?</code></td>
+    <td>None</td>
+    <td>Show audio state and the active/requested devices.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/ao selection</code></td>
+    <td>Device list index or <code>-1</code></td>
+    <td>Select an output; <code>-1</code> means the default output.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/ai selection</code></td>
+    <td>Device list index, <code>-1</code>, or <code>-2</code></td>
+    <td>Select an input; <code>-1</code> means the default input and
+    <code>-2</code> disables capture.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>The older API-router spellings <code>/aout default</code> and
+    <code>/ain off</code> remain host compatibility aliases. They are
+    not Skode syntax: <code>/aout</code> exceeds the four-character atom
+    limit and the textual arguments are not numeric.</p>
+    <h3 id="midi-io">MIDI I/O</h3>
+    <p>Build with <code>MIDI=1</code>, then use <code>/mL</code> to
+    request MIDI access and list ports. <code>/mi N</code> and
+    <code>/mo N</code> open an input or output, <code>/mic</code> and
+    <code>/moc</code> close them, and <code>/m?</code> shows status.
+    <code>[name] /miV</code> and <code>[name] /moV</code> create virtual
+    ports on CoreMIDI and ALSA; WinMM and Web MIDI do not provide
+    virtual ports.</p>
+    <p>Incoming note-on, note-off, and pitch-bend messages can be routed
+    on the control plane. <code>/mv channel,voice[,bend]</code> routes
+    to one voice and <code>/mp channel,pool[,bend]</code> routes to a
+    poly pool. <code>channel</code> is <code>0..15</code>, or
+    <code>.</code>/<code>-</code> for all channels; install multiple
+    routes to listen to several selected channels. <code>bend</code> is
+    the symmetric full-scale range in semitones and defaults to
+    <code>2</code>. For example, <code>/mv 0,3</code> maps channel 1
+    (zero-based channel <code>0</code>) to voice 3, and
+    <code>/mp .,0,12</code> maps all channels to pool 0 with a
+    ±12-semitone bend range.</p>
+    <p><code>/mR</code> lists routes, <code>/mvd channel,voice</code>
+    and <code>/mpd channel,pool</code> remove one, and <code>/mC</code>
+    clears all routes. Adding a command route starts the existing
+    control dispatcher. The C API can instead configure routes and have
+    a host-owned loop call
+    <code>skred_control_dispatch_pump()</code>.</p>
+    <p>Poly groups are templates; MIDI targets the associated pool
+    because the pool owns live note allocation, releases, stealing, mono
+    priority, and per-note bend state.</p>
+    <p>Other MIDI input can invoke arbitrary Skode with
+    <code>[command] /mb type,channel,data1</code>. The bracketed command
+    uses the normal parser string buffer, so the binding syntax works
+    unchanged in interactive input, <code>.sk</code> files, and
+    immediate macros. <code>type</code> is numeric:</p>
+    <table>
+    <thead>
+    <tr class="header">
+    <th style="text-align: right;">Type</th>
+    <th>MIDI message</th>
+    <th>First-data selector</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td style="text-align: right;"><code>8</code></td>
+    <td>Note Off</td>
+    <td>Note number</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>9</code></td>
+    <td>Note On</td>
+    <td>Note number</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>10</code></td>
+    <td>Polyphonic Key Pressure</td>
+    <td>Note number</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>11</code></td>
+    <td>Control Change</td>
+    <td>Controller number</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>12</code></td>
+    <td>Program Change</td>
+    <td>Program number</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>13</code></td>
+    <td>Channel Pressure</td>
+    <td>Pressure value</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>14</code></td>
+    <td>Pitch Bend</td>
+    <td>LSB</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>17</code></td>
+    <td>MTC Quarter Frame</td>
+    <td>Message byte</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>18</code></td>
+    <td>Song Position</td>
+    <td>14-bit song position</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>19</code></td>
+    <td>Song Select</td>
+    <td>Song number</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>20</code></td>
+    <td>Tune Request</td>
+    <td><code>0</code></td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>24</code></td>
+    <td>Timing Clock</td>
+    <td><code>0</code></td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>26</code></td>
+    <td>Start</td>
+    <td><code>0</code></td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>27</code></td>
+    <td>Continue</td>
+    <td><code>0</code></td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>28</code></td>
+    <td>Stop</td>
+    <td><code>0</code></td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>31</code></td>
+    <td>System Reset</td>
+    <td><code>0</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Use <code>.</code> or <code>-</code> for any channel or any first
+    data value. System/realtime messages have no channel, so their
+    channel selector is normally <code>.</code>.</p>
+    <p>Command templates substitute <code>{ch}</code>,
+    <code>{d1}</code>, <code>{d2}</code>, <code>{unit}</code>
+    (<code>d2 / 127</code>), and <code>{bend}</code> (normalized
+    <code>-1..1</code>). The braces are not Skode operators. They are
+    MIDI-binding template markers stored inside an opaque bracket
+    string; the control dispatcher replaces them with numeric text
+    before the resulting Skode command is parsed. Any other braces are
+    copied literally. Examples:</p>
+    <pre class="text"><code>[Z1] /mb 26,.,.                  # MIDI Start: play all patterns
+[Z0] /mb 28,.,.                  # use Stop as pause
+[Z1] /mb 27,.,.                  # Continue resumes
+[v3K{d2}] /mb 11,.,74            # CC 74 controls voice 3 filter cutoff</code></pre>
+    <p>MIDI has Start, Continue, and Stop but no separate Pause message;
+    mapping Stop to pause and Continue to resume is the usual transport
+    interpretation. <code>/mb?</code> lists bindings,
+    <code>/mbd type,channel,data1</code> removes one, and
+    <code>/mbC</code> clears them. The equivalent C API is
+    <code>skred_midi_binding_*()</code>.</p>
+    <p>All commands in this MIDI section are immediate Skode commands
+    rather than API-only aliases. They can therefore be loaded from a
+    file or invoked by an immediate macro. For example:</p>
+    <pre class="text"><code>[map1]:[v3K{d2}] /mb 11 . 74;
+map1</code></pre>
+    <p>Bindings are process-global and remain installed after the loader
+    or macro context returns. On Web MIDI, <code>/mL</code> still has to
+    run from a browser user gesture because opening a file cannot grant
+    browser MIDI permission.</p>
+    <h4 id="midi-drum-maps">MIDI drum maps</h4>
+    <p>The first-data selector for message type <code>9</code> is the
+    MIDI note number, so <code>/mb</code> can act as a drum map.
+    Configure each voice’s sample, envelope, tuning, pan, and routing
+    first, then bind incoming notes to its trigger. <code>{unit}</code>
+    converts MIDI velocity from <code>0..127</code> to the
+    <code>0..1</code> range expected by <code>l</code>:</p>
+    <pre class="text"><code>[v0l{unit}] /mb 9 . 36          # kick
+[v1l{unit}] /mb 9 . 38          # snare
+[v2l{unit}] /mb 9 . 42          # closed hi-hat</code></pre>
+    <p>A binding stores one command template for each
+    <code>(type, channel, data1)</code> key, but that template may
+    control several voices. This makes layered samples
+    straightforward:</p>
+    <pre class="text"><code>[v3l{unit} v4l{unit} v5l{unit}] /mb 9 . 40</code></pre>
+    <p>The three voices can independently provide the drum body,
+    transient, and room layer. A named macro keeps larger kits readable
+    while still allowing the MIDI dispatcher to supply velocity:</p>
+    <pre class="text"><code>[kik]:v0l$$0 v1l$$0;
+[snr]:v2l$$0 v3l$$0 v4l$$0;
+[hat]:v5l$$0;
+
+[kik {unit}] /mb 9 . 36
+[snr {unit}] /mb 9 . 38
+[hat {unit}] /mb 9 . 42</code></pre>
+    <p>Channel selectors can isolate a conventional drum channel.
+    Channels are zero-based, so selector <code>9</code> is MIDI channel
+    10:</p>
+    <pre class="text"><code>[v6l{unit}] /mb 9 9 46          # open hi-hat on channel 10
+[v6l0] /mb 8 9 46               # matching note-off releases it
+[v6l0 v5l{unit}] /mb 9 9 42     # closed hat chokes open hat, then triggers</code></pre>
+    <p>This control-plane approach is suitable for modest kits and for
+    developing the desired mapping behavior. Each hit still expands text
+    and parses Skode on the control dispatcher. A future
+    performance-oriented drum-map facility could compile each note’s
+    real-time-safe program once, retain velocity as an input, and add
+    explicit choke groups, velocity layers, round-robin samples, and
+    event timestamp handling without parsing text for every hit.</p>
+    <h4 id="midi-mono-and-poly-synths">MIDI mono and poly synths</h4>
+    <p>For the simplest monophonic instrument, configure one voice and
+    route a MIDI channel directly to it. Channels are zero-based, so
+    this listens to MIDI channel 1 and uses a ±2-semitone pitch-bend
+    range:</p>
+    <pre class="text"><code>v0 w0 a0 t.01,.15,.7,.35
+/mv 0 0 2</code></pre>
+    <p>Note-on sets the voice pitch and triggers its envelope, note-off
+    releases the currently active note, and pitch bend retunes it
+    without retriggering. This direct route tracks only the latest
+    active key. It does not retain a held-note stack, so use a
+    monophonic pool when overlapping keys must return to an earlier held
+    note.</p>
+    <p>A pool provides proper monophonic priority and articulation. This
+    example uses voice 2 as a one-voice prototype, materializes one
+    instance at voice 16, selects last-note legato mode, and maps MIDI
+    channel 1 with a ±12-semitone bend range:</p>
+    <pre class="text"><code>v2 w0 a0 t.01,.15,.7,.35
+/pg 1 2 1 0
+/pp 1 1 16 1 0
+/pm 1 1 0 1
+/mp 0 1 12</code></pre>
+    <p>The <code>/pm</code> arguments after the pool number are
+    <code>mode=1</code> (mono), <code>priority=0</code> (last note), and
+    <code>articulation=1</code> (legato). Other priorities are
+    <code>1</code> highest, <code>2</code> lowest, and <code>3</code>
+    first. With overlapping keys, releasing the active note returns to
+    the appropriate still-held note; the envelope releases only after
+    the last key is released.</p>
+    <p>For polyphony, define the sound as a prototype group, clone
+    several instances, then route MIDI to the pool. This two-voice sound
+    layers an octave above its root and creates four playable instances
+    in voices 8 through 15:</p>
+    <pre class="text"><code>v0 w0 a0 t.01,.15,.7,.35 N0 G1 H1
+v1 w0 a0 t.005,.1,.5,.25 N12
+/pg 0 0 2 0
+/pp 0 0 8 4 0
+/mp 0 0 2</code></pre>
+    <p>Each MIDI note allocates one two-voice instance. Note-off
+    releases the instance identified by that channel and note, and
+    channel pitch bend applies to all notes still held through that
+    route. The final <code>/pp</code> argument is the stealing policy:
+    <code>0</code> release-oldest, <code>1</code> oldest, <code>2</code>
+    round-robin, <code>3</code> quietest, or <code>4</code>
+    no-steal.</p>
+    <p>Use <code>.</code> instead of a channel number to accept all
+    channels:</p>
+    <pre class="text"><code>/mp . 0 2</code></pre>
+    <p>All-channel pool routes keep equal notes from different channels
+    independent. Install several <code>/mv</code> or <code>/mp</code>
+    routes when only a selected set of channels should drive the
+    instrument. <code>/mR</code> displays the installed routes;
+    <code>/mvd</code> and <code>/mpd</code> remove them.</p>
+    <p>With an output open, <code>MO 144,60,100</code> sends a
+    three-byte note-on message. <code>d&gt;MO</code> sends every value
+    in the data array as a raw byte, which is useful for SysEx. These
+    commands execute immediately and are not pattern-schedulable.</p>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>?</code>, <code>v?</code></td>
+    <td>None</td>
+    <td>Displays the selected voice.</td>
+    </tr>
+    <tr class="even">
+    <td><code>\</code></td>
+    <td>None</td>
+    <td>Displays the selected voice with additional detail.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>??</code>, <code>v??</code></td>
+    <td>None</td>
+    <td>Displays active voices.</td>
+    </tr>
+    <tr class="even">
+    <td><code>?w [wave[,end-or-width[,height]]]</code></td>
+    <td>Optional display parameters</td>
+    <td>Displays one wavetable, recording data, or all loaded waves. A
+    single-wave display includes sample count, baseline duration,
+    playback mode, loop points, loop duration, stats, and a loop marker
+    row under the waveform.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>?vw [voice[,width,height]]</code></td>
+    <td>Optional voice and display dimensions</td>
+    <td>Displays the wavetable assigned to a voice and marks that
+    voice’s current loop points. With two arguments, they are
+    interpreted as width and height for the selected voice.</td>
+    </tr>
+    <tr class="even">
+    <td><code>?ws wave</code></td>
+    <td>Wavetable index</td>
+    <td>Displays a compact spectrogram over the wave’s loop region.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>W* wave,param[,register]</code></td>
+    <td>Wave, property, optional destination</td>
+    <td>Reads wave sample count (<code>0</code>), sample rate
+    (<code>1</code>), duration (<code>2</code>), loop start
+    (<code>3</code>), or loop end (<code>4</code>).</td>
+    </tr>
+    <tr class="even">
+    <td><code>v* param[,register]</code></td>
+    <td>Property and optional destination</td>
+    <td>Reads selected voice wave (<code>0</code>), amplitude
+    (<code>1</code>), or frequency (<code>2</code>).</td>
+    </tr>
+    <tr class="odd">
+    <td><code>?dl [track]</code></td>
+    <td>Optional track <code>1..4</code></td>
+    <td>Displays one track delay, or all four track delays, as
+    copy/pasteable <code>DL...</code> commands.</td>
+    </tr>
+    <tr class="even">
+    <td><code>GS [full]</code></td>
+    <td>Optional boolean</td>
+    <td>Displays copy/pasteable version, master volume, tempo, and track
+    delay commands. With a value greater than <code>0</code>, also
+    prints a larger text snapshot for saving/reloading.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>?s</code></td>
+    <td>None</td>
+    <td>Displays the current parser string.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/s [section]</code></td>
+    <td>Optional section number</td>
+    <td>Displays runtime, audio, synth, Skode, string, or benchmark
+    state.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/th?</code></td>
+    <td>None</td>
+    <td>Displays SKRED service/thread health: audio callback load,
+    control-event dispatcher counters, UDP activity, recorder state, and
+    scope publication state.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/t [level]</code></td>
+    <td>Optional trace level</td>
+    <td>Toggles or sets command and parser tracing.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/v [level]</code></td>
+    <td>Optional verbosity level</td>
+    <td>Toggles or sets verbose output.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/f [value]</code></td>
+    <td>Optional value</td>
+    <td>Displays or sets the current context flag.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>log state</code></td>
+    <td><code>0</code> or nonzero</td>
+    <td>Disables or enables command-context log capture.</td>
+    </tr>
+    <tr class="even">
+    <td><code>udp value</code></td>
+    <td>Any numeric argument</td>
+    <td>Displays the current UDP context endpoint. Requires
+    <code>UDP</code>.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/m_</code></td>
+    <td>None</td>
+    <td>Benchmarks the selected voice. Requires <code>BENCH</code>.</td>
+    </tr>
+    <tr class="even">
+    <td><code>I value</code></td>
+    <td>Numeric value</td>
+    <td>Reserved event-logging stub. It currently has no effect.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/h [category[,entry]]</code></td>
+    <td>Optional help indices; current string may select by name</td>
+    <td>Displays generated command help. Use <code>[term] /h</code> to
+    search.</td>
+    </tr>
+    <tr class="even">
+    <td><code>?M</code></td>
+    <td>None (shows all)</td>
+    <td>Displays the full categorized dictionary grouped by category
+    number, matching <code>/h</code> numbering. The final section lists
+    user-defined macros.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>1 ?M</code></td>
+    <td>Category mode <code>1</code></td>
+    <td>Displays only real-time-safe commands — those safe for patterns,
+    defers, and the event queue.</td>
+    </tr>
+    <tr class="even">
+    <td><code>2 ?M</code></td>
+    <td>Category mode <code>2</code></td>
+    <td>Displays only immediate-only commands — those that run on the
+    control thread and cannot be scheduled.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/q</code></td>
+    <td>None</td>
+    <td>Requests exit from the interactive shell.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p><code>W</code> reports the selected renderer as
+    <code>display braille</code> or <code>display ascii</code>. It uses
+    the compact Unicode Braille plotter on Linux and macOS. Windows
+    console hosts default to an ASCII plot because common
+    <code>cmd.exe</code> and PowerShell fonts render Braille cells
+    poorly. Set <code>SKRED_WAVE_DISPLAY=braille</code> to force the
+    Unicode renderer, or <code>SKRED_WAVE_DISPLAY=ascii</code> to force
+    the portable ASCII renderer on any platform.</p>
+    <p>For a single wavetable, the marker row beneath the waveform spans
+    <code>[loop_start..loop_end)</code>, matching the <code>WL</code>
+    convention: start is inclusive and end is exclusive.</p>
+    <p><code>w&lt;&gt;</code> scans the temporary recording buffer for
+    four consecutive samples above the start/end silence thresholds,
+    then moves to a nearby zero crossing. The optional third argument
+    expands the found region by that many samples before the
+    zero-crossing search. With no arguments, tiny nonzero recorder
+    residue below <code>0.001</code> is treated as silence.</p>
+    <h2 id="file-and-ksynth-utilities">File and Ksynth Utilities</h2>
+    <table>
+    <colgroup>
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    <col style="width: 33%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Parameters</th>
+    <th>Effect</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>/l file[,verbose]</code></td>
+    <td>Numbered Skode file</td>
+    <td>Loads and executes a <code>.sk</code> file.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[filename] /ls [verbose]</code></td>
+    <td>Skode filename</td>
+    <td>Loads and executes a named Skode file. The literal filename is
+    tried first; bare names also fall back to
+    <code>sk/filename</code>.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename] %cat</code></td>
+    <td>String</td>
+    <td>Prints a text file.</td>
+    </tr>
+    <tr class="even">
+    <td><code>[zip-or-directory] %z</code></td>
+    <td>String</td>
+    <td>Mounts a ZIP archive or disk directory as the active VFS
+    root.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>%zu</code></td>
+    <td>None</td>
+    <td>Unmounts and returns to disk mode at the real current
+    directory.</td>
+    </tr>
+    <tr class="even">
+    <td><code>%pwd</code></td>
+    <td>None</td>
+    <td>Displays VFS mode, mounted root, and VFS working directory.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[directory] %cd</code></td>
+    <td>String</td>
+    <td>Changes the VFS working directory.</td>
+    </tr>
+    <tr class="even">
+    <td><code>%ls [type]</code></td>
+    <td><code>0</code> <code>.sk</code>, <code>1</code>
+    <code>.wav</code>, <code>2</code> <code>.mp3</code>, <code>3</code>
+    <code>.ks</code></td>
+    <td>Lists matching files in the active VFS directory.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[file] /ks [verbose]</code></td>
+    <td>Ksynth filename</td>
+    <td>Loads a named Ksynth source file. Requires
+    <code>KSYNTH</code>.</td>
+    </tr>
+    <tr class="even">
+    <td><code>/k file[,verbose]</code></td>
+    <td>Numbered Ksynth file</td>
+    <td>Loads numbered Ksynth source. Requires <code>KSYNTH</code>.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[code] ks</code>, <code>[code] k!</code></td>
+    <td>Ksynth source string</td>
+    <td>Runs source in this Skode context’s Ksynth evaluator.</td>
+    </tr>
+    <tr class="even">
+    <td><code>kw [timeout-ms]</code></td>
+    <td>Optional timeout</td>
+    <td>Compatibility no-op; Ksynth now runs synchronously.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>kw&gt; [timeout-ms]</code></td>
+    <td>Optional timeout</td>
+    <td>Copies the latest Ksynth result into parser data.</td>
+    </tr>
+    <tr class="even">
+    <td><code>k?</code></td>
+    <td>None</td>
+    <td>Displays the latest Ksynth result.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>k&gt;d</code></td>
+    <td>None</td>
+    <td>Copies the latest Ksynth result into parser data.</td>
+    </tr>
+    <tr class="even">
+    <td><code>k&gt;w [slot[,rate[,mode[,offset]]]]</code></td>
+    <td>Wave destination and options</td>
+    <td>Loads the latest Ksynth result directly into a wave. Defaults to
+    slot <code>300</code>, the main sample rate, and cycle mode.</td>
+    </tr>
+    <tr class="odd">
+    <td><code>d&gt;k variable</code></td>
+    <td>Variable <code>0</code> through <code>25</code></td>
+    <td>Copies parser data into Ksynth variable <code>A</code> through
+    <code>Z</code>.</td>
+    </tr>
+    <tr class="even">
+    <td><code>w&gt;k wave,variable</code></td>
+    <td>Wave index and variable <code>0</code> through
+    <code>25</code></td>
+    <td>Copies a wavetable directly into Ksynth variable <code>A</code>
+    through <code>Z</code>.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Loaders search the active VFS first, then the real current
+    directory and their type-specific <code>sk</code>, <code>wav</code>,
+    or <code>ks</code> fallback directory. While a ZIP is mounted,
+    prefix a path with <code>file:</code> to force access to a real
+    filesystem path. <code>skred_vfs_mount_zip_memory()</code> provides
+    the equivalent memory-backed mount for browser/API hosts.</p>
+    <p>Each Skode command context owns its own Ksynth evaluator and
+    persistent <code>A</code> through <code>Z</code> variables. For
+    example, <code>(1 2 3) d&gt;k0 [A,A] ks kw&gt;</code> binds
+    <code>A</code> before evaluating the concatenation; <code>kw</code>
+    is accepted for compatibility but no longer waits. Sample-rate and
+    loop metadata are not copied with array values; provide the desired
+    rate and playback mode to <code>k&gt;w</code> or <code>/d</code>.
+    Vectors are limited to one million elements.</p>
+    <h3 id="processing-wavetables-with-ksynth">Processing Wavetables
+    with Ksynth</h3>
+    <p>Variables are numbered in Skode and named in Ksynth:</p>
+    <pre class="text"><code>0 = A
+1 = B
+...
+25 = Z</code></pre>
+    <p>Bindings and evaluations run immediately in the current Skode
+    command context. <code>kw&gt;</code> copies the latest result into
+    the current Skode data array. Ksynth variables <code>A</code>
+    through <code>Z</code> belong to that context, so local input and
+    separate UDP clients keep independent variables.</p>
+    <p><strong>Transform parser data and load the result into a
+    wavetable:</strong></p>
+    <pre class="text"><code>(0 .5 1 .5 0) d&gt;k0
+[i A] ks
+k&gt;w300</code></pre>
+    <p>This binds the data array to <code>A</code>, reverses it with
+    Ksynth’s monadic <code>i</code>, and loads the result into wavetable
+    300 as a cycle at the main sample rate.</p>
+    <p><strong>Transform a wavetable directly:</strong></p>
+    <pre class="text"><code>w&gt;k10,0
+[w A] ks
+k&gt;w300</code></pre>
+    <p>This copies wave 10 into <code>A</code>, peak-normalizes it with
+    Ksynth’s monadic <code>w</code>, and stores the result in wave 300.
+    <code>w&gt;k</code> avoids changing the current Skode data array
+    during import.</p>
+    <p><strong>Concatenate two built-in wavetables into a periodic
+    waveform:</strong></p>
+    <pre class="text"><code>w&gt;k10,0
+w&gt;k11,1
+[A,B] ks
+k&gt;w300
+v0 w300,1</code></pre>
+    <p>Built-in waves 10 and 11 each contain 4096 samples. The comma
+    concatenates <code>A</code> and <code>B</code> into one 8192-sample
+    cycle. <code>k&gt;w300</code> stores it in the default cycle mode,
+    and <code>w300,1</code> selects it with interpolation enabled while
+    inheriting that mode. The oscillator wraps from the end of wave 11
+    back to the beginning of wave 10.</p>
+    <p><strong>Concatenate two wavetables into a one-shot
+    waveform:</strong></p>
+    <pre class="text"><code>w&gt;k10,0
+w&gt;k11,1
+[A,B] ks
+k&gt;w301,44100,1
+v0 w301,1</code></pre>
+    <p>This creates the same 8192-sample sequence but stores it in wave
+    301 as a one-shot. <code>w301,1</code> selects it with interpolation
+    enabled and inherits one-shot mode, so a trigger reads wave 10
+    followed by wave 11 and then stops at the end instead of wrapping.
+    Use another <code>k&gt;w</code> rate when the source material is not
+    44100 Hz.</p>
+    <p><code>kw</code> is kept for older scripts and does nothing.
+    <code>k&gt;d</code> and <code>kw&gt;</code> both copy the latest
+    completed result.</p>
+    <h2 id="example-sounds">Example Sounds</h2>
+    <p>These are starting points rather than exact emulations. The
+    synthesizer examples require the named feature gates, and the sample
+    examples require <code>KSYNTH</code>. Run each example separately,
+    or reset its voices with <code>S</code> before trying the next
+    one.</p>
+    <p>Standalone example banks are available under
+    <code>parts/examples/</code>:</p>
+    <ul>
+    <li><code>fm-dx-inspired.sk</code> contains four directly copyable
+    <code>FF2</code>/<code>FB</code> examples.</li>
+    <li><code>pd-cz-inspired.sk</code> installs <code>czbr</code>,
+    <code>czbs</code>, <code>czbl</code>, and <code>czpd</code>.</li>
+    <li><code>moog-inspired.sk</code> installs <code>mgbs</code>,
+    <code>mgld</code>, <code>mgpl</code>, and <code>mgpd</code>.</li>
+    <li><code>ksynth-drums-inspired.sk</code> renders waves
+    <code>470..472</code>, configures voices <code>0..2</code>, and
+    installs <code>kick</code>, <code>snar</code>, and
+    <code>chat</code>.</li>
+    </ul>
+    <p>Load a macro bank with <code>/ls</code>, then invoke the named
+    patch with a MIDI note:</p>
+    <pre class="text"><code>[examples/pd-cz-inspired.sk] /ls
+czbr 48
+~1 v0 l0</code></pre>
+    <h3 id="synthesizer-inspired-patches">Synthesizer-Inspired
+    Patches</h3>
+    <p><strong>Moog-style resonant bass.</strong> A saw wave, fast
+    filter envelope, and resonant low-pass produce the rounded attack
+    and dark sustain associated with classic Moog bass patches. Requires
+    <code>ADSR</code>, <code>FILT</code>, and <code>FADSR</code>.</p>
+    <pre class="text"><code>S0
+v0 w2 a0 t.005,.18,.7,.25 j1 k120 q5 kt.002,.25,.08,.3 kd2600 n36 l1
+~.75 v0 l0</code></pre>
+    <p><strong>Casio CZ-1-style phase-distortion brass.</strong> A
+    resonant phase-distortion shape gives a bright, slightly hollow
+    digital brass tone. Requires <code>ADSR</code> and
+    <code>PD</code>.</p>
+    <pre class="text"><code>S0
+v0 w0 a0 c6,-.15 ct.01,.3,.35,.45 cd.9 t.015,.35,.55,.45 n48 l1
+~1 v0 l0</code></pre>
+    <p>Try <code>c7,-.25 ct.005,.2,.2,.3 cd.8</code> for a thinner
+    resonant sweep, or <code>c1,-.6 ct.002,.15,.1,.2 cd1</code> for a
+    more obvious saw-to-pulse attack.</p>
+    <p><strong>Korg DW-8000-style brass pad.</strong> Wave
+    <code>22</code> is the built-in DWGS brass wavetable. A slow filter
+    envelope softens its digital harmonic spectrum. Requires
+    <code>ADSR</code>, <code>FILT</code>, and <code>FADSR</code>.</p>
+    <pre class="text"><code>S0
+v0 w22 a0 t.08,.5,.7,.8 j1 k500 q2 kt.12,.7,.3,.8 kd3200 n48 l1
+~1.5 v0 l0</code></pre>
+    <p>The 16 built-in DWGS waves occupy slots <code>15</code> through
+    <code>30</code>; wave <code>15</code> is strings, <code>18</code> is
+    electric piano, <code>20</code> is clavinet, and <code>29</code> is
+    bell.</p>
+    <p><strong>DX-inspired electric piano.</strong> Voice <code>0</code>
+    is a muted 2:1 sine modulator with light feedback. Voice
+    <code>1</code> is the audible carrier. <code>G0 H0</code> makes the
+    carrier’s note and velocity commands also reach the modulator.
+    Requires <code>ADSR</code> and <code>FM</code>.</p>
+    <pre class="text"><code>S0 S1
+v0 w0 m1 N12,0 a0 t.001,.28,0,.18 FF2 FB.2
+v1 w0 G0 H0 a0 t.002,1.2,.18,.6 FF2 F0,1.38 n52 l1
+~1.5 v1 l0</code></pre>
+    <p>Increase <code>F0,1.38</code> toward <code>F0,1.8</code> for a
+    harder tine, or increase <code>FB.2</code> toward <code>FB.4</code>
+    for a buzzier modulator. <code>m1</code> removes voice
+    <code>0</code> from the main mix while leaving it available as a
+    modulation source.</p>
+    <p><strong>DX-inspired struck bell.</strong> Three sine operators
+    form a current-sample chain: voice <code>0</code> modulates
+    <code>1</code>, which modulates audible carrier <code>2</code>. The
+    transpositions give approximate 3:1, 2:1, and 1:1 ratios. Requires
+    <code>ADSR</code> and <code>FM</code>.</p>
+    <pre class="text"><code>S0 S1 S2
+v0 w0 m1 N19,2 a0 t.001,.16,0,.25 FF2 FB.54
+v1 w0 m1 N12,0 a0 t.001,.7,0,.5 FF2 F0,.89
+v2 w0 G0,1 H0,1 a0 t.001,2.4,0,1.2 FF2 F1,1.05 n69 l1
+~2.5 v2 l0</code></pre>
+    <p>Keep modulators at lower voice numbers than the operators they
+    feed. The current renderer processes voices in ascending order, so
+    <code>0 -&gt; 1 -&gt; 2</code> uses current samples throughout the
+    chain.</p>
+    <p><strong>Feedback bass.</strong> A same-ratio feedback operator
+    gives the carrier a bright, growling attack that decays into a sine
+    fundamental. Requires <code>ADSR</code> and <code>FM</code>.</p>
+    <pre class="text"><code>S0 S1
+v0 w0 m1 N0,0 a0 t.001,.22,.08,.18 FF2 FB1.27
+v1 w0 G0 H0 a0 t.002,.35,.7,.3 FF2 F0,1.51 n36 l1
+~1 v1 l0</code></pre>
+    <p>Raise <code>FB1.27</code> toward <code>FB2</code> for a noisier
+    edge. Lowering <code>F0,1.51</code> changes the brightness without
+    changing the feedback operator’s own spectrum.</p>
+    <p><strong>Metallic percussion.</strong> A short, non-octave
+    modulator envelope and strong feedback produce an inharmonic digital
+    strike. Requires <code>ADSR</code> and <code>FM</code>.</p>
+    <pre class="text"><code>S0 S1
+v0 w0 m1 N7,0 a0 t.0005,.09,0,.08 FF2 FB2.01
+v1 w0 G0 H0 a0 t.0005,.55,0,.25 FF2 F0,2.9 n57 l1
+~.7 v1 l0</code></pre>
+    <p>Changing <code>N7,0</code> on voice <code>0</code> changes the
+    partial spacing; try <code>N12,0</code> for a more harmonic strike
+    or <code>N19,2</code> for an approximate 3:1 ratio.</p>
+    <h3 id="dx-inspired-fm-versus-a-dx7">DX-Inspired FM Versus a
+    DX7</h3>
+    <p><code>FF2</code> and <code>FB</code> provide the two most
+    important signal-path ingredients for DX-like patches: lookup-phase
+    modulation and operator self-feedback. They do not make this engine
+    a DX7 emulator:</p>
+    <ul>
+    <li>A DX7 voice has six operators selected from 32 fixed algorithms.
+    Skode uses general synth voices and explicit <code>F</code>
+    connections, with one modulation input per destination voice.</li>
+    <li>Skode’s operator level envelope is ADSR. A DX7 operator has four
+    rates and four levels, so imported envelopes cannot yet be
+    represented exactly.</li>
+    <li>Ratios are approximated with <code>N</code> transpose/cents.
+    There is no dedicated DX ratio/fixed-frequency mode, coarse/fine
+    mapping, or DX detune curve.</li>
+    <li>Keyboard level/rate scaling, per-operator velocity sensitivity,
+    pitch envelope, and the DX LFO/modulation-sensitivity model are not
+    implemented.</li>
+    <li>Voice evaluation is ascending by voice number rather than
+    compiled from an operator algorithm. A higher-numbered modulator
+    supplies its previous sample, while a lower-numbered modulator
+    supplies its current sample.</li>
+    <li>Poly groups can clone six-voice graphs, but their root note/gate
+    propagation currently reaches only four linked voices in addition to
+    the root.</li>
+    <li><code>FB 0..7</code> is a continuous phase-index scale using a
+    two-sample average. Its numbers are musically useful but are not a
+    bit-exact recreation of the DX7 feedback-level table, sine ROM,
+    arithmetic, quantization, or aliasing.</li>
+    </ul>
+    <p>These differences make the examples starting points for the same
+    families of sound rather than compatible reproductions of DX7
+    patches or SysEx data.</p>
+    <h3 id="drum-samples">Drum Samples</h3>
+    <p>The repository includes Ksynth definitions for synthesized drum
+    one-shots. When Skode is started from the <code>parts</code>
+    directory, these commands generate a kick, snare, and closed hi-hat
+    in dynamic wave slots <code>300</code> through <code>302</code>:</p>
+    <pre class="text"><code>[sk/drums-kick.ks] /ks k&gt;d d&gt;r /r300
+[sk/drums-snare.ks] /ks k&gt;d d&gt;r /r301
+[sk/drums-chh.ks] /ks k&gt;d d&gt;r /r302</code></pre>
+    <p>The standalone <code>examples/ksynth-drums-inspired.sk</code>
+    file performs this setup, assigns the waves to voices
+    <code>0..2</code>, and installs <code>kick</code>,
+    <code>snar</code>, and <code>chat</code> trigger macros.</p>
+    <p>Assign each sample to a voice and trigger it with <code>l1</code>
+    or <code>T</code>:</p>
+    <pre class="text"><code>v0 w300 f440 a10
+v1 w301 f440 a10
+v2 w302 f440 a10
+
+v0 T
+~.25 v2 T
+~.5 v1 T
+~.75 v2 T</code></pre>
+    <p>The same loading pattern works with files such as
+    <code>drums-clap.ks</code>, <code>drums-cowbell.ks</code>,
+    <code>drums-tomhi.ks</code>, and <code>drums-crash.ks</code>.</p>
+    <h3 id="sound-effects">Sound Effects</h3>
+    <p>These bundled one-shots provide useful raw material for alarms,
+    transitions, and game-like effects:</p>
+    <pre class="text"><code>[sk/nap-fm-alarm.ks] /ks k&gt;d d&gt;r /r310
+[sk/nap-noise-sweep.ks] /ks k&gt;d d&gt;r /r311
+[sk/nap-perc-zap.ks] /ks k&gt;d d&gt;r /r312
+
+v3 w310 f440 a10
+v4 w311 f440 a10
+v5 w312 f440 a10</code></pre>
+    <p>Trigger the alarm, a rising noise transition, or an electric
+    zap:</p>
+    <pre class="text"><code>v3 T
+~1 v4 T
+~2.25 v5 T</code></pre>
+    <p>Changing sample playback frequency changes both pitch and
+    duration:</p>
+    <pre class="text"><code>v5 f220 T
+~.5 v5 f880 T</code></pre>
+    <h2 id="short-examples">Short Examples</h2>
+    <p>Play a centered A4 on voice 0:</p>
+    <pre class="text"><code>v0 w0 n69 a0 p0 l1</code></pre>
+    <p>Create a filtered, enveloped note:</p>
+    <pre class="text"><code>v0 w1 t.01,.2,.6,.4 tm1 j0 k1200 q.3 n48 l1</code></pre>
+    <p>Store and reuse a melodic macro:</p>
+    <pre class="text"><code>[v0 n60l1 ~.2 n64l1 ~.2 n67l1] e&gt;0
+e!0</code></pre>
+    <p>Put that macro in a pattern:</p>
+    <pre class="text"><code>M120
+y0
+[e!0] xa
+[~.25 n72l1] xa
+z1</code></pre>
+    <p>Queue four notes a quarter-second apart and cancel them by tag if
+    needed:</p>
+    <pre class="text"><code>[v1 n60 l1] R4,.25,7
+R!7</code></pre>
+    <p>Use registers to change a compiled pattern without rebuilding
+    it:</p>
+    <pre class="text"><code>=0,60
+y1
+[v0 n$0 l1] xa
+z1
+=0,67</code></pre>
+    <h2 id="feature-gated-commands">Feature-Gated Commands</h2>
+    <p>Most commands below exist only when their build feature is
+    enabled. MIDI management atoms remain parseable in all builds but
+    report an unavailable backend unless <code>MIDI=1</code>:</p>
+    <table>
+    <colgroup>
+    <col style="width: 50%" />
+    <col style="width: 50%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Feature</th>
+    <th>Commands</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>ADSR</code></td>
+    <td><code>am</code>, <code>t</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>AM</code></td>
+    <td><code>A</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>CRUSH</code></td>
+    <td><code>bc</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>FILT</code></td>
+    <td><code>j</code>, <code>k</code>, <code>q</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>FILT</code> and <code>FADSR</code></td>
+    <td><code>kt</code>, <code>kd</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>FM</code></td>
+    <td><code>F</code>, <code>FF</code>, <code>FB</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>GLISS</code></td>
+    <td><code>g</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>KSYNTH</code></td>
+    <td><code>/ks</code>, <code>/k</code>, <code>ks</code>,
+    <code>k!</code>, <code>kw</code>, <code>kw&gt;</code>,
+    <code>k?</code>, <code>k&gt;d</code>, <code>k&gt;w</code>,
+    <code>d&gt;k</code>, <code>w&gt;k</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>MIDI</code></td>
+    <td><code>/mL</code>, <code>/m?</code>, <code>/mi</code>,
+    <code>/miV</code>, <code>/mic</code>, <code>/mo</code>,
+    <code>/moV</code>, <code>/moc</code>, <code>MO</code>,
+    <code>d&gt;MO</code>, <code>/mv</code>, <code>/mvd</code>,
+    <code>/mp</code>, <code>/mpd</code>, <code>/mR</code>,
+    <code>/mC</code>, <code>/mb</code>, <code>/mb?</code>,
+    <code>/mbd</code>, <code>/mbC</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>PANMOD</code></td>
+    <td><code>P</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>PD</code></td>
+    <td><code>c</code>, <code>C</code>, <code>ct</code>,
+    <code>cd</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>RECORD</code></td>
+    <td><code>r</code>, <code>/rg</code>, <code>/rs</code>,
+    <code>/r?</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>SCOPE</code></td>
+    <td><code>r</code>, <code>/sg</code>, <code>/ss</code>,
+    <code>/s?</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>SAH</code></td>
+    <td><code>h</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>SEQ</code></td>
+    <td>Timing, event, and pattern commands</td>
+    </tr>
+    <tr class="even">
+    <td><code>SMOOTHER</code></td>
+    <td><code>s</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>TRACKS</code></td>
+    <td><code>r</code>, <code>rt</code>, <code>rv</code>,
+    <code>?r</code>, <code>ds</code>, <code>DL</code>,
+    <code>DL?</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>UDP</code></td>
+    <td><code>udp</code> and API/host UDP startup</td>
+    </tr>
+    <tr class="odd">
+    <td><code>XM</code></td>
+    <td><code>XM</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <h2 id="demonstration-files-sk">Demonstration Files
+    (<code>sk/</code>)</h2>
+    <p>The <code>sk/</code> directory contains complete composition
+    files demonstrating synth patch loading, pattern sequencing,
+    cross-pattern synchronization, ratcheting, and dynamic clock
+    division:</p>
+    <ul>
+    <li><strong><code>sk/2023.sk</code></strong> (or
+    <code>2023.sk</code>): Master Ksynth drum loading demonstration
+    (<code>/ks</code>, <code>k&gt;w</code>) with dynamic pitch scaling
+    (<code>f110</code>, <code>f220</code>), delay send, and
+    multi-pattern playback.</li>
+    <li><strong><code>sk/2024.sk</code></strong> (or
+    <code>sk/demo_polymetric.sk</code>): Polymetric drum &amp; bass loop
+    with cross-pattern wait step (<code>-0</code>) sync, Ksynth drum
+    patches (<code>nin-kick.ks</code>, <code>nin-snare.ks</code>,
+    <code>nin-chh.ks</code>), and Ksynth acid bass
+    (<code>nap-bass-acid.ks</code>).</li>
+    <li><strong><code>sk/2025.sk</code></strong> (or
+    <code>sk/demo_ratchets.sk</code>): Trap &amp; IDM drum rolls
+    demonstrating step ratcheting (<code>z*3</code> triplet snare roll,
+    <code>z*4</code> 32nd-note ratchet, <code>z*8</code> 64th-note
+    roll), Ksynth drums, and Moog lead
+    (<code>gm-lead-moog.ks</code>).</li>
+    <li><strong><code>sk/2026.sk</code></strong> (or
+    <code>sk/demo_dynamic_speed.sk</code>): Dynamic speed changes
+    (<code>z%4</code>, <code>z%2</code>, <code>z%8</code>) and live
+    downbeat quantized queuing (<code>zq1</code>).</li>
+    <li><strong><code>sk/2027.sk</code></strong> (or
+    <code>sk/drum_909_techno.sk</code>): TR-909 Peak-Time Techno
+    4-on-the-floor kick, ghost snare, offbeat open hat, 32nd-note
+    ratchet fill (<code>z*4</code>), and 303 acid bassline
+    (<code>nap-bass-acid.ks</code>).</li>
+    <li><strong><code>sk/2028.sk</code></strong> (or
+    <code>sk/drum_808_electro.sk</code>): 808 Electro-Funk syncopated
+    beat, rimshot accents, triplet hat rolls (<code>z*3</code>), and
+    electro bass synth (<code>gm-bass-chase.ks</code>).</li>
+    <li><strong><code>sk/2029.sk</code></strong> (or
+    <code>sk/drum_amen_jungle.sk</code>): Jungle / Drum &amp; Bass Amen
+    break chop, ghost snares, triplet roll (<code>z*3</code>), 64th-note
+    hat roll (<code>z*8</code>), and deep sub bass
+    (<code>gm-bass-sub.ks</code>).</li>
+    <li><strong><code>sk/2030.sk</code></strong> (or
+    <code>sk/drum_linn_synthwave.sk</code>): 80s LinnDrum Synthwave /
+    Italo Disco driving beat, tom fills, 16th-note hats
+    (<code>%2</code>), and chugging octave bass
+    (<code>nap-bass-grind.ks</code>).</li>
+    </ul>
+  </article>
+</body>
+</html>

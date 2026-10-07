@@ -16,8 +16,20 @@
     <h1>Skred WASM Integration Example</h1>
     <p>This is a minimal example demonstrating how to embed the Skred WebAssembly engine into a web application. The code blocks below show the exact JavaScript running on this page.</p>
     
+    
     <div class="box">
-        <h3>1. Engine Lifecycle</h3>
+        <h3>1. Required Files</h3>
+        <p>To run Skred in the browser, you need to grab three files from the <code>wasm</code> build directory in the <a href="https://github.com/octetta/pulp" target="_blank">github.com/octetta/pulp</a> repository and host them together:</p>
+        <ul>
+            <li><code>skred_api.js</code> - The high-level API wrapper</li>
+            <li><code>skred_core.js</code> - The Emscripten JS glue code</li>
+            <li><code>skred_core.wasm</code> - The compiled DSP engine binary</li>
+        </ul>
+        <p style="margin-top: 15px;">For a complete list of audio commands you can send to the engine, see the <a href="skode_reference.html" target="_blank" style="color: #38bdf8; text-decoration: none;">Skode User Command Reference</a>.</p>
+    </div>
+    
+    <div class="box">
+        <h3>2. Engine Lifecycle</h3>
         <p>Load the script and initialize the audio engine with a buffer size and max voices.</p>
         <p class="code-caption">HTML &amp; JavaScript</p>
 <pre><code>&lt;script src="skred_api.js"&gt;&lt;/script&gt;
@@ -32,7 +44,7 @@ Module._skred_stop();</code></pre>
     </div>
     
     <div class="box">
-        <h3>2. Send Commands &amp; Read Output</h3>
+        <h3>3. Send Commands &amp; Read Output</h3>
         <p>Send a string to the engine using Emscripten's <code>ccall</code>, then poll for text output.</p>
         <p class="code-caption">JavaScript</p>
 <pre><code>// Enable command logging
@@ -85,10 +97,17 @@ const response = ptr ? Module.UTF8ToString(ptr) : "";</code></pre>
             cmdInput.focus();
         };
 
+        let cmdHistory = [];
+        let historyIndex = -1;
+        let currentDraft = '';
+
         // Send commands and read the response
         sendBtn.onclick = () => {
             const cmd = cmdInput.value.trim();
             if (!cmd) return;
+            
+            cmdHistory.push(cmd);
+            historyIndex = cmdHistory.length;
             
             printLog("> " + cmd);
             
@@ -105,9 +124,32 @@ const response = ptr ? Module.UTF8ToString(ptr) : "";</code></pre>
             cmdInput.value = '';
         };
 
-        // Optional: allow pressing Enter to send
+        // Allow pressing Enter to send, and Up/Down for history
         cmdInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') sendBtn.click();
+            if (e.key === 'Enter') {
+                sendBtn.click();
+            } else if (e.key === 'ArrowUp') {
+                if (cmdHistory.length > 0) {
+                    if (historyIndex === cmdHistory.length) {
+                        currentDraft = e.target.value;
+                    }
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        e.target.value = cmdHistory[historyIndex];
+                    }
+                    e.preventDefault();
+                }
+            } else if (e.key === 'ArrowDown') {
+                if (historyIndex < cmdHistory.length) {
+                    historyIndex++;
+                    if (historyIndex === cmdHistory.length) {
+                        e.target.value = currentDraft;
+                    } else {
+                        e.target.value = cmdHistory[historyIndex];
+                    }
+                    e.preventDefault();
+                }
+            }
         });
 
         // Stop the engine and release the audio device

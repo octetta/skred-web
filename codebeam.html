@@ -8,6 +8,7 @@
     <!-- Fira Code explicitly imported for clear O/0 and l/1 distinctions -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
@@ -19,14 +20,24 @@
         .sound-btn:hover { background: #0284c7; }
         #repl-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #111; padding: 15px; z-index: 1000; border-top: 1px solid #333; font-family: monospace; display: flex; flex-direction: column; }
         .repl-row { display: flex; align-items: center; justify-content: center; width: 100%; }
-        #console-history { display: none; height: 250px; overflow-y: auto; background: #000; border: 1px solid #333; margin-top: 15px; padding: 10px; color: #0f0; text-align: left; font-size: 16px; white-space: pre-wrap; font-family: 'Fira Code', monospace; }
+        #console-history { display: none; height: 250px; min-height: 50px; max-height: 80vh; overflow: auto; background: #000; border: 1px solid #333; margin-top: 15px; padding: 10px; color: #0f0; text-align: left; font-size: 16px; white-space: pre-wrap; font-family: 'Fira Code', monospace; }
         #repl-input { width: 40%; font-size: 20px; padding: 8px; font-family: monospace; background: #222; color: #0f0; border: 1px solid #555; }
         #repl-send { font-size: 20px; padding: 8px 16px; margin-left: 10px; cursor: pointer; background: #444; color: white; border: 1px solid #666; }
         #repl-log { margin-left: 20px; color: #aaa; width: 300px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .highlight-text { color: #38bdf8; font-weight: bold; }
         .skred-cmd, code, pre, #repl-input, #repl-log { font-family: 'Fira Code', monospace !important; }
         .skred-cmd { background-color: #222; padding: 2px 8px; border-radius: 4px; color: #4ade80; }
-        .reveal { height: calc(100vh - 75px) !important; }
+        .reveal { height: calc(100vh - 75px); overflow-y: auto; }
+        .reveal .slides { min-height: 100%; overflow-y: visible !important; }
+    
+        
+        @keyframes phosphor-throb {
+            0%, 100% { filter: blur(0.8px) brightness(1.2); }
+            50% { filter: blur(1.5px) brightness(0.9); }
+        }
+        .skred-brand-title { font-family: 'Press Start 2P', monospace; color: #4ade80; text-shadow: 0 0 5px rgba(74,222,128,0.8), 0 0 15px rgba(74,222,128,0.5); animation: phosphor-throb 3s infinite ease-in-out; }
+        .skred-brand-header { font-family: 'Press Start 2P', monospace; font-size: 0.7em; display: inline-block; transform: translateY(0.15em); color: #4ade80; text-shadow: 0 0 4px rgba(74,222,128,0.8), 0 0 10px rgba(74,222,128,0.5); animation: phosphor-throb 3s infinite ease-in-out; }
+        .skred-brand-text { font-family: 'Press Start 2P', monospace; font-size: 0.8em; display: inline-block; transform: translateY(0.15em); color: #4ade80; text-shadow: 0 0 4px rgba(74,222,128,0.8), 0 0 10px rgba(74,222,128,0.5); animation: phosphor-throb 3s infinite ease-in-out; }
     </style>
 </head>
 <body>
@@ -34,59 +45,76 @@
         <div class="slides">
             
             <section>
-                <h1><span style="font-family: 'Fira Code', monospace;">Skred</span></h1>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-00.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>1')" alt="Osko the Octopus">
+                
+
+                <h1><span class="skred-brand-title">skred</span></h1>
                 <h3>Adding audio to your BEAM apps doesn't have to be hard.</h3>
-                <button class="sound-btn" onclick="startAudio()">1. Initialize Audio Engine</button>
-                <p style="font-size: 20px; color: #888;">(Click before presentation)</p>
+                <button id="init-btn" class="sound-btn" onclick="startAudio()">1. Initialize Audio Engine</button>
+                <p id="init-hint" style="font-size: 20px; color: #888;">(Click before presentation)</p>
             </section>
             
+            
             <section>
-                <h2>1. The Hook</h2>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-01.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>2')" alt="Osko the Octopus">
+                <h2>Who Am I?</h2>
+                <ul style="text-align: left; margin-top: 40px;">
+                    <li class="fragment">Joe Stewart (aka <span class="highlight-text">octetta</span>)</li>
+                    <li class="fragment">Principal Firmware Engineer.</li>
+                    <li class="fragment">Audio Programmer & BEAM Enthusiast.</li>
+                    <li class="fragment">Creator of <span class="skred-brand-text">skred</span>.</li>
+                </ul>
+            </section>
+
+<section>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-06.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>3')" alt="Osko the Octopus">
+                
+
+                <h2>1. What</h2>
                 <p>Everything you've heard is generated in real-time.</p>
-                <p>The engine uses <span class="highlight-text">< 1MB of RAM</span>.</p>
+                <p>The engine is <span class="highlight-text">small and self-contained</span>.</p>
                 <p>It is driven entirely by <span class="highlight-text">tiny strings of text</span>.</p>
                 
                 <button class="sound-btn" onclick="doSkred('v0 w0 f440 a0 t .01 1 0 0 l1'); doSkred('+0.5 v0 f660 l1'); doSkred('+1.0 v0 f880 l1')">Play Sequence</button>
             </section>
             
             <section>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-03.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>4')" alt="Osko the Octopus">
+                
+
                 <h2>2. The Problem</h2>
-                <p>Audio programming is usually terrifying.</p>
+                <p>Audio programming is usually challenging.</p>
                 <ul>
                     <li class="fragment">Frontend: Complex WebAudio JS graphs.</li>
                     <li class="fragment">Backend: Thread-blocking, GC pauses, DSP math.</li>
                 </ul>
                 <br><br>
-                <p style="font-style: italic;">"If your Phoenix server pauses for garbage collection, the audio glitches."</p>
+                <p style="font-style: italic;">"Audio rendering is completely decoupled from the BEAM."</p>
             </section>
 
             <section>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-05.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>5')" alt="Osko the Octopus">
+                
+
                 <h2>3. The BEAM-like Solution</h2>
-                <p><span style="font-family: 'Fira Code', monospace;">Skred</span> is designed exactly like an Erlang/Elixir Actor.</p>
+                <p><span class="skred-brand-text">skred</span>'s design is inspired by the BEAM actor model.</p>
                 <ul>
                     <li class="fragment"><span class="highlight-text">Message Passing:</span> Send immutable strings (<span class="skred-cmd">v0 f440 a0 l1</span>).</li>
                     <li class="fragment"><span class="highlight-text">Isolated State:</span> The audio thread is lock-free and never parses text or allocates memory.</li>
-                    <li class="fragment"><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, <span style="font-family: 'Fira Code', monospace;">Skred</span> keeps playing.</li>
+                    <li class="fragment"><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, <span class="skred-brand-text">skred</span> keeps playing. 😂</li>
                 </ul>
             </section>
 
             <section>
-                <h2>4. A 30-Second Guide to <span style="font-family: 'Fira Code', monospace;">Skred</span></h2>
-                <p style="color: #ccc; font-size: 0.9em;"><span style="font-family: 'Fira Code', monospace;">Skred</span> isn't random line noise; it follows intentional design idioms:</p>
-                <ul style="font-size: 0.9em;">
-                    <li class="fragment"><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code class="skred-cmd">v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
-                    <li class="fragment"><span class="highlight-text">Case implies context:</span> <code>f</code> (direct freq) vs <code>F</code> (freq modulation)</li>
-                    <li class="fragment"><span class="highlight-text">Punctuation implies intent:</span> <code>?</code> (inspect), <code>/</code> (subsystem control), <code>></code> (routing)</li>
-                </ul>
-            </section>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-09.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>6')" alt="Osko the Octopus">
+                
 
-            <section>
-                <h2>5. Zero to Sound</h2>
+                <h2>4. Zero to Sound</h2>
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 10%;">
-                    <p style="text-align: left; margin: 0;">WebAudio requires 50 lines of JS.<br>In <span style="font-family: 'Fira Code', monospace;">Skred</span>, a sound effect is one string.</p>
-                    <div style="text-align: center; background: #111; padding: 10px; border-radius: 12px; border: 1px solid #333;">
-                        <a href="https://octetta.github.io/skred-web/help.html" target="_blank"><img src="qr-help.svg" alt="Scan for easy integration example" style="width: 120px; margin: 0; display: block;"></a>
-                        <span style="font-size: 16px; color: #aaa; font-family: 'Fira Code', monospace;">Try It Now</span>
+                    <p style="text-align: left; margin: 0;">WebAudio requires a mess of JS.<br>In <span class="skred-brand-text">skred</span>, a sound effect is one string.</p>
+                    <div style="text-align: center; background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333;">
+                        <a href="https://octetta.github.io/skred-web/help.html" target="_blank"><img src="qr-help.svg?v=2" alt="Scan for easy integration example" style="width: 200px; background: white; padding: 10px; border-radius: 8px; margin: 0 auto; display: block;"></a>
+                        <span style="font-size: 18px; color: #aaa; font-family: 'Fira Code', monospace; display: block; margin-top: 10px;">Try It Now</span>
                     </div>
                 </div>
                 <br>
@@ -96,30 +124,86 @@
                     <button class="sound-btn" style="font-size: 20px; background: #a855f7;" onclick="playDemo(['v0 w2 f800 a-6 t .01 .1 0 0 fb 1200 fbp .1 l1'])">Game: Coin Pickup</button>
                 </div>
                 <br>
-                <pre style="width: 80%; margin: auto; background: #111; border: 1px solid #333; border-radius: 8px;"><code id="live-code-display" class="skred-cmd" style="font-size: 1em; padding: 20px; display: block; white-space: pre-wrap; color: #4ade80;">Click a button above to see the <span style="font-family: 'Fira Code', monospace;">Skred</span> string...</code></pre>
+                <pre style="width: 80%; margin: auto; background: #111; border: 1px solid #333; border-radius: 8px;"><code id="live-code-display" class="skred-cmd" style="font-size: 1em; padding: 20px; display: block; white-space: pre-wrap; color: #4ade80;">Click a button above to see the <span class="skred-brand-text">skred</span> string...</code></pre>
             </section>
 
             <section>
-                <h2>6. The Inspiration</h2>
-                <p>What will you build?</p>
-                <ul>
-                    <li class="fragment"><span class="highlight-text">Data Sonification:</span> High server traffic increases the tempo. Errors trigger heavy FM synths in the dashboard.</li>
-                    <li class="fragment"><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny <span style="font-family: 'Fira Code', monospace;">Skred</span> strings to trigger WASM sound effects for all players.</li>
-                    <li class="fragment"><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates <span style="font-family: 'Fira Code', monospace;">Skred</span> safely.</li>
+                <div style="float: right; margin-left: 30px; margin-bottom: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-04.png" style="cursor: pointer; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>7')" alt="Osko the Octopus">
+                    <div>
+                        <a href="https://github.com/octetta/pulp/blob/main/parts/SKODE_USER_COMMAND_REFERENCE.md" target="_blank">
+                            <img src="qr-cheatsheet.svg?v=2" alt="Skode Cheatsheet QR" style="width: 120px; background: white; padding: 8px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: block; margin: 0 auto;">
+                        </a>
+                        <span style="font-size: 14px; color: #ccc; font-family: 'Fira Code', monospace; display: block; margin-top: 5px;">Reference</span>
+                    </div>
+                </div>
+                
+
+                <h2>5. 30-seconds to <span class="skred-brand-header">skred</span></h2>
+                <p style="color: #ccc; font-size: 0.9em;"><span class="skred-brand-text">skred</span> isn't random line noise; it follows intentional design idioms:</p>
+                <ul style="font-size: 0.9em;">
+                    <li class="fragment"><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code class="skred-cmd">v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
+                    <li class="fragment"><span class="highlight-text">Case implies context:</span> <code>f</code> (direct freq) vs <code>F</code> (freq modulation)</li>
+                    <li class="fragment"><span class="highlight-text">Punctuation implies intent:</span> <code>?</code> (inspect), <code>/</code> (subsystem control), <code>></code> (routing)</li>
                 </ul>
             </section>
 
             <section>
-                <h2>7. Build With <span style="font-family: 'Fira Code', monospace;">Skred</span></h2>
-                <p style="font-style: italic; color: #ccc; margin-top: 10px; margin-bottom: 30px;">"Help me make the world more noisy."</p>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-08.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>8')" alt="Osko the Octopus">
+                
+
+                <h2>6. Challenge</h2>
+                <p>What will you build?</p>
+                <ul>
+                    <li class="fragment"><span class="highlight-text">Data Sonification:</span> High server traffic increases the tempo. Errors trigger heavy FM synths in the dashboard.</li>
+                    <li class="fragment"><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny <span class="skred-brand-text">skred</span> strings to trigger WASM sound effects for all players.</li>
+                    <li class="fragment"><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates <span class="skred-brand-text">skred</span> safely.</li>
+                </ul>
+            </section>
+
+            
+            <section>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-02.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>9')" alt="Osko the Octopus">
+                
+                <h2>7. Help</h2>
+                <p style="font-size: 0.9em; margin-bottom: 10px;">Share your sounds and music!</p>
+                <p style="font-size: 0.9em; margin-bottom: 10px;">I need contributors to bring <span class="skred-brand-text">skred</span> to the backend:</p>
+                <ul style="font-size: 0.85em;">
+                    <li class="fragment" style="margin-bottom: 10px;">A core <span class="highlight-text">GenServer</span> to natively start, stop, and message the engine.</li>
+                    <li class="fragment" style="margin-bottom: 10px;">Idiomatic wrappers for <span class="highlight-text">Erlang, Elixir, Gleam, & LFE</span>.</li>
+                    <li class="fragment">Package and publish to <span class="highlight-text">hex.pm</span>.</li>
+                </ul>
+            </section>
+
+<section>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-10.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>10')" alt="Osko the Octopus">
+                
+
+                <h2>8. Build With <span class="skred-brand-header">skred</span></h2>
+                <p style="font-style: italic; color: #ccc; margin-top: 5px; margin-bottom: 10px;">"Let's make the world more noisy."</p>
                 <div style="text-align: center;">
-                    <a href="https://github.com/octetta/skred-web" target="_blank"><img src="qr-repo.svg" alt="GitHub Repository QR Code" style="width: 250px; border-radius: 12px; border: 2px solid #333; margin: 0 auto; display: block;"></a>
-                    <br>
-                    <a href="https://github.com/octetta/skred-web" target="_blank" style="font-size: 32px; color: #0ea5e9; text-decoration: none; font-family: 'Fira Code', monospace;">github.com/octetta/skred-web</a>
-                    <br><br>
-                    <button id="outro-btn" class="sound-btn" style="background: #a855f7; font-size: 20px;" onclick="toggleOutro()">Play Outro Beat</button>
+                    <a href="https://github.com/octetta/skred-web" target="_blank"><img src="qr-repo.svg?v=2" alt="GitHub Repository QR Code" style="width: 200px; background: white; padding: 10px; border-radius: 12px; margin: 0 auto; display: block;"></a>
+                    <div style="margin: 10px 0;">
+                        <a href="https://github.com/octetta/skred-web" target="_blank" style="font-size: 28px; color: #0ea5e9; text-decoration: none; font-family: 'Fira Code', monospace;">github.com/octetta/skred-web</a>
+                    </div>
+                    <button id="outro-btn" class="sound-btn" style="background: #a855f7; font-size: 20px; margin-top: 0;" onclick="toggleOutro()">Play Outro Beat</button>
                 </div>
             </section>
+
+            <section>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-19-heart.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>11')" alt="Osko the Octopus">
+                <h2>Credits & Links</h2>
+                <ul style="font-size: 0.85em; text-align: left;">
+                                        <li style="margin-bottom: 10px;"><strong>Intro Music:</strong> Gadgetto (<a href="https://gadgetto.bandcamp.com/track/bicycling-holding-dolly-oh-o-ho" target="_blank" style="color: #38bdf8;">Bicycling Holding Dolly Oh-O-Ho</a>)</li>
+                    <li style="margin-bottom: 10px;"><strong>Engine Repo:</strong> <a href="https://github.com/octetta/pulp" target="_blank" style="color: #38bdf8;">github.com/octetta/pulp</a></li>
+                    <li style="margin-bottom: 10px;"><strong>Command Reference:</strong> <a href="skode_reference.html" target="_blank" style="color: #38bdf8;">skode_reference.html</a></li>
+                    <li style="margin-bottom: 10px;"><strong>Web Demo:</strong> <a href="https://octetta.github.io/skred-web/" target="_blank" style="color: #38bdf8;">octetta.github.io/skred-web</a></li>
+                    <li style="margin-bottom: 20px;"><strong>Acknowledgements:</strong> Huge thanks to the BEAM community, Code BEAM organizers, and early testers!</li>
+                </ul>
+                <div style="font-style: italic; color: #888; font-size: 0.8em;">(And thanks to Osko for being a great mascot)</div>
+            </section>
+
+
 
         </div>
     </div>
@@ -127,11 +211,16 @@
     <div id="repl-bar">
         <div class="repl-row">
             <div id="engine-status-light" style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 8px #ef4444; margin-right: 15px;" title="Engine Status"></div>
-            <strong style="color: white; margin-right: 15px;"><span style="font-family: 'Fira Code', monospace;">Skred</span> REPL:</strong>
+            <strong style="color: white; margin-right: 15px;"><span class="skred-brand-text">skred</span> REPL:</strong>
             <input type="text" id="repl-input" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="e.g. v0 w0 f220 a0 l1" disabled>
             <button id="repl-send" disabled>Send</button>
             <div id="repl-log">Waiting for engine...</div>
             <button onclick="toggleConsole()" style="margin-left: 20px; background: #333; color: #aaa; border: 1px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 4px;">&#x25B2; Log</button>
+        </div>
+        
+        <div id="log-resize-handle" style="position: relative; display: none; height: 24px; cursor: ns-resize; width: 100%; text-align: center; color: #fff; background: #444; margin-top: 15px; border-radius: 4px; font-size: 14px; line-height: 24px; font-weight: bold; box-shadow: 0 0 5px rgba(0,0,0,0.5); user-select: none;">
+            <span>&#x25BC; DRAG TO RESIZE LOG &#x25B2;</span>
+            <button onclick="document.getElementById('console-history').innerHTML = ''; document.getElementById('repl-log').textContent = 'Log cleared'; event.stopPropagation();" onmousedown="event.stopPropagation();" style="position: absolute; right: 5px; top: 2px; height: 20px; line-height: 18px; font-size: 11px; cursor: pointer; background: #ef4444; color: white; border: 1px solid #7f1d1d; border-radius: 3px; font-family: 'Fira Code', monospace;">Clear</button>
         </div>
         <div id="console-history"></div>
     </div>
@@ -151,27 +240,8 @@
 
         let engineStarted = false;
         let outroPlaying = false;
-        let outroSetup = false;
-
         function toggleOutro() {
             if (!engineStarted) return;
-            if (!outroSetup) {
-                // Initialize voices
-                doSkred('v1 w82 a20');
-                doSkred('v2 w83 a15');
-                doSkred('v3 w84 a5');
-                
-                // Set up pattern 0: Kick on 0, Snare on 1, modulo 4
-                doSkred('y0 [v1l1]x0');
-                doSkred('y0 [v2l1]x1');
-                doSkred('y0 %4');
-                
-                // Set up pattern 1: Hat on 0, modulo 1
-                doSkred('y1 [v3l1]x0 %1');
-                
-                outroSetup = true;
-            }
-            
             if (outroPlaying) {
                 doSkred('y0z0 y1z0');
                 document.getElementById('outro-btn').textContent = 'Play Outro Beat';
@@ -192,6 +262,8 @@
                 document.getElementById('repl-log').textContent = "Engine Started!";
                 document.getElementById('repl-input').disabled = false;
                 document.getElementById('repl-send').disabled = false;
+                document.getElementById('init-btn').style.display = 'none';
+                document.getElementById('init-hint').style.display = 'none';
                 
                 // Update status light
                 const light = document.getElementById('engine-status-light');
@@ -201,6 +273,30 @@
                 // Ta-da fanfare
                 doSkred('v255 w2 f392.00 a-10 t .01 .1 0 0 l1');
                 doSkred('+0.15 v255 f523.25 t .01 .6 0 0 l1');
+                
+                // ==========================================
+                // PUT YOUR DEFINITIONS HERE
+                // Tweak the slide transition voices to suit your emotions:
+                doSkred('+0.8 v252 m1 a0 f4 l1');
+                doSkred('+1.0 v254 w6 a-5 t 0 1 0 0 j1k1000q10 A252,1');
+                doSkred('+1.2 v255 w4 f1000 a5 t .05 .4 0 0 G254 H254');
+                doSkred('+1.4 v253 w1 f80 a-10 t .01 .1 0 0 fb 40 fbp .05');
+
+                // Setup Outro Beat
+                doSkred('v1 w82 a20');
+                doSkred('v2 w83 a15');
+                doSkred('v3 w84 a5');
+                doSkred('y0 [v1l1]x0');
+                doSkred('y0 [v2l1]x1');
+                doSkred('y0 %4');
+                doSkred('y1 [v3l1]x0 %1');
+
+                // Define your macros for the Osko clicks!
+                // e.g.: doSkred('+1.6 e1> v0 w1 f440 a0 t .01 .1 0 0 l1');
+                //       doSkred('+1.8 e2> v0 w2 f880 a0 t .01 .1 0 0 l1');
+                //       ...
+                // ==========================================
+
             }
         }
 
@@ -227,43 +323,111 @@
             hist.scrollTop = hist.scrollHeight;
         }
         
+        function updateRevealHeight() {
+            const replHeight = document.getElementById('repl-bar').offsetHeight;
+            document.querySelector('.reveal').style.height = `calc(100vh - ${replHeight}px)`;
+            if (typeof Reveal !== 'undefined' && Reveal.layout) {
+                Reveal.layout();
+            }
+        }
+
         function toggleConsole() {
             const hist = document.getElementById('console-history');
+            const handle = document.getElementById('log-resize-handle');
             const btn = document.querySelector('button[onclick="toggleConsole()"]');
             if (hist.style.display === 'none' || hist.style.display === '') {
                 hist.style.display = 'block';
+                handle.style.display = 'block';
                 btn.innerHTML = '&#x25BC; Log';
             } else {
                 hist.style.display = 'none';
+                handle.style.display = 'none';
                 btn.innerHTML = '&#x25B2; Log';
             }
+            // Give the browser a tick to apply display block before measuring
+            setTimeout(updateRevealHeight, 10);
         }
+
+        let cmdHistory = [];
+        let historyIndex = -1;
+        let currentDraft = '';
 
         document.getElementById('repl-send').onclick = () => {
             const input = document.getElementById('repl-input');
             const cmd = input.value.trim();
             if (cmd) {
+                cmdHistory.push(cmd);
+                historyIndex = cmdHistory.length;
                 doSkred(cmd);
                 input.value = '';
             }
         };
 
         document.getElementById('repl-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') document.getElementById('repl-send').click();
+            if (e.key === 'Enter') {
+                document.getElementById('repl-send').click();
+            } else if (e.key === 'ArrowUp') {
+                if (cmdHistory.length > 0) {
+                    if (historyIndex === cmdHistory.length) {
+                        currentDraft = e.target.value;
+                    }
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        e.target.value = cmdHistory[historyIndex];
+                    }
+                    e.preventDefault();
+                }
+            } else if (e.key === 'ArrowDown') {
+                if (historyIndex < cmdHistory.length) {
+                    historyIndex++;
+                    if (historyIndex === cmdHistory.length) {
+                        e.target.value = currentDraft;
+                    } else {
+                        e.target.value = cmdHistory[historyIndex];
+                    }
+                    e.preventDefault();
+                }
+            }
         });
 
         // Presentation Audio Hooks using reserved voice v255
         Reveal.on('slidechanged', event => {
             if (!engineStarted) return;
-            // TODO: Swoosh sound
-            doSkred('v255 w4 f1000 a-15 t .05 .4 0 0 l1'); 
+            doSkred('v255 l1'); 
         });
 
         Reveal.on('fragmentshown', event => {
             if (!engineStarted) return;
             // TODO: Thump sound
-            doSkred('v255 w1 f80 a-10 t .01 .1 0 0 fb 40 fbp .05 l1'); 
+            doSkred('v253 l1'); 
+        });
+
+        // Drag logic for the log
+        let isDraggingLog = false;
+        let startY = 0;
+        let startHeight = 0;
+        
+        document.getElementById('log-resize-handle').addEventListener('mousedown', (e) => {
+            isDraggingLog = true;
+            startY = e.clientY;
+            startHeight = parseInt(window.getComputedStyle(document.getElementById('console-history')).height, 10);
+            e.preventDefault();
+        });
+        
+        window.addEventListener('mousemove', (e) => {
+            if (!isDraggingLog) return;
+            const dy = startY - e.clientY;
+            let newHeight = startHeight + dy;
+            if (newHeight < 50) newHeight = 50;
+            if (newHeight > window.innerHeight * 0.8) newHeight = window.innerHeight * 0.8;
+            document.getElementById('console-history').style.height = newHeight + 'px';
+            updateRevealHeight();
+        });
+        
+        window.addEventListener('mouseup', () => {
+            isDraggingLog = false;
         });
     </script>
 </body>
+
 </html>
