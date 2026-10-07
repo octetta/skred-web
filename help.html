@@ -44,7 +44,7 @@ Module.ccall('skred_command', null, ['string'], ["v0 f440 a0 l1"]);
 // Read the text response
 const ptr = Module._skred_log();
 const response = ptr ? Module.UTF8ToString(ptr) : "";</code></pre>
-        <input type="text" id="cmdInput" placeholder="Enter Skode command (e.g. ?? or v0 f440 a0 l1)" disabled>
+        <input type="text" id="cmdInput" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Enter Skode command (e.g. ?? or v0 f440 a0 l1)" disabled>
         <button id="sendBtn" disabled>Send</button>
         
         <div id="output"></div>
