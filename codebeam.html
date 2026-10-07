@@ -80,7 +80,13 @@
 
             <section>
                 <h2>5. Zero to Sound</h2>
-                <p>WebAudio requires 50 lines of JS. In Skred, a sound effect is one string.</p>
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 10%;">
+                    <p style="text-align: left; margin: 0;">WebAudio requires 50 lines of JS.<br>In Skred, a sound effect is one string.</p>
+                    <div style="text-align: center; background: #111; padding: 10px; border-radius: 12px; border: 1px solid #333;">
+                        <img src="qr-help.svg" alt="Scan for easy integration example" style="width: 120px; margin: 0; display: block;">
+                        <span style="font-size: 16px; color: #aaa; font-family: 'Fira Code', monospace;">Try It Now</span>
+                    </div>
+                </div>
                 <br>
                 <div style="display: flex; justify-content: center; gap: 10px;">
                     <button class="sound-btn" style="font-size: 20px; background: #22c55e;" onclick="playDemo(['v0 w0 f523.25 a-6 t .01 .1 0 0 l1', '+0.1 v0 f659.25 l1', '+0.2 v0 f783.99 t .01 .5 0 0 l1'])">App: Success Chime</button>
