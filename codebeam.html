@@ -174,6 +174,19 @@
         document.getElementById('repl-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') document.getElementById('repl-send').click();
         });
+
+        // Presentation Audio Hooks using reserved voice v255
+        Reveal.on('slidechanged', event => {
+            if (!engineStarted) return;
+            // TODO: Swoosh sound
+            doSkred('v255 w4 f1000 a-15 t .05 .4 0 0 l1'); 
+        });
+
+        Reveal.on('fragmentshown', event => {
+            if (!engineStarted) return;
+            // TODO: Thump sound
+            doSkred('v255 w1 f80 a-10 t .01 .1 0 0 fb 40 fbp .05 l1'); 
+        });
     </script>
 </body>
 </html>
