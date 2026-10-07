@@ -71,9 +71,11 @@
                 
 
                 <h2>1. What</h2>
-                <p>Everything you've heard is generated in real-time.</p>
-                <p>The engine is <span class="highlight-text">small and self-contained</span>.</p>
-                <p>It is driven entirely by <span class="highlight-text">tiny strings of text</span>.</p>
+                <p class="fragment">Everything you've heard is generated in real-time.</p>
+                <p class="fragment">The engine is <span class="highlight-text">small and self-contained</span>.</p>
+                <p class="fragment">It is driven entirely by <span class="highlight-text">tiny strings of text</span>.</p>
+                <p class="fragment"><span class="skred-brand-text">skred</span> generates waveforms in interesting ways.</p>
+                <p class="fragment">It can easily sequence patterns of those waves.</p>
                 
                 <button class="sound-btn" onclick="doSkred('v0 w0 f440 a0 t .01 1 0 0 l1'); doSkred('+0.5 v0 f660 l1'); doSkred('+1.0 v0 f880 l1')">Play Sequence</button>
             </section>
@@ -131,7 +133,7 @@
                 <div style="float: right; margin-left: 30px; margin-bottom: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 15px;">
                     <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-04.png" style="cursor: pointer; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>7')" alt="Osko the Octopus">
                     <div>
-                        <a href="https://github.com/octetta/pulp/blob/main/parts/SKODE_USER_COMMAND_REFERENCE.md" target="_blank">
+                        <a href="skode_reference.html" target="_blank">
                             <img src="qr-cheatsheet.svg?v=2" alt="Skode Cheatsheet QR" style="width: 120px; background: white; padding: 8px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: block; margin: 0 auto;">
                         </a>
                         <span style="font-size: 14px; color: #ccc; font-family: 'Fira Code', monospace; display: block; margin-top: 5px;">Reference</span>
@@ -205,6 +207,17 @@
 
 
 
+
+            <section>
+                <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-13.png" style="cursor: pointer; float: right; width: 150px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-left: 30px; margin-bottom: 20px;" onclick="doSkred('e>12')" alt="Osko the Octopus">
+                <h2>...one more thing...</h2>
+                <p>Connecting today with the past.</p>
+                <br>
+                <button id="retro-btn" class="sound-btn" style="background: #eab308; color: #000;" onclick="loadAmigaZip()">Load .MOD File</button>
+                <div style="margin-top: 15px;">
+                    <button id="play-retro-btn" class="sound-btn" style="background: #22c55e; color: #fff; display: none;" onclick="toggleRetroPlay()">PLAY</button>
+                </div>
+            </section>
         </div>
     </div>
 
@@ -346,6 +359,43 @@
             }
             // Give the browser a tick to apply display block before measuring
             setTimeout(updateRevealHeight, 10);
+        }
+
+
+
+        let isRetroPlaying = false;
+        function toggleRetroPlay() {
+            const btn = document.getElementById('play-retro-btn');
+            if (isRetroPlaying) {
+                doSkred('stop');
+                btn.textContent = 'PLAY';
+                btn.style.background = '#22c55e';
+                isRetroPlaying = false;
+            } else {
+                doSkred('play');
+                btn.textContent = 'STOP';
+                btn.style.background = '#ef4444';
+                isRetroPlaying = true;
+            }
+        }
+
+        async function loadAmigaZip() {
+            if (!engineStarted) return;
+            const btn = document.getElementById('retro-btn');
+            btn.textContent = "Loading...";
+            try {
+                const res = await fetch('amiga.zip');
+                const buf = await res.arrayBuffer();
+                const data = new Uint8Array(buf);
+                Module.FS.writeFile('/amiga.zip', data);
+                doSkred('[amiga.zip] %z');
+                btn.textContent = "Amiga Loaded!";
+                btn.disabled = true;
+                document.getElementById('play-retro-btn').style.display = 'inline-block';
+            } catch (e) {
+                console.error(e);
+                btn.textContent = "Failed to load amiga.zip";
+            }
         }
 
         let cmdHistory = [];
