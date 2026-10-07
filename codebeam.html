@@ -156,7 +156,9 @@
                 doSkred('v3 w84 a5');
                 
                 // Set up pattern 0: Kick on 0, Snare on 1, modulo 4
-                doSkred('y0 [v1l1]x0 [v2l1]x1 %4');
+                doSkred('y0 [v1l1]x0');
+                doSkred('y0 [v2l1]x1');
+                doSkred('y0 %4');
                 
                 // Set up pattern 1: Hat on 0, modulo 1
                 doSkred('y1 [v3l1]x0 %1');
