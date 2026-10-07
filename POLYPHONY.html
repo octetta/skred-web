@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Skode Polyphony Guide</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
+  <style>
+    body { background-color: #0d1117; margin: 0; padding: 40px; }
+    .markdown-body {
+      box-sizing: border-box;
+      min-width: 200px;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 45px;
+      background-color: #0d1117;
+    }
+    @media (max-width: 767px) {
+      .markdown-body {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="markdown-body">
+    <h1 id="skode-voice-groups-pools-and-dependency-graphs">Skode Voice
+    Groups, Pools, and Dependency Graphs</h1>
+    <p>Skode’s ordinary <code>v</code>, <code>n</code>, <code>l</code>,
+    modulation, routing, and copy commands remain the lowest-level voice
+    interface. Voice groups and pools are an optional layer above that
+    interface. They make a multi-voice sound playable as a polyphonic or
+    monophonic instrument without hiding its physical voices.</p>
+    <h2 id="mental-model">Mental Model</h2>
+    <p>A <strong>group</strong> describes a contiguous prototype block
+    of physical voices. It has one root voice. Pitch and gate commands
+    enter through the root, then the prototype’s existing <code>G</code>
+    and <code>H</code> links decide which other members receive those
+    changes.</p>
+    <p>A <strong>pool</strong> reserves one or more equally sized blocks
+    as playable instances of a group. Pool configuration copies the
+    prototype synthesis settings into every instance and remaps
+    dependencies that point to another prototype member. References
+    outside the prototype remain absolute, which permits shared LFOs or
+    other global modulation voices.</p>
+    <p>Groups and pools do not prevent direct <code>vN</code> editing.
+    Pool ownership is advisory: direct edits take effect immediately,
+    and a later pool refresh or allocation may replace the synthesis
+    state of a free instance.</p>
+    <p>Serialize <code>/pg</code>, <code>/pp</code>, <code>/pm</code>,
+    and refresh calls with the host’s other Skode configuration work.
+    They mutate shared voice layouts and are intended for the control
+    path, not for concurrent calls from several host threads. The
+    compiled <code>pn</code>, <code>pr</code>, and <code>pb</code>
+    operations are the bounded performance path.</p>
+    <p>All limits are fixed and allocation-free during performance:</p>
+    <ul>
+    <li>16 groups</li>
+    <li>16 pools</li>
+    <li>16 voices per group</li>
+    <li>64 held-note records per monophonic pool</li>
+    <li>no more physical instances than the configured synth voice count
+    permits</li>
+    </ul>
+    <h2 id="defining-a-prototype">Defining a Prototype</h2>
+    <p>First construct a sound using ordinary voices. This two-voice
+    example layers an octave above the root:</p>
+    <pre class="text"><code>v0 w0 a0 t.01,.15,.7,.35 N0 G1 H1
+v1 w0 a0 t.005,.1,.5,.25 N12</code></pre>
+    <p>Define group <code>0</code> from voices <code>0</code> and
+    <code>1</code>:</p>
+    <pre class="text"><code>/pg 0,0,2,0</code></pre>
+    <p>The arguments are:</p>
+    <pre class="text"><code>/pg group,source,width[,root-offset]</code></pre>
+    <p><code>root-offset</code> defaults to <code>0</code>. It is
+    relative to <code>source</code>, so the example root is voice
+    <code>0</code>.</p>
+    <p>The group records the prototype layout, not a second private copy
+    of every synth field. Pool construction and explicit refresh read
+    the current prototype settings. Editing the prototype does not
+    silently rewrite sounding instances.</p>
+    <p>Show one group or all groups:</p>
+    <pre class="text"><code>?pg 0
+?pg</code></pre>
+    <h2 id="constructing-a-polyphonic-pool">Constructing a Polyphonic
+    Pool</h2>
+    <p>Create four two-voice instances in voices <code>8</code> through
+    <code>15</code>:</p>
+    <pre class="text"><code>/pp 0,0,8,4,0</code></pre>
+    <p>The arguments are:</p>
+    <pre class="text"><code>/pp pool,group,base,count[,steal-policy]</code></pre>
+    <p>The numeric steal policies are:</p>
+    <table>
+    <colgroup>
+    <col style="width: 40%" />
+    <col style="width: 30%" />
+    <col style="width: 30%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th style="text-align: right;">Value</th>
+    <th>Name</th>
+    <th>Behavior after checking for a free instance</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td style="text-align: right;"><code>0</code></td>
+    <td>release-oldest</td>
+    <td>Oldest releasing instance, then oldest held instance. This is
+    the default.</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>1</code></td>
+    <td>oldest</td>
+    <td>Oldest allocated instance.</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>2</code></td>
+    <td>round-robin</td>
+    <td>Next instance in pool order.</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>3</code></td>
+    <td>quietest</td>
+    <td>Instance whose loudest member envelope currently has the lowest
+    amplitude.</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>4</code></td>
+    <td>no-steal</td>
+    <td>Reject note-on when every instance is occupied.</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Unknown policy values reject pool construction. Every policy
+    always prefers a free instance.</p>
+    <p>The destination range must fit inside the runtime voice count. It
+    may begin at the prototype source, allowing a one-instance group to
+    use its original voices. Other partial overlaps with the prototype
+    are rejected, as are overlapping destination ranges owned by two
+    pools.</p>
+    <p>A pool index can be redefined; sounding allocations in the old
+    definition are released first. A group can be restated with the same
+    geometry, but changing its source, width, or root is rejected while
+    a pool still refers to it. This prevents an existing allocator from
+    silently acquiring the wrong physical voice layout. Rebuild those
+    pools with another group index when a live layout migration is
+    needed.</p>
+    <p>Show current allocations:</p>
+    <pre class="text"><code>?pp 0
+?pp</code></pre>
+    <p>The output includes copy/pasteable <code>/pp</code> and
+    <code>/pm</code> commands, numeric values, readable policy/mode
+    comments, physical root voices, allocation state, keys, notes, and
+    velocities.</p>
+    <h2 id="note-identity-and-performance-commands">Note Identity and
+    Performance Commands</h2>
+    <p>Pool note commands use an integer <strong>key</strong> that
+    identifies a note lifetime. The key is intentionally separate from
+    pitch. This permits overlapping instances of the same MIDI note and
+    makes a late release harmless after an instance has been stolen.</p>
+    <p>Keys must be exactly representable by the compiled float opcode
+    format, so the documented range is <code>-16777216..16777216</code>.
+    Key <code>-1</code> is reserved as the pool-wide target for pitch
+    bend.</p>
+    <pre class="text"><code>pn pool,key,note,velocity[,cents]
+pr pool,key[,release-velocity]
+pb pool,key,semitones[,cents]</code></pre>
+    <p>Examples:</p>
+    <pre class="text"><code>pn 0,1001,60,.8
+pn 0,1002,64,.7
+pb 0,1001,2
+pr 0,1001
+pr 0,1002</code></pre>
+    <p><code>pn</code> applies <code>n</code> and then <code>l</code> to
+    the allocated instance root. Its cloned <code>G</code> and
+    <code>H</code> links propagate pitch and gate exactly as they do
+    under manual voice control. Member <code>N</code> values continue to
+    provide intervals and fine detuning.</p>
+    <p><code>pr</code> applies <code>l0</code>. Releasing an unknown or
+    stolen key is a successful no-op, so delayed MIDI note-off messages
+    cannot release a newer allocation. The optional release-velocity
+    argument is retained for MIDI-shaped call sites; it is currently
+    accepted but does not alter the release envelope.</p>
+    <p><code>pb</code> changes pitch without retriggering. A key of
+    <code>-1</code> stores a pool-wide bend, applies it to every held
+    instance, and also affects later note-ons:</p>
+    <pre class="text"><code>pb 0,-1,-2,25</code></pre>
+    <p>That bends the pool down 175 cents. Per-note bend remains
+    available with a normal key.</p>
+    <p><code>pn</code>, <code>pr</code>, and <code>pb</code> are bounded
+    numeric opcodes. They are valid in pattern steps, defers, repeats,
+    external compiled macros, and the timestamped event queue. Group and
+    pool configuration commands are immediate-only.</p>
+    <h2 id="monophonic-mode">Monophonic Mode</h2>
+    <p>A monophonic pool uses its first group instance; any remaining
+    instances stay idle until the pool returns to polyphonic mode.
+    Configure it after pool construction:</p>
+    <pre class="text"><code>/pp 1,0,20,1,0
+/pm 1,1,0,1</code></pre>
+    <p>The arguments are:</p>
+    <pre class="text"><code>/pm pool,mode[,priority[,articulation]]</code></pre>
+    <p>Modes:</p>
+    <table>
+    <thead>
+    <tr class="header">
+    <th style="text-align: right;">Value</th>
+    <th>Meaning</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td style="text-align: right;"><code>0</code></td>
+    <td>Polyphonic allocation</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>1</code></td>
+    <td>Monophonic held-note selection</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>2</code></td>
+    <td>Reserved for a future arpeggiator; currently rejected</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Monophonic priorities:</p>
+    <table>
+    <thead>
+    <tr class="header">
+    <th style="text-align: right;">Value</th>
+    <th>Meaning</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td style="text-align: right;"><code>0</code></td>
+    <td>Last pressed note</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>1</code></td>
+    <td>Highest note</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>2</code></td>
+    <td>Lowest note</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>3</code></td>
+    <td>First pressed note</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Articulation:</p>
+    <table>
+    <colgroup>
+    <col style="width: 57%" />
+    <col style="width: 42%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th style="text-align: right;">Value</th>
+    <th>Meaning</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td style="text-align: right;"><code>0</code></td>
+    <td>Retrigger the envelope whenever the active note changes</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>1</code></td>
+    <td>Legato: trigger only the first held note and release only after
+    the final key is released</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Example last-note legato behavior:</p>
+    <pre class="text"><code>pn 1,2001,60,.8
+pn 1,2002,67,.6
+pr 1,2002
+pr 1,2001</code></pre>
+    <p>The pool plays 60, changes to 67, returns to the still-held 60,
+    then releases. The held-note ledger retains every key’s pitch,
+    cents, velocity, bend, and press order. That fixed ledger is also
+    the intended input set for future arpeggiation mode
+    <code>2</code>.</p>
+    <p>Changing <code>/pm</code> releases current allocations and clears
+    the held-note ledger. This makes it safe to switch an existing
+    multi-instance pool between poly and mono without rebuilding it.</p>
+    <h2 id="midi-input-recipes">MIDI Input Recipes</h2>
+    <p>The control-plane MIDI router can drive a configured pool
+    directly. <code>/mp</code> accepts
+    <code>channel,pool[,bend-range]</code>; channels are zero-based and
+    <code>.</code>/<code>-</code> means all channels.</p>
+    <p>For the four-instance, two-voice polyphonic pool <code>0</code>
+    constructed above:</p>
+    <pre class="text"><code>/mp 0 0 2</code></pre>
+    <p>MIDI channel 1 now supplies note-on, note-off, and ±2-semitone
+    pitch bend. Every note lifetime is keyed by channel plus MIDI note,
+    so delayed note-off and equal notes on different accepted channels
+    do not release the wrong instance.</p>
+    <p>For monophonic pool <code>1</code> from the previous section:</p>
+    <pre class="text"><code>/mp 0 1 12</code></pre>
+    <p>This retains the pool’s configured priority and articulation
+    while allowing a ±12-semitone bend range. The router does not
+    replace <code>/pm</code>; it only translates MIDI performance
+    messages into the pool’s existing note, release, and bend
+    operations.</p>
+    <p>The simpler <code>/mv channel,voice[,bend-range]</code> route
+    drives one physical voice without a pool. It is useful for a basic
+    one-note-at-a-time instrument, but it tracks only the latest active
+    key and cannot return to an earlier held note. Use monophonic pool
+    mode for held-note priority, legato, and fallback behavior.</p>
+    <p>See the “MIDI mono and poly synths” and “MIDI drum maps” recipes
+    in <a href="skode_reference.html">skode_reference.html</a> for
+    complete voice setup examples and channel-routing variations.</p>
+    <h2 id="refreshing-a-group-or-pool">Refreshing a Group or Pool</h2>
+    <p>After editing prototype voices, refresh every free instance in
+    pools using the group:</p>
+    <pre class="text"><code>/pg! 0</code></pre>
+    <p>Refresh only one pool:</p>
+    <pre class="text"><code>/pp! 0</code></pre>
+    <p>Refresh never rewrites held or releasing instances. Those
+    instances retain their current settings until they become free and a
+    later refresh occurs.</p>
+    <h2 id="what-group-copying-includes">What Group Copying
+    Includes</h2>
+    <p>Group cloning uses the existing synthesis-copy behavior, resets
+    transient playback state, and remaps voice dependencies. It includes
+    oscillator, wave, range/loop, amplitude, pan, envelopes, tuning,
+    filters, smoothing, distortion, and enabled modulation settings.</p>
+    <p>It deliberately preserves the destination voice’s:</p>
+    <ul>
+    <li>record/scope track assignment (<code>r</code>)</li>
+    <li>delay send (<code>ds</code>)</li>
+    <li>control-event publication (<code>vc</code>)</li>
+    </ul>
+    <p>Track delay parameters are global track state and are never part
+    of a group.</p>
+    <p>The transient state reset includes one-shot/loop progress, output
+    sample, ping-pong direction leg, finished flags, and sample-hold
+    progress. Oscillator and envelope performance state begins when the
+    instance receives <code>pn</code>.</p>
+    <h2 id="dependency-graphs">Dependency Graphs</h2>
+    <p>Use <code>/vg</code> to inspect all dependencies reachable from
+    one voice:</p>
+    <pre class="text"><code>/vg 0
+/vg 0,0,4
+/vg 0,1,4</code></pre>
+    <p>The arguments are:</p>
+    <pre class="text"><code>/vg voice[,format[,depth]]</code></pre>
+    <p>Formats:</p>
+    <ul>
+    <li><code>0</code>: human-readable ASCII tree (default)</li>
+    <li><code>1</code>: stable machine-readable graph text</li>
+    </ul>
+    <p>Depth <code>0</code> means the configured voice count. Cycles are
+    shown once and marked <code>(seen)</code> in ASCII output.</p>
+    <p>Example ASCII:</p>
+    <pre class="text"><code>voice v0
+|- pitch -&gt; v1
+`- gate -&gt; v1 (seen)</code></pre>
+    <p>The machine format is a line protocol designed for ro-totem and
+    browser apps:</p>
+    <pre class="text"><code>skred-voice-graph 1
+root 0
+node 0
+edge 0 1 0 pitch
+edge 0 1 1 gate
+end</code></pre>
+    <p>Grammar:</p>
+    <pre class="text"><code>header = &quot;skred-voice-graph&quot; SP version LF
+root   = &quot;root&quot; SP voice LF
+node   = &quot;node&quot; SP voice LF
+edge   = &quot;edge&quot; SP from SP to SP type SP label LF
+end    = &quot;end&quot; LF</code></pre>
+    <p>Edge types are numeric and stable:</p>
+    <table>
+    <thead>
+    <tr class="header">
+    <th style="text-align: right;">Type</th>
+    <th>Label</th>
+    <th>Source setting</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td style="text-align: right;"><code>0</code></td>
+    <td>pitch</td>
+    <td><code>G</code> MIDI-note link</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>1</code></td>
+    <td>gate</td>
+    <td><code>H</code> velocity/gate link</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>2</code></td>
+    <td>amp-mod</td>
+    <td><code>A</code> source voice</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>3</code></td>
+    <td>freq-mod</td>
+    <td><code>F</code> source voice</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>4</code></td>
+    <td>pan-mod</td>
+    <td><code>P</code> source voice</td>
+    </tr>
+    <tr class="even">
+    <td style="text-align: right;"><code>5</code></td>
+    <td>phase-mod</td>
+    <td><code>C</code> source voice</td>
+    </tr>
+    <tr class="odd">
+    <td style="text-align: right;"><code>6</code></td>
+    <td>ring-mod</td>
+    <td><code>XM</code> source voice</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Feature-gated edge kinds appear only when included in the build.
+    Multiple edge types between the same nodes are retained.</p>
+    <p>A browser-side parser can stay deliberately small:</p>
+    <div class="sourceCode" id="cb23"><pre
+    class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">parseVoiceGraph</span>(text) {</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> graph <span class="op">=</span> { <span class="dt">version</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">root</span><span class="op">:</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dt">nodes</span><span class="op">:</span> []<span class="op">,</span> <span class="dt">edges</span><span class="op">:</span> [] }<span class="op">;</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">const</span> line <span class="kw">of</span> text<span class="op">.</span><span class="fu">trim</span>()<span class="op">.</span><span class="fu">split</span>(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)) {</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> field <span class="op">=</span> line<span class="op">.</span><span class="fu">split</span>(<span class="ss">/</span><span class="sc">\s+</span><span class="ss">/</span>)<span class="op">;</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (field[<span class="dv">0</span>] <span class="op">===</span> <span class="st">&quot;skred-voice-graph&quot;</span>) graph<span class="op">.</span><span class="at">version</span> <span class="op">=</span> <span class="bu">Number</span>(field[<span class="dv">1</span>])<span class="op">;</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="cf">if</span> (field[<span class="dv">0</span>] <span class="op">===</span> <span class="st">&quot;root&quot;</span>) graph<span class="op">.</span><span class="at">root</span> <span class="op">=</span> <span class="bu">Number</span>(field[<span class="dv">1</span>])<span class="op">;</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="cf">if</span> (field[<span class="dv">0</span>] <span class="op">===</span> <span class="st">&quot;node&quot;</span>) graph<span class="op">.</span><span class="at">nodes</span><span class="op">.</span><span class="fu">push</span>(<span class="bu">Number</span>(field[<span class="dv">1</span>]))<span class="op">;</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="cf">if</span> (field[<span class="dv">0</span>] <span class="op">===</span> <span class="st">&quot;edge&quot;</span>) graph<span class="op">.</span><span class="at">edges</span><span class="op">.</span><span class="fu">push</span>({</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">from</span><span class="op">:</span> <span class="bu">Number</span>(field[<span class="dv">1</span>])<span class="op">,</span> <span class="dt">to</span><span class="op">:</span> <span class="bu">Number</span>(field[<span class="dv">2</span>])<span class="op">,</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">type</span><span class="op">:</span> <span class="bu">Number</span>(field[<span class="dv">3</span>])<span class="op">,</span> <span class="dt">label</span><span class="op">:</span> field[<span class="dv">4</span>]</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (graph<span class="op">.</span><span class="at">version</span> <span class="op">!==</span> <span class="dv">1</span>) <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">Error</span>(<span class="st">&quot;unsupported voice graph version&quot;</span>)<span class="op">;</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> graph<span class="op">;</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+    <p>Consumers should key edges by <code>(from,to,type)</code>, not
+    just <code>(from,to)</code>, because pitch and gate commonly connect
+    the same pair of voices.</p>
+    <p>Hosts can bypass the bounded Skode log and obtain the full graph
+    directly:</p>
+    <div class="sourceCode" id="cb24"><pre
+    class="sourceCode c"><code class="sourceCode c"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="dt">const</span> <span class="dt">char</span> <span class="op">*</span>text <span class="op">=</span> skred_voice_graph<span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span></code></pre></div>
+    <p>In WebAssembly:</p>
+    <div class="sourceCode" id="cb25"><pre
+    class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ptr <span class="op">=</span> Module<span class="op">.</span><span class="fu">ccall</span>(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;skred_voice_graph&quot;</span><span class="op">,</span> <span class="st">&quot;number&quot;</span><span class="op">,</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  [<span class="st">&quot;number&quot;</span><span class="op">,</span> <span class="st">&quot;number&quot;</span><span class="op">,</span> <span class="st">&quot;number&quot;</span>]<span class="op">,</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  [<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>]</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> graph <span class="op">=</span> Module<span class="op">.</span><span class="fu">UTF8ToString</span>(ptr)<span class="op">;</span></span></code></pre></div>
+    <p>The returned pointer uses an internal buffer and remains valid
+    until the next graph request. Consumers should copy it before
+    issuing another request.</p>
+    <h2 id="complete-polyphonic-example">Complete Polyphonic
+    Example</h2>
+    <pre class="text"><code># Prototype: root plus octave layer.
+v0 w0 a0 t.01,.15,.7,.35 N0 G1 H1
+v1 w0 a0 t.005,.1,.5,.25 N12
+
+# Four instances occupy voices 8..15.
+/pg 0,0,2,0
+/pp 0,0,8,4,0
+
+# Inspect the remapped first instance.
+/vg 8
+
+# Play and release a chord.
+pn 0,1,60,.8
+pn 0,2,64,.75
+pn 0,3,67,.7
+pr 0,1
+pr 0,2
+pr 0,3</code></pre>
+    <p>See <code>examples/poly-layer.sk</code> and
+    <code>examples/poly-mono.sk</code> for copyable examples.</p>
+  </article>
+</body>
+</html>

@@ -1,0 +1,2102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Skode Internal Commands</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
+  <style>
+    body { background-color: #0d1117; margin: 0; padding: 40px; }
+    .markdown-body {
+      box-sizing: border-box;
+      min-width: 200px;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 45px;
+      background-color: #0d1117;
+    }
+    @media (max-width: 767px) {
+      .markdown-body {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="markdown-body">
+    <h1 id="skode-commands-and-their-implementation">Skode Commands and
+    Their Implementation</h1>
+    <p>This document describes the Skode command language implemented by
+    <code>skode.c</code>, <code>skode-event.c</code>, and the synth and
+    sequencer modules behind them.</p>
+    <p>Skode is compact by design. A command name is usually one to four
+    punctuation or letter characters followed by numeric arguments.
+    Arguments may be separated by commas or whitespace, and commands may
+    be placed next to each other:</p>
+    <pre class="text"><code>v0 w0 f220 a0 l1
+v1n60l1</code></pre>
+    <p>Strings are written in square brackets and numeric data arrays in
+    parentheses:</p>
+    <pre class="text"><code>[v0 n45 l1] xa
+[sk/drums-kick.ks] /ks
+(0 0.5 1 0.5 0) /d300,44100,1</code></pre>
+    <p>Skode is case-sensitive. For example, <code>a</code> controls
+    amplitude while <code>A</code> controls amplitude modulation.</p>
+    <h2 id="execution-model">Execution Model</h2>
+    <p>The main entry point is:</p>
+    <div class="sourceCode" id="cb3"><pre
+    class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> skode_consume<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>line<span class="op">,</span> skode_t <span class="op">*</span>ctx<span class="op">);</span></span></code></pre></div>
+    <p>The execution path is:</p>
+    <ol type="1">
+    <li><code>skode_consume()</code> passes text to the
+    <code>ands</code> parser.</li>
+    <li><code>skode_callback()</code> receives parser events.</li>
+    <li>Ordinary commands are dispatched by
+    <code>skode_function()</code>.</li>
+    <li>Deferred, repeated, and sequence commands are compiled by
+    <code>skode_compile_program()</code>.</li>
+    <li>Compiled commands become fixed-size <code>event_program_t</code>
+    and <code>event_t</code> values.</li>
+    <li><code>skode_execute_event()</code> resolves register operands
+    and calls <code>skode_execute_voice_opcode()</code>.</li>
+    <li>The final opcode handler calls synth functions such as
+    <code>amp_set()</code>, <code>wave_set()</code>, or
+    <code>envelope_set()</code>.</li>
+    </ol>
+    <p>This division matters: immediate commands may use strings, files,
+    allocation, or parser state. Scheduled commands must be
+    representable as bounded numeric opcodes and may run from the audio
+    callback.</p>
+    <h2 id="values-registers-and-timing">Values, Registers, and
+    Timing</h2>
+    <ul>
+    <li><code>vN</code> selects voice <code>N</code> in the current
+    <code>skode_t</code> context.</li>
+    <li><code>$N</code> reads register <code>N</code>. There are
+    <code>ANDS_VAR_MAX</code> (128) registers.</li>
+    <li><code>=N,value</code> writes a register. This command is
+    schedulable.</li>
+    <li><code>-</code> is an explicit default value for commands that
+    support it, notably <code>n-</code> and <code>N-</code>.</li>
+    <li><code>+delay command</code> defers by a tempo-relative
+    amount.</li>
+    <li><code>~seconds command</code> defers by seconds.</li>
+    <li>Compiled programs contain at most
+    <code>SEQ_PROGRAM_OP_MAX</code> (32) operations.</li>
+    <li>Each compiled opcode contains at most
+    <code>SEQ_OPCODE_ARG_MAX</code> (8) arguments.</li>
+    </ul>
+    <p>Register operands remain symbolic in compiled programs and are
+    resolved when the event executes. This permits commands such as:</p>
+    <pre class="text"><code>=0,3 v$0 n60 l1</code></pre>
+    <h2 id="schedulable-voice-opcodes">Schedulable Voice Opcodes</h2>
+    <p>The commands in this section can be compiled for queues, repeats,
+    deferred execution, and sequence steps. Feature-gated commands are
+    available only when their named build option is enabled.</p>
+    <table>
+    <colgroup>
+    <col style="width: 20%" />
+    <col style="width: 20%" />
+    <col style="width: 20%" />
+    <col style="width: 20%" />
+    <col style="width: 20%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Arguments</th>
+    <th>Opcode</th>
+    <th>Function or state changed</th>
+    <th>Feature</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>v</code></td>
+    <td><code>voice</code></td>
+    <td><code>SKODE_OP_VOICE</code></td>
+    <td>Changes the current voice inside the compiled program</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>a</code></td>
+    <td><code>dB</code></td>
+    <td><code>SKODE_OP_AMP</code></td>
+    <td><code>amp_set()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>f</code></td>
+    <td><code>Hz</code></td>
+    <td><code>SKODE_OP_FREQ</code></td>
+    <td><code>freq_set()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>fb</code></td>
+    <td><code>val</code></td>
+    <td><code>SKODE_OP_FREQ_BEND</code></td>
+    <td><code>freq_bend_set()</code>; frequency bend normalized value
+    (<code>-1.0</code> to <code>1.0</code>)</td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>fbp</code></td>
+    <td><code>range [, offset]</code></td>
+    <td><code>SKODE_OP_FREQ_BEND_PARAM</code></td>
+    <td><code>freq_bend_param_set()</code>; frequency bend range
+    (semitones) and optional offset</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>ab</code></td>
+    <td><code>val</code></td>
+    <td><code>SKODE_OP_AMP_BEND</code></td>
+    <td><code>amp_bend_set()</code>; amplitude bend normalized value
+    (<code>-1.0</code> to <code>1.0</code>)</td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>abp</code></td>
+    <td><code>range [, offset]</code></td>
+    <td><code>SKODE_OP_AMP_BEND_PARAM</code></td>
+    <td><code>amp_bend_param_set()</code>; amplitude bend range (dB) and
+    optional offset</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>n</code></td>
+    <td><code>note [, cents]</code></td>
+    <td><code>SKODE_OP_MIDI_NOTE</code></td>
+    <td><code>skode_midi_note()</code> then
+    <code>freq_midi()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>p</code></td>
+    <td><code>pan</code></td>
+    <td><code>SKODE_OP_PAN</code></td>
+    <td><code>pan_set()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>l</code></td>
+    <td><code>velocity</code></td>
+    <td><code>SKODE_OP_VELOCITY</code></td>
+    <td><code>skode_envelope_velocity()</code> and linked voices</td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>___l</code></td>
+    <td><code>velocity</code></td>
+    <td><code>SKODE_OP_ENVELOPE_VELOCITY</code></td>
+    <td><code>envelope_velocity()</code> without link propagation</td>
+    <td>internal</td>
+    </tr>
+    <tr class="even">
+    <td><code>A</code></td>
+    <td><code>[voice, depth [, offset]]</code></td>
+    <td><code>SKODE_OP_AMP_MOD</code></td>
+    <td><code>amp_mod_set()</code>; fewer than two args disable AM</td>
+    <td><code>AM</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>b</code></td>
+    <td><code>[direction]</code></td>
+    <td><code>SKODE_OP_WAVE_DIRECTION</code></td>
+    <td><code>wave_dir()</code>; no argument toggles</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>B</code></td>
+    <td><code>[loop]</code></td>
+    <td><code>SKODE_OP_WAVE_LOOP</code></td>
+    <td><code>wave_loop()</code>; no argument toggles</td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>BC</code></td>
+    <td><code>count</code></td>
+    <td><code>SKODE_OP_WAVE_LOOP_COUNT</code></td>
+    <td>Sets bounded one-shot loop repeats; <code>0</code> means
+    unlimited</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>WL</code></td>
+    <td><code>wave,start,end</code></td>
+    <td>immediate</td>
+    <td><code>wave_loop_points_set()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>VS</code></td>
+    <td><code>[start,end]</code></td>
+    <td><code>SKODE_OP_WAVE_RANGE_SET</code></td>
+    <td><code>voice_wave_range_set()</code> or
+    <code>voice_wave_range_reset()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>VL</code></td>
+    <td><code>[start,end]</code></td>
+    <td><code>SKODE_OP_WAVE_LOOP_SET</code></td>
+    <td><code>voice_loop_points_set()</code> or
+    <code>voice_loop_points_reset()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>pn</code></td>
+    <td><code>pool,key,note,velocity[,cents]</code></td>
+    <td><code>SKODE_OP_POLY_NOTE</code></td>
+    <td>Allocates/updates a group instance and applies pitch plus
+    gate</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>pr</code></td>
+    <td><code>pool,key[,release-velocity]</code></td>
+    <td><code>SKODE_OP_POLY_RELEASE</code></td>
+    <td>Releases a keyed pool allocation</td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>pb</code></td>
+    <td><code>pool,key,semitones[,cents]</code></td>
+    <td><code>SKODE_OP_POLY_BEND</code></td>
+    <td>Applies keyed or pool-wide pitch bend</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>c</code></td>
+    <td><code>[mode [, amount]]</code></td>
+    <td><code>SKODE_OP_PHASE_DISTORTION</code></td>
+    <td>Sets signed base PD amount; zero args disable PD</td>
+    <td><code>PD</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>C</code></td>
+    <td><code>[voice, depth]</code></td>
+    <td><code>SKODE_OP_PHASE_MOD</code></td>
+    <td><code>cmod_set()</code>; fewer than two args disable
+    modulation</td>
+    <td><code>PD</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>ct</code></td>
+    <td><code>attack, decay, sustain, release</code></td>
+    <td><code>SKODE_OP_PHASE_ENVELOPE</code></td>
+    <td>Configures the PD envelope for its next trigger</td>
+    <td><code>PD</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>cd</code></td>
+    <td><code>depth</code></td>
+    <td><code>SKODE_OP_PHASE_ENVELOPE_DEPTH</code></td>
+    <td>Sets the signed PD-envelope depth</td>
+    <td><code>PD</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>ft</code></td>
+    <td><code>attack, decay, sustain, release</code></td>
+    <td><code>SKODE_OP_FILTER_ENVELOPE</code></td>
+    <td>Configures the filter envelope for its next trigger</td>
+    <td><code>FILT</code>, <code>FADSR</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>fd</code></td>
+    <td><code>depth</code></td>
+    <td><code>SKODE_OP_FILTER_ENVELOPE_DEPTH</code></td>
+    <td>Sets <code>sv.filter_env_depth</code></td>
+    <td><code>FILT</code>, <code>FADSR</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>F</code></td>
+    <td><code>[voice, depth [, offset]]</code></td>
+    <td><code>SKODE_OP_FREQ_MOD</code></td>
+    <td><code>freq_mod_set()</code>; zero or one arg disables FM</td>
+    <td><code>FM</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>FF</code></td>
+    <td><code>mode</code></td>
+    <td><code>SKODE_OP_FREQ_MOD_MODE</code></td>
+    <td><code>0</code> relative FM, <code>1</code> absolute hertz,
+    <code>2</code> lookup-phase modulation</td>
+    <td><code>FM</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>FB</code></td>
+    <td><code>amount</code></td>
+    <td><code>SKODE_OP_FREQ_FEEDBACK</code></td>
+    <td>Sets FF2 two-sample operator feedback in radians,
+    <code>0..7</code></td>
+    <td><code>FM</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>g</code></td>
+    <td><code>time</code></td>
+    <td><code>SKODE_OP_GLISSANDO</code></td>
+    <td>Sets <code>sv.glissando_enable</code> and
+    <code>sv.glissando_time</code></td>
+    <td><code>GLISS</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>G</code></td>
+    <td><code>voice [, voice ...]</code></td>
+    <td><code>SKODE_OP_LINK_MIDI</code></td>
+    <td>Sets up to four <code>sv.link_midi_*</code> voices</td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>h</code></td>
+    <td><code>ratio [mode]</code></td>
+    <td><code>SKODE_OP_SAMPLE_HOLD</code></td>
+    <td>Sets <code>sv.sample_hold_ratio</code> and
+    <code>sv.sample_hold_mode</code></td>
+    <td><code>SAH</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>H</code></td>
+    <td><code>voice [, voice ...]</code></td>
+    <td><code>SKODE_OP_LINK_VELOCITY</code></td>
+    <td>Sets up to four <code>sv.link_velo_*</code> voices</td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>L</code></td>
+    <td><code>seconds</code></td>
+    <td><code>SKODE_OP_TRIGGER_DELAY</code></td>
+    <td>Sets <code>sv.link_trig</code> and
+    <code>sv.link_trig_samp</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>J</code></td>
+    <td><code>mode [character]</code></td>
+    <td><code>SKODE_OP_FILTER_MODE</code></td>
+    <td>Sets filter mode and calls <code>mmf_set_params()</code></td>
+    <td><code>FILT</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>K</code></td>
+    <td><code>Hz</code></td>
+    <td><code>SKODE_OP_FILTER_FREQ</code></td>
+    <td><code>mmf_set_freq()</code></td>
+    <td><code>FILT</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>k</code></td>
+    <td><code>mode</code></td>
+    <td><code>SKODE_OP_ENVELOPE_MODE</code></td>
+    <td>Sets <code>sv.amp_envelope_mode</code></td>
+    <td><code>ADSR</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>m</code></td>
+    <td><code>state</code></td>
+    <td><code>SKODE_OP_MUTE</code></td>
+    <td><code>wave_mute()</code>; suppresses master output while
+    preserving an <code>r1</code>..<code>r4</code> dry stem route</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>N</code></td>
+    <td><code>semitones [, cents]</code></td>
+    <td><code>SKODE_OP_MIDI_DETUNE</code></td>
+    <td>Sets <code>sv.midi_transpose</code> and
+    <code>sv.midi_cents</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>P</code></td>
+    <td><code>[voice, depth [, offset]]</code></td>
+    <td><code>SKODE_OP_PAN_MOD</code></td>
+    <td><code>pan_mod_set()</code>; fewer than two args disable
+    modulation</td>
+    <td><code>PANMOD</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>q</code></td>
+    <td><code>bit-depth [curve]</code></td>
+    <td><code>SKODE_OP_QUANTIZE</code></td>
+    <td><code>wave_quant()</code></td>
+    <td><code>CRUSH</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>Q</code></td>
+    <td><code>resonance</code></td>
+    <td><code>SKODE_OP_FILTER_RESONANCE</code></td>
+    <td><code>mmf_set_res()</code></td>
+    <td><code>FILT</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>r</code></td>
+    <td><code>track</code></td>
+    <td><code>SKODE_OP_RECORD_TRACK</code></td>
+    <td><code>synth_record_track_set()</code></td>
+    <td><code>TRACKS</code>, <code>RECORD</code>, or
+    <code>SCOPE</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>rt</code></td>
+    <td><code>[name] track</code></td>
+    <td>immediate</td>
+    <td><code>synth_track_name_set()</code></td>
+    <td><code>TRACKS</code>, <code>RECORD</code>, or
+    <code>SCOPE</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>rv</code></td>
+    <td><code>track,dB</code></td>
+    <td>immediate</td>
+    <td><code>synth_track_volume_set()</code></td>
+    <td><code>TRACKS</code>, <code>RECORD</code>, or
+    <code>SCOPE</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>?r</code></td>
+    <td>none</td>
+    <td>immediate</td>
+    <td>show track names, volumes, and assigned voices</td>
+    <td><code>TRACKS</code>, <code>RECORD</code>, or
+    <code>SCOPE</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>s</code></td>
+    <td><code>amount</code></td>
+    <td><code>SKODE_OP_SMOOTHER</code></td>
+    <td>Enables or disables amplitude smoothing</td>
+    <td><code>SMOOTHER</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>S</code></td>
+    <td><code>voice</code></td>
+    <td><code>SKODE_OP_VOICE_RESET</code></td>
+    <td><code>wave_reset()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>t</code></td>
+    <td><code>attack, decay, sustain, release</code></td>
+    <td><code>SKODE_OP_ENVELOPE</code></td>
+    <td>Configures the amplitude envelope for its next trigger</td>
+    <td><code>ADSR</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>T</code></td>
+    <td>none</td>
+    <td><code>SKODE_OP_TRIGGER</code></td>
+    <td>Calls <code>envelope_velocity(..., 1)</code> on the voice and
+    velocity links</td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>w</code></td>
+    <td><code>wave [, interpolate [, mode]]</code></td>
+    <td><code>SKODE_OP_WAVE</code></td>
+    <td><code>wave_set()</code> and optional voice flags; mode
+    <code>0</code> is cycle and <code>1</code> is one-shot</td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>&gt;</code></td>
+    <td><code>destination-voice</code></td>
+    <td><code>SKODE_OP_VOICE_COPY</code></td>
+    <td><code>voice_copy(current, destination)</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>/</code></td>
+    <td>none</td>
+    <td><code>SKODE_OP_WAVE_DEFAULT</code></td>
+    <td><code>wave_default()</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="odd">
+    <td><code>=</code></td>
+    <td><code>register, value</code></td>
+    <td><code>SKODE_OP_VARIABLE_SET</code></td>
+    <td>Writes <code>global_var[register]</code></td>
+    <td>base</td>
+    </tr>
+    <tr class="even">
+    <td><code>XM</code></td>
+    <td><code>voice [, amount]</code></td>
+    <td><code>SKODE_OP_RING_MOD</code></td>
+    <td>Sets <code>sv.ring_osc</code> and
+    <code>sv.ring_amount</code></td>
+    <td><code>XM</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <h3 id="notes-on-selected-opcodes">Notes on Selected Opcodes</h3>
+    <p><code>pn</code>, <code>pr</code>, and <code>pb</code> operate on
+    pools configured by the immediate <code>/pg</code>,
+    <code>/pp</code>, and <code>/pm</code> commands. Their integer note
+    key identifies a lifetime rather than a pitch. They are ordinary
+    bounded opcodes, so patterns and queued events can use them without
+    parsing text in the audio callback. See <a
+    href="POLYPHONY.html">POLYPHONY.html</a> for allocation and
+    monophonic semantics.</p>
+    <p><code>n</code> accepts a MIDI note number and optional cents
+    offset. <code>n-</code> reuses the voice’s last MIDI note.
+    <code>skode_midi_note()</code> also propagates the note to voices
+    configured by <code>G</code>.</p>
+    <p><code>l</code> applies velocity immediately or schedules it using
+    the voice’s trigger delay. It also propagates velocity to voices
+    configured by <code>H</code>.</p>
+    <p><code>b</code>, <code>B</code>, <code>BC</code>, and
+    <code>l</code> have separate playback responsibilities.
+    <code>b</code> selects direction mode: <code>b0</code> forward,
+    <code>b1</code> backward, and <code>b2</code> ping-pong.
+    <code>B</code> configures wrapping, and <code>BC</code> configures a
+    bounded number of one-shot traversals. Zero is unlimited; a positive
+    count means repeats after the initial loop traversal, so
+    <code>BC1</code> permits one repeat and two traversals. In ping-pong
+    mode, each trip from one boundary to the other counts as one
+    traversal. Positive <code>l</code> or <code>T</code> snapshots the
+    <code>BC</code> bound for the new note. <code>B</code> remains an
+    immediate runtime switch. <code>l0</code> emits the release
+    lifecycle event and asks any active one-shot loop, bounded or
+    unbounded, to leave the loop at the next boundary in the current
+    playback direction.</p>
+    <p>One-shot loop entry always includes the pre-loop segment. Forward
+    playback starts at physical sample <code>0</code>, plays to
+    <code>loop_end</code>, then wraps to <code>loop_start</code>.
+    Backward playback starts at the physical last sample, plays to
+    <code>loop_start</code>, then wraps to <code>loop_end</code>.
+    Ping-pong playback starts forward, reverses at
+    <code>loop_end</code>, reverses again at <code>loop_start</code>,
+    and repeats. <code>l0</code> and <code>BC</code> exhaustion leave
+    the loop at the next boundary reached by the current leg and play
+    the remaining physical tail in that same direction.</p>
+    <p><code>B0</code> clears active loop runtime state. <code>B1</code>
+    immediately starts a fresh active loop snapshot from the current
+    <code>BC</code> configuration, so stale counted-loop remaining state
+    does not carry into a later unbounded loop.</p>
+    <p><code>WL wave,start,end</code> sets the loop boundaries stored on
+    the wave itself. <code>start</code> is inclusive, <code>end</code>
+    is exclusive, and <code>end</code> may equal the wave sample count.
+    Voices already using that wave receive the updated loop points
+    unless they have a voice-level override.</p>
+    <p><code>VS start,end</code> overrides the selected voice’s playable
+    sample range after its <code>w</code> assignment. <code>VS</code>
+    with no arguments resets the selected voice to the full current wave
+    range. If narrowing the range would leave inherited loop points
+    outside the playable region, the voice loop falls back to the new
+    <code>VS</code> range.</p>
+    <p><code>VL start,end</code> overrides loop points on the selected
+    voice after its <code>w</code> assignment. <code>VL</code> with no
+    arguments clears the override and reapplies the current wave’s
+    <code>WL</code> defaults when they fit inside the active
+    <code>VS</code> range; otherwise it falls back to the active
+    <code>VS</code> range. Voice display emits <code>VSstart,end</code>
+    and <code>VLstart,end</code> only for voices with active overrides,
+    so saved voice lines stay compact but pasteable. <code>VS</code> and
+    <code>VL</code> do not enable looping; the voice still needs
+    <code>B1</code> or <code>BC count</code> for those points to affect
+    <code>l1</code> playback.</p>
+    <p>Amplitude envelope mode <code>k1</code> enables timed one-shot
+    ASR. For non-looping one-shots and bounded <code>BC</code> one-shot
+    loops, positive <code>l</code> schedules the release phase to finish
+    at the natural playback end. The <code>t</code> attack, sustain, and
+    release values shape the result; decay remains available but is
+    usually not useful for this mode. Unbounded
+    <code>BC0</code>/<code>B1</code> loops keep normal held ADSR
+    behavior until <code>l0</code>, then exit the loop in the current
+    direction and play the remaining wave tail.</p>
+    <p>At trigger time, <code>osc_trigger()</code> initializes
+    <code>loop_active</code>, <code>loop_bounded</code>, and
+    <code>loop_remaining</code>. <code>osc_next()</code> consumes wraps
+    in either direction, including multiple boundaries crossed by one
+    phase increment. Natural bounded-loop exhaustion raises
+    <code>loop_ended</code>; the render loop consumes that event to
+    publish one <code>VOICE_RELEASE</code> control-plane event while
+    playback continues through the one-shot tail. An explicit
+    <code>l0</code> publishes its release event immediately, then exits
+    the loop at the next boundary without publishing a duplicate
+    boundary release event.</p>
+    <p><code>c</code> phase-distortion modes are:</p>
+    <table>
+    <thead>
+    <tr class="header">
+    <th>Mode</th>
+    <th>Shape</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>0</code></td>
+    <td>off</td>
+    </tr>
+    <tr class="even">
+    <td><code>1</code></td>
+    <td>saw to pulse</td>
+    </tr>
+    <tr class="odd">
+    <td><code>2</code></td>
+    <td>folded sine</td>
+    </tr>
+    <tr class="even">
+    <td><code>3</code></td>
+    <td>triangle</td>
+    </tr>
+    <tr class="odd">
+    <td><code>4</code></td>
+    <td>double sine</td>
+    </tr>
+    <tr class="even">
+    <td><code>5</code></td>
+    <td>saw to triangle</td>
+    </tr>
+    <tr class="odd">
+    <td><code>6</code></td>
+    <td>resonant 1</td>
+    </tr>
+    <tr class="even">
+    <td><code>7</code></td>
+    <td>resonant 2</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>The public PD amount range is <code>-1..1</code>, with
+    <code>0</code> as the exact undistorted phase for every mode. The
+    render path computes
+    <code>c amount + C modulation + ct envelope * cd depth</code>, then
+    clamps the result to <code>-1..1</code>. Negative amounts apply the
+    complementary direction of each shape. <code>ct 0 0 1 0</code>
+    disables the PD envelope; <code>cd</code> may be positive or
+    negative.</p>
+    <p><code>w</code> changes the selected wavetable. The optional
+    second and third arguments set interpolation and one-shot playback
+    flags.</p>
+    <p><code>S</code> takes an explicit voice number rather than using
+    the selected voice. In the current implementation, an out-of-range
+    voice invokes <code>voice_init()</code> and resets every voice;
+    <code>S100</code> therefore acts as reset-all with the default voice
+    limit. This sentinel behavior is retained for compatibility but is
+    not a dedicated reset-all command.</p>
+    <h3 id="numeric-escape">Numeric Escape</h3>
+    <p><code>EXEC id [args...]</code> Direct execution/compilation of
+    opcode <code>id</code> (0-255). Re-uses the argument arity and
+    execution path of the underlying opcode.</p>
+    <h2 id="scheduling-and-queue-commands">Scheduling and Queue
+    Commands</h2>
+    <p>These commands run on the control thread but compile their string
+    contents into the opcode representation above.</p>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Input</th>
+    <th>Behavior</th>
+    <th>Main functions</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>+delay ...</code></td>
+    <td>deferred commands</td>
+    <td>Tempo-relative defer</td>
+    <td><code>skode_defer()</code>,
+    <code>skode_queue_program()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>~seconds ...</code></td>
+    <td>deferred commands</td>
+    <td>Seconds-relative defer</td>
+    <td><code>skode_defer()</code>,
+    <code>skode_queue_program()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[commands] R count,seconds[,tag]</code></td>
+    <td>string</td>
+    <td>Repeat using seconds</td>
+    <td><code>skode_compile_program()</code>,
+    <code>skode_queue_program()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[commands] RR count,steps[,tag]</code></td>
+    <td>string</td>
+    <td>Repeat using tempo-relative step duration</td>
+    <td><code>skode_compile_program()</code>,
+    <code>skode_queue_program()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>eR macro,count,seconds[,tag]</code></td>
+    <td>external string</td>
+    <td>Compile a macro snapshot and repeat it using seconds</td>
+    <td><code>skode_extra_copy()</code>,
+    <code>skode_compile_program()</code>,
+    <code>skode_queue_program()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>eRR macro,count,beats[,tag]</code></td>
+    <td>external string</td>
+    <td>Compile a macro snapshot and repeat it using tempo-relative beat
+    duration</td>
+    <td>same as above</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[commands] DO? value[,tag]</code></td>
+    <td>string</td>
+    <td>Queue once when <code>value &gt; 0</code></td>
+    <td><code>skode_compile_program()</code>,
+    <code>skode_queue_program()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>R! tag</code></td>
+    <td>numeric</td>
+    <td>Remove queued events with a tag</td>
+    <td><code>seq_kill_by_tag()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>R!!</code></td>
+    <td>none</td>
+    <td>Remove all queued events</td>
+    <td><code>seq_kill_all()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[commands] e!</code></td>
+    <td>string</td>
+    <td>Compile and queue the parser string now</td>
+    <td><code>skode_compile_program()</code>,
+    <code>skode_queue_program()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>e! index</code></td>
+    <td>external string</td>
+    <td>Expand a literal external buffer while compiling, then queue
+    it</td>
+    <td>same as above</td>
+    </tr>
+    <tr class="even">
+    <td><code>?o</code></td>
+    <td>none</td>
+    <td>Show queued opcode events</td>
+    <td><code>opcode_queue_show()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>?o pattern[,step]</code></td>
+    <td>numeric</td>
+    <td>Show compiled pattern programs</td>
+    <td><code>opcode_pattern_show()</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Commands containing strings, arrays, file operations, or other
+    immediate-only operations are rejected by
+    <code>skode_compile_program()</code>. There is no fallback that
+    sends command text into the audio callback.</p>
+    <p>Literal external macro references such as <code>e!12</code> are
+    the exception: the compiler reads buffer 12 on the control thread
+    and inlines its compiled opcodes. This works inside patterns,
+    defers, repeats, and nested macros. Expansion uses snapshot
+    semantics, so editing buffer 12 later does not change an existing
+    pattern or queued event. Undefined buffers, recursive cycles,
+    <code>e!$N</code>, and expansions beyond 32 operations are rejected.
+    Argumentless <code>e!</code> continues to mean “execute the current
+    parser string” and is immediate-only. <code>eR</code> and
+    <code>eRR</code> use the same snapshot compilation but schedule the
+    resulting program repeatedly without expanding it once per
+    repetition.</p>
+    <h2 id="pattern-and-sequence-commands">Pattern and Sequence
+    Commands</h2>
+    <p>Sequence support is compiled under the <code>SEQ</code>
+    feature.</p>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Arguments or string</th>
+    <th>Behavior</th>
+    <th>Main function or state</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>M</code></td>
+    <td><code>bpm [subdivision]</code></td>
+    <td>Set tempo (BPM) with optional step subdivision per quarter note
+    (default 16 for 16th-note drum steps; 8 for 8th notes, 4 for quarter
+    notes, 32 for 32nd rolls).</td>
+    <td><code>tempo_set_subdivision()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>y</code></td>
+    <td><code>pattern</code></td>
+    <td>Select the editing pattern</td>
+    <td><code>ctx-&gt;pattern</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[text] yt</code></td>
+    <td>string</td>
+    <td>Name the selected pattern</td>
+    <td><code>seq_text[]</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>ym</code></td>
+    <td><code>0/1</code></td>
+    <td>Mute the selected pattern</td>
+    <td><code>seq_mute_set()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>Y</code></td>
+    <td><code>pattern</code></td>
+    <td>Clear a pattern</td>
+    <td><code>pattern_reset()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[commands] xa</code></td>
+    <td>string</td>
+    <td>Append a compiled step</td>
+    <td><code>seq_step_append()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[commands] x step</code></td>
+    <td>string</td>
+    <td>Set a compiled step; <code>x-</code> advances the edit
+    cursor</td>
+    <td><code>seq_step_set()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[-] x step</code></td>
+    <td>string</td>
+    <td>Sequence flow commands: <code>-</code> stops pattern;
+    <code>-N</code> waits for pattern <code>N</code>;
+    <code>-jN</code>/<code>-j$N</code>/<code>-j&amp;N</code> jump to
+    step <code>N</code> (literal, variable, or stream);
+    <code>-sN</code>/<code>-s$N</code>/<code>-s&amp;N</code> stop if
+    condition is non-zero.</td>
+    <td><code>seq_step_set()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>&lt;x step</code></td>
+    <td>numeric</td>
+    <td>Copy a step’s source text into the parser string</td>
+    <td><code>seq_step_get()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>zg step</code>, <code>z g step</code></td>
+    <td><code>step</code></td>
+    <td>Immediately jump pattern playback pointer to a specific
+    step</td>
+    <td><code>seq_step_goto()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>zq</code></td>
+    <td><code>0/1</code></td>
+    <td>Queue pattern start (<code>zq1</code>) or stop
+    (<code>zq0</code>) on next downbeat
+    (<code>seq_pointer[0] == 0</code>)</td>
+    <td><code>seq_state_queue()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>%</code>, <code>z%</code></td>
+    <td><code>modulus</code></td>
+    <td>Set selected pattern step clock division modulus (default 1 per
+    16th-note tick; e.g. <code>z%16</code> 16th notes, <code>z%8</code>
+    8th notes, <code>z%32</code> 32nd notes)</td>
+    <td><code>seq_modulo_set()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>z*</code></td>
+    <td><code>count</code></td>
+    <td>Step ratchet opcode: subdivide step duration into
+    <code>count</code> micro-triggers (<code>z*2</code>,
+    <code>z*3</code>, <code>z*4</code>, <code>z*8</code>)</td>
+    <td><code>skode_program_push()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>z</code></td>
+    <td><code>[0..3]</code></td>
+    <td>Set selected pattern state (<code>0</code>=stop,
+    <code>1</code>=start phase-aligned at step 0)</td>
+    <td><code>seq_state_set()</code>, <code>pattern_show()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>z?</code></td>
+    <td>none</td>
+    <td>Show selected pattern</td>
+    <td><code>pattern_show()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>Z</code></td>
+    <td><code>[0..3]</code></td>
+    <td>Set all pattern states (<code>0</code>=all stop,
+    <code>1</code>=all start phase-aligned at step 0; empty pattern
+    slots omitted)</td>
+    <td><code>seq_state_all()</code>, <code>pattern_show()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>Z?</code>, <code>z??</code></td>
+    <td>none</td>
+    <td>Show all populated patterns with steps (empty pattern slots
+    omitted)</td>
+    <td><code>pattern_show()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/SS</code></td>
+    <td><code>stream</code></td>
+    <td>Set stream from stack array data</td>
+    <td><code>skode_stream_set()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/SC</code></td>
+    <td><code>dst, src</code></td>
+    <td>Copy stream</td>
+    <td><code>SKODE_OP_STREAM_COPY</code>,
+    <code>skode_stream_copy()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/SM</code></td>
+    <td><code>stream, mode</code></td>
+    <td>Set stream playback mode</td>
+    <td><code>SKODE_OP_STREAM_MODE</code>,
+    <code>skode_stream_mode()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/SP</code></td>
+    <td><code>stream, pos</code></td>
+    <td>Set stream playback position</td>
+    <td><code>SKODE_OP_STREAM_POS</code>,
+    <code>skode_stream_pos()</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Sequence steps retain their source text for editing and
+    diagnostics, but playback uses the compiled
+    <code>event_program_t</code>. Each pattern keeps its own persistent
+    current voice during playback. Clearing a pattern resets that
+    selection to voice 0 before the pattern next runs.</p>
+    <p>Tempo is limited to 960 BPM. At four sequence steps per beat this
+    is 64 steps per second, which remains practical for control-rate
+    sequencing while avoiding unbounded catch-up work in the audio
+    callback. If processing falls behind, SKRED executes at most 64
+    missed pattern ticks in one callback and resumes from the current
+    timeline.</p>
+    <p>The audio callback renders adaptively around queued events and
+    pattern clock ticks. A block containing a timing boundary is split
+    at that sample; a block without one is rendered in a single call.
+    Integer-sample events are exact, and fractional tempo boundaries are
+    rounded forward by less than one sample. Device and hardware
+    buffering latency is unaffected.</p>
+    <h2 id="voice-wave-and-synth-control">Voice, Wave, and Synth
+    Control</h2>
+    <p>The following commands are immediate-only even when related voice
+    opcodes are schedulable.</p>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Arguments or string</th>
+    <th>Behavior</th>
+    <th>Main function or state</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>V</code></td>
+    <td><code>dB</code></td>
+    <td>Set main output volume</td>
+    <td><code>volume_set()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[name] vt</code></td>
+    <td>string</td>
+    <td>Set selected voice label</td>
+    <td><code>sv.text[]</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[name] wt wave</code></td>
+    <td>string, numeric</td>
+    <td>Set wavetable label</td>
+    <td><code>sw.name[]</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>W</code></td>
+    <td><code>[wave [, end-or-width [, height]]]</code></td>
+    <td>Show wavetable or recording data, including loop metadata and
+    one-shot baseline duration for single-wave displays</td>
+    <td><code>wavetable_show()</code>, waveform display helpers</td>
+    </tr>
+    <tr class="odd">
+    <td><code>VW</code></td>
+    <td><code>[voice [, width, height]]</code></td>
+    <td>Show the wavetable assigned to one voice with its current loop
+    markers</td>
+    <td><code>wavetable_waveform_show()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>WS</code></td>
+    <td><code>wave</code></td>
+    <td>Show a compact spectrogram over a wavetable loop region</td>
+    <td><code>wavetable_spectrogram_show()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>W*</code></td>
+    <td><code>wave,param[,register]</code></td>
+    <td>Read wave size, rate, duration, loop start, or loop end</td>
+    <td><code>sw</code>, register write</td>
+    </tr>
+    <tr class="even">
+    <td><code>v*</code></td>
+    <td><code>param[,register]</code></td>
+    <td>Read selected voice wave, amplitude, or frequency</td>
+    <td><code>sv</code> fields, register write</td>
+    </tr>
+    <tr class="odd">
+    <td><code>ds</code></td>
+    <td><code>amount</code></td>
+    <td>Set selected voice send amount to the delay owned by its
+    <code>r1</code>..<code>r4</code> record/scope track; effective only
+    when <code>p0</code> and pan modulation is off</td>
+    <td><code>delay_send_set()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>DL</code></td>
+    <td><code>track,coarse,fine,feedback,modfreq,moddepth,level</code></td>
+    <td>Set the DW-style mono-send/stereo-return delay attached to
+    record/scope track <code>1..4</code></td>
+    <td><code>delay_params_set()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>DG</code></td>
+    <td><code>track [bits] [native]</code></td>
+    <td>Set the bit depth reduction applied to the delay line for the
+    specified track</td>
+    <td><code>delay_grit_set()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>DL?</code></td>
+    <td><code>[track]</code></td>
+    <td>Show one track delay or all four track delays as copy/pasteable
+    <code>DL...</code> commands</td>
+    <td><code>delay_format()</code>,
+    <code>delay_bus_format()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>GS</code></td>
+    <td><code>[full]</code></td>
+    <td>Show copy/pasteable version, master volume, tempo, and track
+    delays; <code>full &gt; 0</code> adds a larger text snapshot</td>
+    <td><code>global_status_show()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[filename] GS&gt;</code></td>
+    <td>string</td>
+    <td>Save the complete current REPL/session state as an ordinary
+    versioned ZIP</td>
+    <td><code>skode_session_save()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename] GS&lt;</code></td>
+    <td>string</td>
+    <td>Validate and restore a complete session ZIP</td>
+    <td><code>skode_session_load()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>w&gt;d</code></td>
+    <td><code>wave</code></td>
+    <td>Copy wavetable samples to parser data</td>
+    <td><code>sw</code>, <code>ands_data_resize()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>w&gt;r</code></td>
+    <td><code>wave</code></td>
+    <td>Copy wavetable samples to recording buffer</td>
+    <td><code>skode_sample_alloc()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[filename] w&gt;w wave</code></td>
+    <td>string, numeric</td>
+    <td>Write wavetable samples unchanged at their stored sample
+    rate</td>
+    <td>miniaudio encoder API</td>
+    </tr>
+    <tr class="odd">
+    <td><code>d&gt;r</code></td>
+    <td>none</td>
+    <td>Copy parser data to recording buffer</td>
+    <td><code>skode_sample_alloc()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>w!</code></td>
+    <td>none</td>
+    <td>Apply current recording frame offset and trim</td>
+    <td>recording-buffer state</td>
+    </tr>
+    <tr class="odd">
+    <td><code>w*</code></td>
+    <td>none</td>
+    <td>Reset recording offset and trim</td>
+    <td>recording-buffer state</td>
+    </tr>
+    <tr class="even">
+    <td><code>w&gt;</code></td>
+    <td><code>[frames]</code></td>
+    <td>Move recording start offset</td>
+    <td><code>sampling.offset</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>w&lt;</code></td>
+    <td><code>[frames]</code></td>
+    <td>Increase or decrease end trim</td>
+    <td><code>sampling.trim</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>w&lt;&gt;</code></td>
+    <td><code>[threshold [, end-threshold [, margin-frames]]]</code></td>
+    <td>Find recording trim points using a default <code>0.001</code>
+    silence threshold, four consecutive audible frames, and optional
+    frame margin</td>
+    <td><code>record_find_trim()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/r</code></td>
+    <td><code>[slot [, mode [, channel]]]</code></td>
+    <td>Load recording into a mono wave; stereo defaults to a downmix,
+    or channel <code>0</code>/<code>1</code> selects left/right</td>
+    <td><code>rec_load()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/d</code></td>
+    <td><code>[slot [, rate [, mode [, offset]]]]</code></td>
+    <td>Load parser data into a wave slot; defaults to cycle mode</td>
+    <td><code>data_load()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/wex</code></td>
+    <td><code>wave</code></td>
+    <td>Expand a dynamic wave slot in the 200-999 range</td>
+    <td><code>wave_table_dynamic_expand()</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>For <code>W*</code>, parameter <code>0</code> is sample count,
+    <code>1</code> is sample rate, <code>2</code> is duration
+    (<code>size / rate</code>), <code>3</code> is loop start, and
+    <code>4</code> is loop end. For <code>v*</code>, parameter
+    <code>0</code> is wave index, <code>1</code> is user amplitude, and
+    <code>2</code> is frequency.</p>
+    <p>Single-wave <code>W</code> output prints a labeled marker row
+    under the waveform using the same
+    <code>[loop_start..loop_end)</code> convention as <code>WL</code>;
+    the header includes the baseline duration at the wave’s stored
+    playback rate and the loop duration.</p>
+    <h2 id="data-and-register-commands">Data and Register Commands</h2>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Arguments</th>
+    <th>Behavior</th>
+    <th>Main function</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>dup</code></td>
+    <td>numeric stack</td>
+    <td>Duplicate the first pending argument for the next atom</td>
+    <td><code>ands_arg_dup()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>drop</code></td>
+    <td>numeric stack</td>
+    <td>Drop the first pending argument for the next atom</td>
+    <td><code>ands_arg_drop()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>swap</code></td>
+    <td>numeric stack</td>
+    <td>Swap the first two pending arguments for the next atom</td>
+    <td><code>ands_arg_swap()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>over</code></td>
+    <td>numeric stack</td>
+    <td>Copy the second pending argument to the front</td>
+    <td><code>ands_arg_over()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>rot</code></td>
+    <td>numeric stack</td>
+    <td>Rotate the first three pending arguments left</td>
+    <td><code>ands_arg_rot()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>clr</code></td>
+    <td>numeric stack</td>
+    <td>Clear pending arguments before the next atom</td>
+    <td><code>ands_arg_clear()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>D</code></td>
+    <td><code>[capacity]</code></td>
+    <td>Show or increase parser data capacity</td>
+    <td><code>ands_data_cap()</code>,
+    <code>ands_data_resize()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/D</code></td>
+    <td><code>[capacity]</code></td>
+    <td>Resize data and print capacity details</td>
+    <td><code>ands_data_resize()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>?d</code></td>
+    <td>none</td>
+    <td>Print parser data</td>
+    <td><code>skode_double_dump()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>d*</code></td>
+    <td><code>index</code></td>
+    <td>Print one data element</td>
+    <td><code>ands_data()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>=d</code></td>
+    <td><code>register,index</code></td>
+    <td>Copy a data element to a shared register</td>
+    <td>register write</td>
+    </tr>
+    <tr class="even">
+    <td><code>=</code></td>
+    <td><code>[register [, value]]</code></td>
+    <td>Set, inspect, or list shared registers</td>
+    <td>register read/write</td>
+    </tr>
+    <tr class="odd">
+    <td><code>*=</code></td>
+    <td><code>register,a,b</code></td>
+    <td>Store <code>a * b</code></td>
+    <td>register write</td>
+    </tr>
+    <tr class="even">
+    <td><code>/=</code></td>
+    <td><code>register,a,b</code></td>
+    <td>Store <code>a / b</code> when <code>b != 0</code></td>
+    <td>register write</td>
+    </tr>
+    <tr class="odd">
+    <td><code>a=</code></td>
+    <td><code>register,a,b</code></td>
+    <td>Store <code>a + b</code></td>
+    <td>register write</td>
+    </tr>
+    <tr class="even">
+    <td><code>s=</code></td>
+    <td><code>register,a,b</code></td>
+    <td>Store <code>a - b</code></td>
+    <td>register write</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>The two meanings of <code>=</code> share syntax.
+    <code>=N,value</code> is also accepted by the scheduled opcode
+    compiler and writes the shared register array when executed. The
+    immediate read/math forms <code>d*</code>, <code>W*</code>,
+    <code>v*</code>, <code>=</code>, <code>*=</code>, <code>/=</code>,
+    <code>a=</code>, and <code>s=</code> also return their result as the
+    next command’s pending first argument when they are followed by
+    another atom in the same chunk.</p>
+    <h3 id="macro-and-composition-examples">Macro and Composition
+    Examples</h3>
+    <p>ANDS macros are global named commands. Define them with
+    <code>[name] : body ;</code>. Names use the same four-character atom
+    width as commands; longer definition names are silently truncated to
+    four characters. Macro arguments are written as
+    <code>$$0</code>..<code>$$7</code>. <code>@0</code>..<code>@9</code>
+    now read parser-local return values and are not macro-parameter
+    aliases. Plain <code>$0</code> keeps its normal meaning as a shared
+    register reference. Because macros are global, scripts loaded with
+    <code>/l</code> can define macros for later interactive use.</p>
+    <pre class="skode"><code>[ar] : t $$0 0 $$1 0 ;
+ar 0.01 0.4</code></pre>
+    <p>The example above compiles to the same opcodes as
+    <code>t 0.01 0 0.4 0</code>, which configures an
+    attack/release-style amplitude envelope. Definition uses the real
+    compiler: <code>?m</code> reports <code>realtime</code> when the
+    bounded program is cached in the dictionary, and
+    <code>immediate</code> when the body must retain text expansion.
+    Invalid and oversized bodies are reported separately.</p>
+    <p>Macros can bundle small voice recipes:</p>
+    <pre class="skode"><code>[one] : w $$0 1 1 k1 t $$1 0 $$2 $$3 ;
+one 12 0.002 1 0.08</code></pre>
+    <p>That selects wave <code>12</code>, enables interpolation and
+    one-shot playback, enables timed ASR mode, and configures the
+    envelope. Macro definitions can be inspected and removed from the
+    current parser context:</p>
+    <pre class="skode"><code>?m
+[one] /m
+/m!</code></pre>
+    <p>Read commands can feed later commands in the same chunk. The
+    return value is left as the next command’s first pending
+    argument:</p>
+    <pre class="skode"><code>1 v* a       # read selected voice amplitude and feed it to a
+0 3 4 a= a  # store 3+4 in $0, then feed 7 to a
+(2 5 8) 1 d* f</code></pre>
+    <p>Immediate macros can return a tuple explicitly:</p>
+    <pre class="skode"><code>[pair] : *R .1 .2 ;
+pair
+?R                  # non-consuming: @0=.1, @1=.2
+@0 a</code></pre>
+    <p><code>*R</code> replaces the return tuple with its arguments.
+    <code>@0</code>..<code>@9</code> read it, and <code>?R</code>
+    displays it without changing it. These parser-local operations have
+    no scheduled representation, so macros containing them are
+    <code>immediate</code>.</p>
+    <p>The stack helpers rearrange pending numeric arguments before the
+    next atom:</p>
+    <pre class="skode"><code>0 5 swap v  # v receives 5 instead of 0
+7 3 drop v  # v receives 3
+4 2 over v  # v receives 2, with the copied value at the front
+1 6 7 rot v # v receives 6</code></pre>
+    <p>Context-local string slots are useful scratch pads that do not
+    use the global external string buffers:</p>
+    <pre class="skode"><code>[lead voice] 0 s&gt;
+[temporary] vt
+0 &lt;s vt
+s?</code></pre>
+    <p>Runtime string formatting replaces
+    <code>@0</code>..<code>@7</code> in the current parser string with
+    numeric arguments:</p>
+    <pre class="skode"><code>[take-@0.wav] 12 s% /rg 10
+[voice @0 wave @1] 3 14 s% vt</code></pre>
+    <h2 id="string-buffers-and-ksynth">String Buffers and Ksynth</h2>
+    <p>Skode has <code>SKODE_EXTRA_MAX</code> (128) external string
+    buffers of 256 bytes each.</p>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Arguments or string</th>
+    <th>Behavior</th>
+    <th>Main function</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>[text] e&gt; index</code></td>
+    <td>string</td>
+    <td>Copy parser string to external buffer</td>
+    <td><code>skode_copy_string()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>&lt;e index</code></td>
+    <td>numeric</td>
+    <td>Copy external buffer to parser string</td>
+    <td><code>ands_string_from_external()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>e? [index]</code></td>
+    <td>optional numeric</td>
+    <td>Show one or all non-empty buffers</td>
+    <td>direct buffer inspection</td>
+    </tr>
+    <tr class="even">
+    <td><code>[text] s&gt; index</code></td>
+    <td>string</td>
+    <td>Copy parser string to a context-local string slot</td>
+    <td><code>ctx-&gt;string_slot[]</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>&lt;s index</code></td>
+    <td>numeric</td>
+    <td>Copy a context-local string slot to parser string</td>
+    <td><code>ands_string_from_external()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>s? [index]</code></td>
+    <td>optional numeric</td>
+    <td>Show one or all non-empty context-local string slots</td>
+    <td>direct slot inspection</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[template] s% args...</code></td>
+    <td>string and numeric</td>
+    <td>Replace <code>@0</code>..<code>@7</code> in parser string with
+    numeric args</td>
+    <td><code>skode_format_string_args()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>e! index</code></td>
+    <td>literal numeric</td>
+    <td>Compile and inline a macro buffer; schedulable</td>
+    <td><code>skode_extra_copy()</code>,
+    <code>skode_compile_program()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>eR index,count,seconds[,tag]</code></td>
+    <td>numeric</td>
+    <td>Repeat a compiled macro snapshot using seconds</td>
+    <td><code>skode_repeat_macro()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>eRR index,count,beats[,tag]</code></td>
+    <td>numeric</td>
+    <td>Repeat a compiled macro snapshot using tempo</td>
+    <td><code>skode_repeat_macro()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[file] /ks [verbose]</code></td>
+    <td>string</td>
+    <td>Load a named Ksynth source file</td>
+    <td><code>ksynth_load_name()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/k file-number[,verbose]</code></td>
+    <td>numeric</td>
+    <td>Load numbered Ksynth source</td>
+    <td><code>ksynth_load()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[code] ks</code>, <code>[code] k!</code></td>
+    <td>string</td>
+    <td>Run Ksynth source in this Skode context</td>
+    <td><code>skode_ks_eval()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>kw [timeout-ms]</code></td>
+    <td>optional numeric</td>
+    <td>Compatibility no-op; Ksynth now runs synchronously</td>
+    <td>parser command</td>
+    </tr>
+    <tr class="odd">
+    <td><code>kw&gt; [timeout-ms]</code></td>
+    <td>optional numeric</td>
+    <td>Copy latest Ksynth result to parser data</td>
+    <td><code>skode_ks_result_to_data()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>k?</code></td>
+    <td>none</td>
+    <td>Print latest Ksynth result</td>
+    <td>direct result inspection</td>
+    </tr>
+    <tr class="odd">
+    <td><code>k&gt;d</code></td>
+    <td>none</td>
+    <td>Copy latest Ksynth result to parser data</td>
+    <td><code>skode_ks_result_to_data()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>k&gt;w</code></td>
+    <td><code>[slot[,rate[,mode[,offset]]]]</code></td>
+    <td>Load latest Ksynth result directly into a wave; defaults to slot
+    300 and cycle mode</td>
+    <td><code>skode_ks_result_to_data()</code>,
+    <code>data_load()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>d&gt;k variable</code></td>
+    <td>numeric <code>0..25</code></td>
+    <td>Copy parser data to Ksynth <code>A..Z</code></td>
+    <td><code>ks_bind_vector()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>w&gt;k wave,variable</code></td>
+    <td>numeric</td>
+    <td>Copy a wavetable directly to Ksynth <code>A..Z</code></td>
+    <td><code>ks_bind_vector()</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Ksynth commands require the <code>KSYNTH</code> feature and are
+    immediate-only. Each vector is limited to one million elements. Each
+    Skode command context owns its own lazy Ksynth context and
+    persistent <code>A..Z</code> variables; local input and each UDP
+    client therefore keep independent Ksynth state. <code>kw</code>
+    remains accepted for older scripts, but no longer waits for a
+    worker. <code>kw&gt;</code> and <code>k&gt;d</code> copy the latest
+    numeric result into parser data. <code>k&gt;w</code> combines that
+    copy with wave installation. Wavetable metadata is not part of the
+    transferred Ksynth vector, so <code>k&gt;w</code> arguments supply
+    the desired rate and playback mode.</p>
+    <h2 id="files-samples-and-recording">Files, Samples, and
+    Recording</h2>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Arguments or string</th>
+    <th>Behavior</th>
+    <th>Main function</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>/l file-number[,verbose]</code></td>
+    <td>numeric</td>
+    <td>Load a numbered <code>.sk</code> file</td>
+    <td><code>skode_load()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[filename] /ls [verbose]</code></td>
+    <td>string</td>
+    <td>Load a named Skode file; bare names also fall back to
+    <code>sk/filename</code></td>
+    <td><code>skode_load_name()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename] /ws wave[,channel]</code></td>
+    <td>string</td>
+    <td>Load an audio file into a writable wave slot</td>
+    <td><code>wave_load_string()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/w file-number[,wave[,channel]]</code></td>
+    <td>numeric</td>
+    <td>Load a numbered audio file</td>
+    <td><code>wave_load()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>&lt;r seconds[,source[,voice]]</code>,
+    <code>^r ...</code></td>
+    <td>numeric</td>
+    <td>Record source <code>0</code> dry mono, <code>1</code> selected
+    voice, or <code>2</code> audible stereo master</td>
+    <td><code>skode_sample_go()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[filename] &gt;r</code></td>
+    <td>string</td>
+    <td>Normalize the completed mono or stereo sample buffer and write
+    the named WAV file</td>
+    <td>miniaudio encoder API</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename] /rg [max-seconds]</code></td>
+    <td>string</td>
+    <td>Start multitrack recording</td>
+    <td><code>recorder_start()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/rs</code></td>
+    <td>none</td>
+    <td>Stop multitrack recording</td>
+    <td><code>recorder_stop()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/r?</code></td>
+    <td>none</td>
+    <td>Show multitrack recorder status</td>
+    <td>recorder status functions</td>
+    </tr>
+    <tr class="even">
+    <td><code>[name] /sg [channel-mask[,buffer-seconds]]</code></td>
+    <td>string and numeric</td>
+    <td>Start shared-memory audio publication</td>
+    <td><code>scope_ipc_start()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/ss</code></td>
+    <td>none</td>
+    <td>Stop and unlink shared-memory publication</td>
+    <td><code>scope_ipc_stop()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/s?</code></td>
+    <td>none</td>
+    <td>Show shared-memory publication status</td>
+    <td>scope IPC status functions</td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename] %cat</code></td>
+    <td>string</td>
+    <td>Print a text file from the active VFS/search path</td>
+    <td><code>skode_asset_read()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[zip-or-directory] %z</code></td>
+    <td>string</td>
+    <td>Mount a ZIP archive or disk directory</td>
+    <td><code>skred_vfs_mount()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>%zu</code></td>
+    <td>none</td>
+    <td>Unmount and return to real-directory disk mode</td>
+    <td><code>skred_vfs_unmount()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>%pwd</code></td>
+    <td>none</td>
+    <td>Show VFS mode, root, and working directory</td>
+    <td><code>skred_vfs_status()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[directory] %cd</code></td>
+    <td>string</td>
+    <td>Change VFS working directory</td>
+    <td><code>skred_chdir()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>%ls [type]</code></td>
+    <td>optional numeric</td>
+    <td>List VFS files; <code>0=.sk</code>, <code>1=.wav</code>,
+    <code>2=.mp3</code>, <code>3=.ks</code></td>
+    <td><code>skred_opendir()</code>, <code>skred_readdir()</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>Multitrack file commands require <code>RECORD</code>.
+    Shared-memory publication commands require <code>SCOPE</code>. The
+    <code>r</code> stem-routing command is available with either
+    feature.</p>
+    <h2 id="diagnostics-and-runtime-control">Diagnostics and Runtime
+    Control</h2>
+    <h3 id="audio-device-management">Audio device management</h3>
+    <p><code>/als</code> and <code>/a?</code> refresh/list devices and
+    show status. <code>/ao selection</code> chooses playback and
+    <code>/ai selection</code> chooses capture; <code>-1</code> means
+    default and capture selection <code>-2</code> means off. These are
+    immediate Skode commands and therefore work from files and immediate
+    macros. The legacy host aliases <code>/aout default</code> and
+    <code>/ain off</code> remain at the API boundary but are not Skode
+    commands.</p>
+    <h3 id="midi-output-and-device-management">MIDI output and device
+    management</h3>
+    <p>With <code>MIDI=1</code>, <code>MO status[,data1[,data2]]</code>
+    sends one to three raw bytes to the open MIDI output.
+    <code>d&gt;MO</code> sends the current data array as raw bytes,
+    including a complete SysEx buffer. Both are immediate commands and
+    validate every element as an integer byte. MIDI endpoint commands
+    <code>/mL</code>, <code>/mi</code>, <code>/miV</code>,
+    <code>/mic</code>, <code>/mo</code>, <code>/moV</code>,
+    <code>/moc</code>, and <code>/m?</code> are also genuine immediate
+    Skode commands, so they work through the public API, loaders, and
+    immediate macros. <code>/mv channel,voice[,bend]</code> and
+    <code>/mp channel,pool[,bend]</code> install control-plane input
+    routes (<code>.</code> or <code>-</code> selects every channel);
+    <code>/mvd</code> and <code>/mpd</code> remove routes,
+    <code>/mR</code> lists them, and <code>/mC</code> clears them. Poly
+    input targets the pool rather than its group template. Generic
+    <code>[command] /mb type,channel,data1</code> bindings use the
+    numeric <code>SKRED_MIDI_*</code> type values, filter any fixed-size
+    MIDI message, and expand <code>{ch}</code>, <code>{d1}</code>,
+    <code>{d2}</code>, <code>{unit}</code>, or <code>{bend}</code> into
+    arbitrary Skode; <code>/mb?</code>, <code>/mbd</code>, and
+    <code>/mbC</code> inspect, remove, and clear these bindings. These
+    names deliberately fit Skode’s four-character atom limit.</p>
+    <table>
+    <colgroup>
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    <col style="width: 25%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Command</th>
+    <th>Arguments</th>
+    <th>Behavior</th>
+    <th>Main function or state</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>?</code>, <code>v?</code></td>
+    <td>none</td>
+    <td>Show selected voice</td>
+    <td><code>voice_show()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>\</code></td>
+    <td>none</td>
+    <td>Show selected voice verbosely</td>
+    <td><code>voice_show()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>??</code>, <code>v??</code></td>
+    <td>none</td>
+    <td>Show active voices</td>
+    <td><code>voice_show_all()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>?s</code></td>
+    <td>none</td>
+    <td>Show parser string</td>
+    <td><code>ands_string()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>?m</code></td>
+    <td>none</td>
+    <td>Show global ANDS macros</td>
+    <td><code>ands_macro_get()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[name] /m</code></td>
+    <td>string</td>
+    <td>Remove one global ANDS macro</td>
+    <td><code>ands_macro_remove()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/m!</code></td>
+    <td>none</td>
+    <td>Clear all global ANDS macros</td>
+    <td><code>ands_macro_clear()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>GS</code></td>
+    <td><code>[full]</code></td>
+    <td>Show copy/pasteable version, master volume, tempo, and track
+    delay commands; <code>full &gt; 0</code> adds a larger text
+    snapshot</td>
+    <td><code>global_status_show()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>[filename] GS&gt;</code></td>
+    <td>string</td>
+    <td>Save settings, writable waves, recording buffer, variables,
+    macros, KSynth state, and control/MIDI mappings to ZIP</td>
+    <td><code>skode_session_save()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>[filename] GS&lt;</code></td>
+    <td>string</td>
+    <td>Restore a validated session ZIP into the receiving parser
+    context</td>
+    <td><code>skode_session_load()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/s [section]</code></td>
+    <td>optional numeric</td>
+    <td>Show system, audio, synth, Skode, string, or benchmark
+    state</td>
+    <td><code>system_show()</code> and related helpers</td>
+    </tr>
+    <tr class="even">
+    <td><code>/t [level]</code></td>
+    <td>optional numeric</td>
+    <td>Toggle or set command/parser tracing</td>
+    <td><code>ctx-&gt;trace</code>, <code>ands_trace_set()</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>/v [level]</code></td>
+    <td>optional numeric</td>
+    <td>Toggle or set verbose output</td>
+    <td><code>ctx-&gt;verbose</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/f [value]</code></td>
+    <td>optional numeric</td>
+    <td>Show or set context flag</td>
+    <td><code>ctx-&gt;flag</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>log state</code></td>
+    <td>numeric</td>
+    <td>Enable or disable context log capture</td>
+    <td><code>ctx-&gt;log_enable</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>udp value</code></td>
+    <td>numeric</td>
+    <td>Show UDP endpoint information</td>
+    <td>context fields; <code>UDP</code> feature</td>
+    </tr>
+    <tr class="odd">
+    <td><code>wait ms</code></td>
+    <td>numeric</td>
+    <td>Block the control thread</td>
+    <td><code>sk_sleep()</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>/m_</code></td>
+    <td>none</td>
+    <td>Benchmark selected voice</td>
+    <td><code>synth_voice_bench()</code>; <code>BENCH</code>
+    feature</td>
+    </tr>
+    <tr class="odd">
+    <td><code>/q</code></td>
+    <td>none</td>
+    <td>Request shell exit</td>
+    <td><code>ctx-&gt;quit</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p><code>I</code> currently parses a numeric argument but is a stub;
+    it does not enable an event logger.</p>
+    <h2 id="build-features">Build Features</h2>
+    <p>Commands enclosed by <code>#ifdef ...</code> in the C sources
+    only exist when those features are enabled. Important command
+    features include:</p>
+    <table>
+    <colgroup>
+    <col style="width: 50%" />
+    <col style="width: 50%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Feature</th>
+    <th>Commands</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td><code>ADSR</code></td>
+    <td><code>k</code>, <code>t</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>AM</code></td>
+    <td><code>A</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>BENCH</code></td>
+    <td><code>/m_</code> and extra <code>/s</code> sections</td>
+    </tr>
+    <tr class="even">
+    <td><code>CRUSH</code></td>
+    <td><code>q</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>FADSR</code> with <code>FILT</code></td>
+    <td><code>ft</code>, <code>fd</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>FILT</code></td>
+    <td><code>J</code>, <code>K</code>, <code>Q</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>FM</code></td>
+    <td><code>F</code>, <code>FF</code>, <code>FB</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>GLISS</code></td>
+    <td><code>g</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>KSYNTH</code></td>
+    <td><code>/ks</code>, <code>/k</code>, <code>ks</code>,
+    <code>k!</code>, <code>kw</code>, <code>kw&gt;</code>,
+    <code>k?</code>, <code>k&gt;d</code>, <code>k&gt;w</code>,
+    <code>d&gt;k</code>, <code>w&gt;k</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>MIDI</code></td>
+    <td><code>/mL</code>, <code>/m?</code>, <code>/mi</code>,
+    <code>/miV</code>, <code>/mic</code>, <code>/mo</code>,
+    <code>/moV</code>, <code>/moc</code>, <code>MO</code>,
+    <code>d&gt;MO</code>, <code>/mv</code>, <code>/mvd</code>,
+    <code>/mp</code>, <code>/mpd</code>, <code>/mR</code>,
+    <code>/mC</code>, <code>/mb</code>, <code>/mb?</code>,
+    <code>/mbd</code>, <code>/mbC</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>PANMOD</code></td>
+    <td><code>P</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>PD</code></td>
+    <td><code>c</code>, <code>C</code>, <code>ct</code>,
+    <code>cd</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>RECORD</code></td>
+    <td><code>r</code>, <code>rt</code>, <code>rv</code>,
+    <code>?r</code>, <code>/rg</code>, <code>/rs</code>,
+    <code>/r?</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>SCOPE</code></td>
+    <td><code>r</code>, <code>rt</code>, <code>rv</code>,
+    <code>?r</code>, <code>/sg</code>, <code>/ss</code>,
+    <code>/s?</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>TRACKS</code></td>
+    <td><code>r</code>, <code>rt</code>, <code>rv</code>,
+    <code>?r</code>, <code>ds</code>, <code>DL</code>,
+    <code>DL?</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>SAH</code></td>
+    <td><code>h</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>SEQ</code></td>
+    <td>timing, queue, and pattern commands</td>
+    </tr>
+    <tr class="even">
+    <td><code>SMOOTHER</code></td>
+    <td><code>s</code></td>
+    </tr>
+    <tr class="odd">
+    <td><code>UDP</code></td>
+    <td><code>udp</code></td>
+    </tr>
+    <tr class="even">
+    <td><code>XM</code></td>
+    <td><code>XM</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>MIDI management, route, binding, and output atoms are present
+    even without <code>MIDI=1</code> so scripts receive a stable
+    unavailable-backend result. The actual backend, device access, and
+    <code>MIDI</code> feature report require <code>MIDI=1</code>.</p>
+    <p>The normal WASM build enables the voice and sequence features
+    listed in <code>WASM_KIT_OPTS</code> in <code>Makefile</code>, but
+    does not enable every optional command.</p>
+    <h2 id="source-map">Source Map</h2>
+    <table>
+    <colgroup>
+    <col style="width: 50%" />
+    <col style="width: 50%" />
+    </colgroup>
+    <thead>
+    <tr class="header">
+    <th>Area</th>
+    <th>Source</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="odd">
+    <td>Parser context and public Skode API</td>
+    <td><code>skode.h</code></td>
+    </tr>
+    <tr class="even">
+    <td>Immediate command dispatch</td>
+    <td><code>skode.c</code>, <code>skode_function()</code></td>
+    </tr>
+    <tr class="odd">
+    <td>Dictionary word registration and lookup</td>
+    <td><code>skode-dict.c</code>, <code>skode-dict.h</code></td>
+    </tr>
+    <tr class="even">
+    <td>Scheduled command compiler</td>
+    <td><code>skode-event.c</code>,
+    <code>skode_compile_program()</code></td>
+    </tr>
+    <tr class="odd">
+    <td>Legacy hardcoded opcode real-time check</td>
+    <td><code>skode-event.c</code>,
+    <code>skode_is_legacy_realtime_opcode()</code></td>
+    </tr>
+    <tr class="even">
+    <td>Event and program execution</td>
+    <td><code>skode-event.c</code>, <code>run_program()</code></td>
+    </tr>
+    <tr class="odd">
+    <td>Voice opcode dispatch</td>
+    <td><code>skode.c</code>,
+    <code>skode_execute_voice_opcode()</code></td>
+    </tr>
+    <tr class="even">
+    <td>Synth functions and state</td>
+    <td><code>synth.c</code>, <code>synth.h</code></td>
+    </tr>
+    <tr class="odd">
+    <td>Queue implementation</td>
+    <td><code>skqueue.c</code>, <code>skqueue.h</code></td>
+    </tr>
+    <tr class="even">
+    <td>Sequence implementation</td>
+    <td><code>seq.c</code>, <code>seq.h</code></td>
+    </tr>
+    <tr class="odd">
+    <td>Parser implementation</td>
+    <td><code>ands.c</code>, <code>ands.h</code></td>
+    </tr>
+    <tr class="even">
+    <td>Scheduled-opcode design notes</td>
+    <td><code>OPCODES.md</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <h3 id="adding-a-new-command">Adding a new command</h3>
+    <p>There are two paths for new commands. Choose based on whether you
+    are extending the dictionary system or working with a legacy
+    hardcoded opcode.</p>
+    <p><strong>Preferred: dictionary-registered word (new
+    additions)</strong></p>
+    <ol type="1">
+    <li>Register a <code>skode_word_t</code> in
+    <code>skode-dict.c</code> with the appropriate
+    <code>.safety</code>.</li>
+    <li>For real-time-safe commands, set
+    <code>.safety = WORD_REAL_TIME_SAFE</code> and either:
+    <ul>
+    <li>Set <code>.opcode_id</code> to an existing
+    <code>skode_opcode_t</code> value (no new opcode needed), or</li>
+    <li>Set <code>.compile</code> to a custom compile callback and add
+    an opcode entry in <code>skode.h</code>.</li>
+    </ul></li>
+    <li>Set <code>.execute</code> for the immediate execution path.</li>
+    <li>For immediate-only commands, set
+    <code>.safety = WORD_IMMEDIATE_ONLY</code> and only
+    <code>.execute</code>.</li>
+    <li>Add tests and update this command reference.</li>
+    </ol>
+    <p><strong>Legacy path (modifying existing hardcoded commands in
+    <code>skode-event.c</code>)</strong></p>
+    <p>The legacy <code>switch</code>-based compiler in
+    <code>skode-event.c</code> handles many voice commands that predate
+    the dictionary system. These words have
+    <code>.safety = WORD_IMMEDIATE_ONLY</code> in their
+    <code>skode_word_t</code> struct to prevent the dictionary compiler
+    from handling them, but they <em>are</em> real-time safe through the
+    legacy path. The bridge is
+    <code>skode_is_legacy_realtime_opcode()</code> in
+    <code>skode-event.c</code>.</p>
+    <p>When adding to or modifying the legacy path, update all of the
+    following:</p>
+    <ol type="1">
+    <li><code>skode_opcode_t</code> in <code>skode.h</code>.</li>
+    <li><code>skode_opcode_name()</code> in
+    <code>skode-event.c</code>.</li>
+    <li><code>skode_compile_callback()</code> in
+    <code>skode-event.c</code>.</li>
+    <li><code>skode_opcode_supported()</code> in
+    <code>skode.c</code>.</li>
+    <li><code>skode_execute_voice_opcode()</code> in
+    <code>skode.c</code>.</li>
+    <li>The immediate command path in
+    <code>skode_function()</code>.</li>
+    <li><code>skode_is_legacy_realtime_opcode()</code> if the word
+    should appear in <code>1 ?M</code>.</li>
+    <li>Tests and this command reference.</li>
+    </ol>
+  </article>
+</body>
+</html>
