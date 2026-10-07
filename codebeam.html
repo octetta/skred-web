@@ -121,6 +121,7 @@
     </div>
 
     <div id="repl-bar">
+        <div id="engine-status-light" style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 8px #ef4444; margin-right: 15px;" title="Engine Status"></div>
         <strong style="color: white; margin-right: 15px;"><span style="font-family: 'Fira Code', monospace;">Skred</span> REPL:</strong>
         <input type="text" id="repl-input" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="e.g. v0 w0 f220 a0 l1" disabled>
         <button id="repl-send" disabled>Send</button>
@@ -151,6 +152,11 @@
                 document.getElementById('repl-log').textContent = "Engine Started!";
                 document.getElementById('repl-input').disabled = false;
                 document.getElementById('repl-send').disabled = false;
+                
+                // Update status light
+                const light = document.getElementById('engine-status-light');
+                light.style.backgroundColor = '#22c55e';
+                light.style.boxShadow = '0 0 8px #22c55e';
                 
                 // Ta-da fanfare
                 doSkred('v255 w2 f392.00 a-10 t .01 .1 0 0 l1');
