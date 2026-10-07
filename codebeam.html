@@ -152,14 +152,14 @@
             if (!outroSetup) {
                 // Initialize voices
                 doSkred('v1 w82 a20');
-                doSkred('v2 w83 a10');
-                doSkred('v3 w84 a20');
+                doSkred('v2 w83 a15');
+                doSkred('v3 w84 a5');
                 
-                // Set up pattern 0: Kick on 0, Snare on 2, modulo 4
-                doSkred('y0 [v1l1]x0 [v2l1]x2 %4');
+                // Set up pattern 0: Kick on 0, Snare on 1, modulo 4
+                doSkred('y0 [v1l1]x0 [v2l1]x1 %4');
                 
-                // Set up pattern 1: Hat on every step, modulo 4
-                doSkred('y1 [v3l1]x0 [v3l1]x1 [v3l1]x2 [v3l1]x3 %4');
+                // Set up pattern 1: Hat on 0, modulo 1
+                doSkred('y1 [v3l1]x0 %1');
                 
                 outroSetup = true;
             }
