@@ -32,7 +32,7 @@
         <div class="slides">
             
             <section>
-                <h1>Skred</h1>
+                <h1><span style="font-family: 'Fira Code', monospace;">Skred</span></h1>
                 <h3>Adding audio to your BEAM apps doesn't have to be hard.</h3>
                 <button class="sound-btn" onclick="startAudio()">1. Initialize Audio Engine</button>
                 <p style="font-size: 20px; color: #888;">(Click before presentation)</p>
@@ -60,17 +60,17 @@
 
             <section>
                 <h2>3. The BEAM-like Solution</h2>
-                <p>Skred is designed exactly like an Erlang/Elixir Actor.</p>
+                <p><span style="font-family: 'Fira Code', monospace;">Skred</span> is designed exactly like an Erlang/Elixir Actor.</p>
                 <ul>
                     <li class="fragment"><span class="highlight-text">Message Passing:</span> Send immutable strings (<span class="skred-cmd">v0 f440 a0 l1</span>).</li>
                     <li class="fragment"><span class="highlight-text">Isolated State:</span> The audio thread is lock-free and never parses text or allocates memory.</li>
-                    <li class="fragment"><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, Skred keeps playing.</li>
+                    <li class="fragment"><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, <span style="font-family: 'Fira Code', monospace;">Skred</span> keeps playing.</li>
                 </ul>
             </section>
 
             <section>
-                <h2>4. A 30-Second Guide to Skred</h2>
-                <p style="color: #ccc; font-size: 0.9em;">Skred isn't random line noise; it follows intentional design idioms:</p>
+                <h2>4. A 30-Second Guide to <span style="font-family: 'Fira Code', monospace;">Skred</span></h2>
+                <p style="color: #ccc; font-size: 0.9em;"><span style="font-family: 'Fira Code', monospace;">Skred</span> isn't random line noise; it follows intentional design idioms:</p>
                 <ul style="font-size: 0.9em;">
                     <li class="fragment"><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code class="skred-cmd">v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
                     <li class="fragment"><span class="highlight-text">Case implies context:</span> <code>f</code> (direct freq) vs <code>F</code> (freq modulation)</li>
@@ -81,7 +81,7 @@
             <section>
                 <h2>5. Zero to Sound</h2>
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 10%;">
-                    <p style="text-align: left; margin: 0;">WebAudio requires 50 lines of JS.<br>In Skred, a sound effect is one string.</p>
+                    <p style="text-align: left; margin: 0;">WebAudio requires 50 lines of JS.<br>In <span style="font-family: 'Fira Code', monospace;">Skred</span>, a sound effect is one string.</p>
                     <div style="text-align: center; background: #111; padding: 10px; border-radius: 12px; border: 1px solid #333;">
                         <img src="qr-help.svg" alt="Scan for easy integration example" style="width: 120px; margin: 0; display: block;">
                         <span style="font-size: 16px; color: #aaa; font-family: 'Fira Code', monospace;">Try It Now</span>
@@ -94,7 +94,7 @@
                     <button class="sound-btn" style="font-size: 20px; background: #a855f7;" onclick="playDemo(['v0 w2 f800 a-6 t .01 .1 0 0 fb 1200 fbp .1 l1'])">Game: Coin Pickup</button>
                 </div>
                 <br>
-                <pre style="width: 80%; margin: auto; background: #111; border: 1px solid #333; border-radius: 8px;"><code id="live-code-display" class="skred-cmd" style="font-size: 1em; padding: 20px; display: block; white-space: pre-wrap; color: #4ade80;">Click a button above to see the Skred string...</code></pre>
+                <pre style="width: 80%; margin: auto; background: #111; border: 1px solid #333; border-radius: 8px;"><code id="live-code-display" class="skred-cmd" style="font-size: 1em; padding: 20px; display: block; white-space: pre-wrap; color: #4ade80;">Click a button above to see the <span style="font-family: 'Fira Code', monospace;">Skred</span> string...</code></pre>
             </section>
 
             <section>
@@ -102,8 +102,8 @@
                 <p>What will you build?</p>
                 <ul>
                     <li class="fragment"><span class="highlight-text">Data Sonification:</span> High server traffic increases the tempo. Errors trigger heavy FM synths in the dashboard.</li>
-                    <li class="fragment"><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny Skred strings to trigger WASM sound effects for all players.</li>
-                    <li class="fragment"><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates Skred safely.</li>
+                    <li class="fragment"><span class="highlight-text">Multiplayer Games:</span> Phoenix Channels broadcasting tiny <span style="font-family: 'Fira Code', monospace;">Skred</span> strings to trigger WASM sound effects for all players.</li>
+                    <li class="fragment"><span class="highlight-text">Type-Safe DSL:</span> A Gleam library that generates <span style="font-family: 'Fira Code', monospace;">Skred</span> safely.</li>
                 </ul>
             </section>
 
@@ -111,7 +111,7 @@
     </div>
 
     <div id="repl-bar">
-        <strong style="color: white; margin-right: 15px;">Skred REPL:</strong>
+        <strong style="color: white; margin-right: 15px;"><span style="font-family: 'Fira Code', monospace;">Skred</span> REPL:</strong>
         <input type="text" id="repl-input" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="e.g. v0 w0 f220 a0 l1" disabled>
         <button id="repl-send" disabled>Send</button>
         <div id="repl-log">Waiting for engine...</div>
