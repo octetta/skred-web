@@ -77,7 +77,7 @@
                 <p class="fragment"><span class="skred-brand-text">skred</span> generates waveforms in interesting ways.</p>
                 <p class="fragment">It can easily sequence patterns of those waves.</p>
                 
-                <button class="sound-btn" onclick="doSkred('v0 w0 f440 a0 t .01 1 0 0 l1'); doSkred('+0.5 v0 f660 l1'); doSkred('+1.0 v0 f880 l1')">Play Sequence</button>
+                <button class="sound-btn" onclick="doSkred('v0 w0 f440 a-15 t .01 1 0 0 l1'); doSkred('+0.5 v0 f660 l1'); doSkred('+1.0 v0 f880 l1')">Play Sequence</button>
             </section>
             
             <section>
@@ -101,7 +101,7 @@
                 <h2>3. The BEAM-like Solution</h2>
                 <p><span class="skred-brand-text">skred</span>'s design is inspired by the BEAM actor model.</p>
                 <ul>
-                    <li class="fragment"><span class="highlight-text">Message Passing:</span> Send immutable strings (<span class="skred-cmd">v0 f440 a0 l1</span>).</li>
+                    <li class="fragment"><span class="highlight-text">Message Passing:</span> Send immutable strings (<span class="skred-cmd">v0 f440 a-15 l1</span>).</li>
                     <li class="fragment"><span class="highlight-text">Isolated State:</span> The audio thread is lock-free and never parses text or allocates memory.</li>
                     <li class="fragment"><span class="highlight-text">Fault Tolerant:</span> If your Elixir backend crashes, <span class="skred-brand-text">skred</span> keeps playing. 😂</li>
                 </ul>
@@ -144,7 +144,7 @@
                 <h2>5. 30-seconds to <span class="skred-brand-header">skred</span></h2>
                 <p style="color: #ccc; font-size: 0.9em;"><span class="skred-brand-text">skred</span> isn't random line noise; it follows intentional design idioms:</p>
                 <ul style="font-size: 0.9em;">
-                    <li class="fragment"><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code class="skred-cmd">v0 n60 a0 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
+                    <li class="fragment"><span class="highlight-text">Single letters</span> prioritize what you touch constantly:<br> <code class="skred-cmd">v0 n60 a-15 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60, <b>A</b>mplitude 0, <b>L</b>evel (Trigger) 1</li>
                     <li class="fragment"><span class="highlight-text">Case implies context:</span> <code>f</code> (direct freq) vs <code>F</code> (freq modulation)</li>
                     <li class="fragment"><span class="highlight-text">Punctuation implies intent:</span> <code>?</code> (inspect), <code>/</code> (subsystem control), <code>></code> (routing)</li>
                 </ul>
@@ -225,7 +225,7 @@
         <div class="repl-row">
             <div id="engine-status-light" style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 8px #ef4444; margin-right: 15px;" title="Engine Status"></div>
             <strong style="color: white; margin-right: 15px;"><span class="skred-brand-text">skred</span> REPL:</strong>
-            <input type="text" id="repl-input" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="e.g. v0 w0 f220 a0 l1" disabled>
+            <input type="text" id="repl-input" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="e.g. v0 w0 f220 a-15 l1" disabled>
             <button id="repl-send" disabled>Send</button>
             <div id="repl-log">Waiting for engine...</div>
             <button onclick="toggleConsole()" style="margin-left: 20px; background: #333; color: #aaa; border: 1px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 4px;">&#x25B2; Log</button>
@@ -284,29 +284,29 @@
                 light.style.boxShadow = '0 0 8px #22c55e';
                 
                 // Ta-da fanfare
-                doSkred('v255 w2 f392.00 a-10 t .01 .1 0 0 l1');
+                doSkred('v255 w2 f392.00 a-25 t .01 .1 0 0 l1');
                 doSkred('+0.15 v255 f523.25 t .01 .6 0 0 l1');
                 
                 // ==========================================
                 // PUT YOUR DEFINITIONS HERE
                 // Tweak the slide transition voices to suit your emotions:
-                doSkred('+0.8 v252 m1 a0 f4 l1');
-                doSkred('+1.0 v254 w6 a-5 t 0 1 0 0 j1k1000q10 A252,1');
-                doSkred('+1.2 v255 w4 f1000 a5 t .05 .4 0 0 G254 H254');
-                doSkred('+1.4 v253 w1 f80 a-10 t .01 .1 0 0 fb 40 fbp .05');
+                doSkred('+0.8 v252 m1 a-15 f4 l1');
+                doSkred('+1.0 v254 w6 a-20 t 0 1 0 0 j1k1000q10 A252,1');
+                doSkred('+1.2 v255 w4 f1000 a-10 t .05 .4 0 0 G254 H254');
+                doSkred('+1.4 v253 w1 f80 a-25 t .01 .1 0 0 fb 40 fbp .05');
 
                 // Setup Outro Beat
-                doSkred('v1 w82 a20');
-                doSkred('v2 w83 a15');
-                doSkred('v3 w84 a5');
+                doSkred('v1 w82 a5');
+                doSkred('v2 w83 a0');
+                doSkred('v3 w84 a-10');
                 doSkred('y0 [v1l1]x0');
                 doSkred('y0 [v2l1]x1');
                 doSkred('y0 %4');
                 doSkred('y1 [v3l1]x0 %1');
 
                 // Define your macros for the Osko clicks!
-                // e.g.: doSkred('+1.6 e1> v0 w1 f440 a0 t .01 .1 0 0 l1');
-                //       doSkred('+1.8 e2> v0 w2 f880 a0 t .01 .1 0 0 l1');
+                // e.g.: doSkred('+1.6 e1> v0 w1 f440 a-15 t .01 .1 0 0 l1');
+                //       doSkred('+1.8 e2> v0 w2 f880 a-15 t .01 .1 0 0 l1');
                 //       ...
                 // ==========================================
 
