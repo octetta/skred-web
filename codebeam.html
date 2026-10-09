@@ -269,7 +269,7 @@
         function startAudio() {
             if (engineStarted) return;
             if (typeof Module !== 'undefined' && Module._skred_start) {
-                const res = Module._skred_start(1024, 256, 0);
+                const res = Module._skred_start(128, 256, 0);
                 engineStarted = true;
                 doSkred('log 1');
                 document.getElementById('repl-log').textContent = "Engine Started!";
