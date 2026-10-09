@@ -126,12 +126,12 @@
           <label for="midi-note">Test Pitch (MIDI Note):</label>
           <input type="number" id="midi-note" value="69" min="0" max="127">
           <label for="main-vol" style="margin-left: 20px;">Main Vol:</label>
-          <input type="number" id="main-vol" value="-20" max="10" step="1">
+          <input type="number" id="main-vol" value="-6" max="10" step="1">
           <span style="margin-left: 15px; font-size: 8px; opacity: 0.8;">Click/Space plays</span>
       </div>
       <div style="margin-bottom: 10px;">
           <label for="manual-cmd">Manual Command:</label>
-          <input type="text" id="manual-cmd" placeholder="e.g. v0 w15 a20 t 0 0 1 0 n69 l1">
+          <input type="text" id="manual-cmd" placeholder="e.g. v0 w15 a10 t 0 0 1 0 n69 l1">
       </div>
       <div style="font-size: 8px; color: #fff; background: #000; padding: 8px; border: 1px solid #003333; border-radius: 4px; display: inline-block; min-width: 350px; text-align: left;" id="cmd-display">
           > Waiting for input...
@@ -166,9 +166,9 @@
         
         let cmd = "";
         if (wave.one_shot) {
-            cmd = `S${voice} v${voice} w${wave.id} a20 t 0 0 1 0 n${note} l1`;
+            cmd = `S${voice} v${voice} w${wave.id} a10 t 0 0 1 0 n${note} l1`;
         } else {
-            cmd = `S${voice} v${voice} w${wave.id} a0 t 0.01 1 0 0 n${note} l1`;
+            cmd = `S${voice} v${voice} w${wave.id} t 0.01 1 0 0 n${note} l1`;
         }
         
         console.log("Playing:", cmd);
