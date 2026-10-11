@@ -318,8 +318,133 @@
             cmds.forEach(cmd => doSkred(cmd));
         }
 
+        let lastRecordedFile = null;
+
+        function saveRecordedFile(requestedName) {
+            const fs = window.FS || (typeof Module !== 'undefined' ? Module.FS : null);
+            if (!fs) {
+                const err = "Error: FS object not found on window or Module.";
+                console.error(err);
+                document.getElementById('repl-log').textContent = err;
+                return false;
+            }
+
+            let targetName = requestedName ? requestedName.trim() : null;
+            if (targetName && targetName.startsWith('[') && targetName.endsWith(']')) {
+                targetName = targetName.slice(1, -1).trim();
+            }
+            if (!targetName) {
+                targetName = lastRecordedFile;
+            }
+
+            function findFileInFS(name) {
+                if (!name) return null;
+                const candidates = [
+                    name,
+                    '/' + name,
+                    name.startsWith('/') ? name.slice(1) : '/' + name
+                ];
+                for (const p of candidates) {
+                    try {
+                        const stat = fs.stat(p);
+                        if (stat && !fs.isDir(stat.mode)) {
+                            return p;
+                        }
+                    } catch (e) {}
+                }
+                return null;
+            }
+
+            let virtualPath = findFileInFS(targetName);
+
+            if (!virtualPath) {
+                try {
+                    const files = fs.readdir('/');
+                    const wavFiles = [];
+                    for (const f of files) {
+                        if (f === '.' || f === '..') continue;
+                        try {
+                            const p = '/' + f;
+                            const stat = fs.stat(p);
+                            if (stat && !fs.isDir(stat.mode) && f.toLowerCase().endsWith('.wav')) {
+                                wavFiles.push({ path: p, name: f, mtime: stat.mtime });
+                            }
+                        } catch (e) {}
+                    }
+                    if (wavFiles.length > 0) {
+                        wavFiles.sort((a, b) => b.mtime - a.mtime);
+                        virtualPath = wavFiles[0].path;
+                        targetName = wavFiles[0].name;
+                    }
+                } catch (e) {}
+            }
+
+            if (!virtualPath) {
+                const msg = "No recorded file found. Record first using [filename.wav] /rg then /rs";
+                console.warn(msg);
+                document.getElementById('repl-log').textContent = msg;
+                const hist = document.getElementById('console-history');
+                if (hist) {
+                    hist.innerHTML += `<span style="color: #ef4444;">${msg}</span>\n`;
+                    hist.scrollTop = hist.scrollHeight;
+                }
+                return false;
+            }
+
+            let saveAsName = targetName ? targetName.split('/').pop() : virtualPath.split('/').pop();
+            if (!saveAsName.toLowerCase().endsWith('.wav')) {
+                saveAsName += '.wav';
+            }
+
+            try {
+                const fileData = fs.readFile(virtualPath, { encoding: 'binary' });
+                const blob = new Blob([fileData], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = saveAsName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+
+                const successMsg = `Downloaded ${virtualPath} as ${saveAsName} (${fileData.length} bytes)`;
+                console.log(successMsg);
+                document.getElementById('repl-log').textContent = successMsg;
+                const hist = document.getElementById('console-history');
+                if (hist) {
+                    hist.innerHTML += `<span style="color: #4ade80;">${successMsg}</span>\n`;
+                    hist.scrollTop = hist.scrollHeight;
+                }
+                return true;
+            } catch (err) {
+                const errMsg = `Failed to read ${virtualPath}: ${err.message || err}`;
+                console.error(errMsg, err);
+                document.getElementById('repl-log').textContent = errMsg;
+                return false;
+            }
+        }
+
         function doSkred(cmd) {
             if (!engineStarted) return;
+            const trimmed = cmd.trim();
+            const action = trimmed.split(' ')[0].toLowerCase();
+            if (action === '-save' || action === '.save') {
+                const parts = trimmed.split(' ');
+                const arg = parts.length > 1 ? parts.slice(1).join(' ') : null;
+                const hist = document.getElementById('console-history');
+                if (hist) {
+                    hist.innerHTML += `<span style="color: #aaa;">> ${cmd}</span>\n`;
+                }
+                saveRecordedFile(arg);
+                return;
+            }
+
+            const rgMatch = cmd.match(/\[([^\]]+)\]\s*\/rg/);
+            if (rgMatch) {
+                lastRecordedFile = rgMatch[1].trim();
+            }
+
             Module.ccall('skred_command', null, ['string'], [cmd]);
             
             const ptr = Module._skred_log();

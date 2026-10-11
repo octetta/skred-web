@@ -378,6 +378,7 @@ function usage() {
   printToTerminal("-load # select a wav file");
   printToTerminal("-zip # select and mount a zip asset bundle");
   printToTerminal("-unzip # unmount zip asset bundle");
+  printToTerminal("-save [filename] # download recorded wav file");
   printToTerminal(`v(0..${nvoices}) # select voice`);
   printToTerminal("w(0..999)     # select waveform");
   printToTerminal("a(-90..10)    # set amplitide (dB)");
@@ -715,9 +716,115 @@ function ensureBooted() {
     }
 }
 
+let lastRecordedFile = null;
+
+function saveRecordedFile(requestedName) {
+    const fs = window.FS || (typeof Module !== 'undefined' ? Module.FS : null);
+    if (!fs) {
+        const err = "Error: FS object not found on window or Module.";
+        console.error(err);
+        printToTerminal(err, "error");
+        return false;
+    }
+
+    let targetName = requestedName ? requestedName.trim() : null;
+    if (targetName && targetName.startsWith('[') && targetName.endsWith(']')) {
+        targetName = targetName.slice(1, -1).trim();
+    }
+    if (!targetName) {
+        targetName = lastRecordedFile;
+    }
+
+    function findFileInFS(name) {
+        if (!name) return null;
+        const candidates = [
+            name,
+            '/' + name,
+            name.startsWith('/') ? name.slice(1) : '/' + name
+        ];
+        for (const p of candidates) {
+            try {
+                const stat = fs.stat(p);
+                if (stat && !fs.isDir(stat.mode)) {
+                    return p;
+                }
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    let virtualPath = findFileInFS(targetName);
+
+    // If not found by specific name, scan '/' for any .wav files
+    if (!virtualPath) {
+        try {
+            const files = fs.readdir('/');
+            const wavFiles = [];
+            for (const f of files) {
+                if (f === '.' || f === '..') continue;
+                try {
+                    const p = '/' + f;
+                    const stat = fs.stat(p);
+                    if (stat && !fs.isDir(stat.mode) && f.toLowerCase().endsWith('.wav')) {
+                        wavFiles.push({ path: p, name: f, mtime: stat.mtime });
+                    }
+                } catch (e) {}
+            }
+            if (wavFiles.length > 0) {
+                wavFiles.sort((a, b) => b.mtime - a.mtime);
+                virtualPath = wavFiles[0].path;
+                targetName = wavFiles[0].name;
+            }
+        } catch (e) {}
+    }
+
+    if (!virtualPath) {
+        const msg = "No recorded file found in virtual filesystem. Record first using [filename.wav] /rg then /rs";
+        console.warn(msg);
+        printToTerminal(msg, "error");
+        return false;
+    }
+
+    let saveAsName = targetName ? targetName.split('/').pop() : virtualPath.split('/').pop();
+    if (!saveAsName.toLowerCase().endsWith('.wav')) {
+        saveAsName += '.wav';
+    }
+
+    try {
+        const fileData = fs.readFile(virtualPath, { encoding: 'binary' });
+        if (!fileData || fileData.length === 0) {
+            printToTerminal(`Warning: ${virtualPath} is empty (0 bytes). Did you run /rs to finish recording?`, "error");
+        }
+        const blob = new Blob([fileData], { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = saveAsName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        const successMsg = `Downloaded ${virtualPath} as ${saveAsName} (${fileData.length} bytes)`;
+        console.log(successMsg);
+        printToTerminal(successMsg, "system");
+        return true;
+    } catch (err) {
+        const errMsg = `Failed to read ${virtualPath} from virtual filesystem: ${err.message || err}`;
+        console.error(errMsg, err);
+        printToTerminal(errMsg, "error");
+        return false;
+    }
+}
+
 function processCommand(cmd) {
     const action = cmd.split(' ')[0].toLowerCase();
     var arg = cmd.split(' ');
+
+    const rgMatch = cmd.match(/\[([^\]]+)\]\s*\/rg/);
+    if (rgMatch) {
+        lastRecordedFile = rgMatch[1].trim();
+    }
 
     switch(action) {
         case '-restart':
@@ -765,6 +872,10 @@ function processCommand(cmd) {
             if (!ensureBooted()) return;
             addWavViaDialog();
             break;
+        case '-save':
+        case '.save':
+            saveRecordedFile(arg.length > 1 ? arg.slice(1).join(' ') : null);
+            break;
         case '-zip':
         case '.zip':
             mountZipViaDialog();
@@ -801,6 +912,10 @@ function processCommand(cmd) {
 
 function sendSkredCommand(cmd) {
     if (!ensureBooted()) return false;
+    const rgMatch = cmd.match(/\[([^\]]+)\]\s*\/rg/);
+    if (rgMatch) {
+        lastRecordedFile = rgMatch[1].trim();
+    }
     Module.ccall('skred_command', null, ['string'], [cmd]);
     const log = skredLogString();
     if (log !== "") {
