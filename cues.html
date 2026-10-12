@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Code BEAM: Speaker Notes & Timing Cues</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-card: #131924;
+            --border-card: #222d3d;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-green: #4ade80;
+            --accent-cyan: #38bdf8;
+            --accent-yellow: #facc15;
+            --accent-purple: #c084fc;
+            --accent-red: #f87171;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            padding: 16px;
+            padding-bottom: 90px;
+            line-height: 1.5;
+        }
+
+        /* Fixed Mobile Header / Stopwatch */
+        #timer-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 14, 20, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--border-card);
+            padding: 12px 14px;
+            margin: -16px -16px 20px -16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .timer-display {
+            font-family: 'Fira Code', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            letter-spacing: -0.02em;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+
+        .btn-start {
+            background: var(--accent-green);
+            color: #064e3b;
+        }
+
+        .btn-pause {
+            background: var(--accent-yellow);
+            color: #713f12;
+        }
+
+        .btn-reset {
+            background: #334155;
+            color: #cbd5e1;
+        }
+
+        .header-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-green);
+            margin-bottom: 4px;
+        }
+
+        .header-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        /* Slide cue card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s ease, transform 0.15s ease;
+        }
+
+        .card:hover, .card:active {
+            border-color: var(--accent-cyan);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-card);
+            padding-bottom: 8px;
+        }
+
+        .slide-tag {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            background: rgba(56, 189, 248, 0.12);
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .time-badge {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-yellow);
+            background: rgba(250, 204, 21, 0.12);
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(250, 204, 21, 0.3);
+        }
+
+        .slide-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .cue-box {
+            background: rgba(56, 189, 248, 0.08);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 10px 12px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            color: #bae6fd;
+            font-weight: 500;
+        }
+
+        .points-list {
+            list-style: none;
+            padding-left: 0;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .points-list li {
+            position: relative;
+            padding-left: 18px;
+            margin-bottom: 6px;
+        }
+
+        .points-list li::before {
+            content: "•";
+            position: absolute;
+            left: 4px;
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        .code-tag {
+            font-family: 'Fira Code', monospace;
+            background: #1e293b;
+            color: var(--accent-green);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .action-alert {
+            display: inline-block;
+            margin-top: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-purple);
+            background: rgba(192, 132, 252, 0.12);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(192, 132, 252, 0.3);
+        }
+
+        /* Bottom quick switcher */
+        #nav-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #0f172a;
+            border-top: 1px solid #1e293b;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-around;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+        }
+
+        #nav-footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            padding: 4px 10px;
+            background: #1e293b;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sticky Timer Header -->
+    <div id="timer-bar">
+        <div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-family: 'Fira Code', monospace;">ELAPSED / 40:00</div>
+            <div id="timer" class="timer-display">00:00</div>
+        </div>
+        <div class="timer-controls">
+            <button id="toggle-btn" class="btn-start" onclick="toggleTimer()">START</button>
+            <button class="btn-reset" onclick="resetTimer()">RESET</button>
+        </div>
+    </div>
+
+    <div class="header-title">SKRED LIVE CUES</div>
+    <div class="header-subtitle">Code BEAM Europe · 40m Slot (30m Talk + 10m Q&A)</div>
+
+    <!-- Slide 1 -->
+    <div class="card" id="card-1">
+        <div class="card-header">
+            <span class="slide-tag">Slide 01/10</span>
+            <span class="time-badge">T+00:00</span>
+        </div>
+        <div class="slide-title">Title & Hook</div>
+        <div class="cue-box">
+            Fade Gadgetto walk-in music. Acknowledge the vibe: we're here to make real noise. No stuffiness.
+        </div>
+        <ul class="points-list">
+            <li>Title: <em>Weird Live Audio Coding & Making Noise with the BEAM</em></li>
+            <li>Energy: Fast, fun, demo-first atmosphere.</li>
+        </ul>
+        <div class="action-alert">Action: Fade intro audio, set stage hook.</div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="card" id="card-2">
+        <div class="card-header">
+            <span class="slide-tag">Slide 02/10</span>
+            <span class="time-badge">T+01:30</span>
+        </div>
+        <div class="slide-title">Who Am I?</div>
+        <div class="cue-box">
+            Advance quickly to the live engine. 30 seconds max!
+        </div>
+        <ul class="points-list">
+            <li>Joe Stewart (<span class="code-tag">octetta</span>)</li>
+            <li>Principal Firmware Engineer · Audio Programmer & BEAM Enthusiast</li>
+            <li>Creator of <span class="code-tag">skred</span></li>
+        </ul>
+        <div class="action-alert">Action: Keep intro brief, don't stall before sound.</div>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="card" id="card-3">
+        <div class="card-header">
+            <span class="slide-tag">Slide 03/10</span>
+            <span class="time-badge">T+02:00</span>
+        </div>
+        <div class="slide-title">0 to Noise in One String</div>
+        <div class="cue-box">
+            Fire first sound into the PA. Wake up the room!
+        </div>
+        <ul class="points-list">
+            <li>Hit <code class="code-tag">[Fire Sequence]</code> button or type in REPL.</li>
+            <li>Point out: All generated in real-time from tiny ASCII strings.</li>
+            <li>Live DSP math running in pure C in memory right now.</li>
+        </ul>
+        <div class="action-alert">Action: Tap "Fire Sequence" button on slide.</div>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="card" id="card-4">
+        <div class="card-header">
+            <span class="slide-tag">Slide 04/10</span>
+            <span class="time-badge">T+05:00</span>
+        </div>
+        <div class="slide-title">Why Audio is Weird & Hard</div>
+        <div class="cue-box">
+            The hard-realtime constraint: zero syscalls, zero allocs in render loop.
+        </div>
+        <ul class="points-list">
+            <li>Audio render callbacks cannot block: no <code class="code-tag">malloc/free</code>, no mutexes, no sockets/files, no GC pauses.</li>
+            <li>Unbounded latency = immediate buffer underrun clicks.</li>
+            <li>BEAM is great at concurrency & fault tolerance, but wasn't designed for sub-millisecond audio loops.</li>
+            <li><strong>Solution:</strong> Decouple DSP math (C) from conductor orchestration (BEAM).</li>
+        </ul>
+    </div>
+
+    <!-- Slide 5 -->
+    <div class="card" id="card-5">
+        <div class="card-header">
+            <span class="slide-tag">Slide 05/10</span>
+            <span class="time-badge">T+08:00</span>
+        </div>
+        <div class="slide-title">The Architecture: One Engine, Two Transports</div>
+        <div class="cue-box">
+            Establish mental model: same C DSP core across Web and Native.
+        </div>
+        <ul class="points-list">
+            <li><strong>Pure C Core:</strong> Lock-free, zero-alloc, text-command driven.</li>
+            <li><strong>Target A (Browser / WASM):</strong> Zero-install sandbox on any device right now.</li>
+            <li><strong>Target B (Native):</strong> High performance headless daemon for servers, Raspberry Pis, rigs.</li>
+        </ul>
+    </div>
+
+    <!-- Slide 6 -->
+    <div class="card" id="card-6">
+        <div class="card-header">
+            <span class="slide-tag">Slide 06/10</span>
+            <span class="time-badge">T+13:00</span>
+        </div>
+        <div class="slide-title">Orchestrating from the BEAM</div>
+        <div class="cue-box">
+            The BEAM connection they came to see: ports, UDP, and OTP orchestration.
+        </div>
+        <ul class="points-list">
+            <li><strong>Option 1: Managed Port (<code class="code-tag">open_port</code>):</strong> Lifecycle tied to OTP supervision tree, stdio pipes.</li>
+            <li><strong>Option 2: UDP Daemon (<code class="code-tag">gen_udp</code>):</strong> Detached process. Kill/reload BEAM node without dropping audio buffers!</li>
+            <li>Mention hardware MIDI inputs routing into BEAM actors.</li>
+        </ul>
+    </div>
+
+    <!-- Slide 7 -->
+    <div class="card" id="card-7">
+        <div class="card-header">
+            <span class="slide-tag">Slide 07/10</span>
+            <span class="time-badge">T+18:00</span>
+        </div>
+        <div class="slide-title">Hands-On: Make Some Noise!</div>
+        <div class="cue-box">
+            Get everyone in the room onto help.html. Let them tap and trigger sounds!
+        </div>
+        <ul class="points-list">
+            <li>Point to QR 1: <code class="code-tag">help.html</code> (interactive playground).</li>
+            <li>Point to QR 2: <code class="code-tag">skode_reference.html</code> (syntax cheatsheet).</li>
+            <li>30-sec breakdown: <code class="code-tag">v0 n60 a-15 l1</code> (Voice, Note, Amp, Trigger).</li>
+            <li>Let attendees trigger sounds on their own phones while you present.</li>
+        </ul>
+        <div class="action-alert">Action: Encourage room to scan QR codes now.</div>
+    </div>
+
+    <!-- Slide 8 -->
+    <div class="card" id="card-8">
+        <div class="card-header">
+            <span class="slide-tag">Slide 08/10</span>
+            <span class="time-badge">T+22:00</span>
+        </div>
+        <div class="slide-title">Live Demo & Amiga Climax</div>
+        <div class="cue-box">
+            Jam session + Amiga demo. Let the tracker bump through the venue speakers!
+        </div>
+        <ul class="points-list">
+            <li>Quick demo buttons: Success Chime, Error Alarm, Coin Pickup.</li>
+            <li>The Climax: Tap <code class="code-tag">[Load .MOD File]</code> & <code class="code-tag">[PLAY]</code>.</li>
+            <li>Track: <em>Elysium</em> by Jester (Amiga tracker replay via VFS).</li>
+        </ul>
+        <div class="action-alert">Action: Load .MOD, click PLAY, let it bump!</div>
+    </div>
+
+    <!-- Slide 9 -->
+    <div class="card" id="card-9">
+        <div class="card-header">
+            <span class="slide-tag">Slide 09/10</span>
+            <span class="time-badge">T+27:00</span>
+        </div>
+        <div class="slide-title">What Else Can You Build?</div>
+        <div class="cue-box">
+            Spark their imagination with real-world BEAM projects.
+        </div>
+        <ul class="points-list">
+            <li><strong>Data Sonification:</strong> Phoenix LiveView server alerts, backlog tempo ramps, FM buzz on errors.</li>
+            <li><strong>Multiplayer Games:</strong> Phoenix Channels broadcasting tiny skode strings.</li>
+            <li><strong>Type-Safe DSL:</strong> Gleam / Elixir DSL compiling down to skode.</li>
+            <li><strong>Call for Contributors:</strong> Core GenServer & <code class="code-tag">hex.pm</code> package!</li>
+        </ul>
+    </div>
+
+    <!-- Slide 10 -->
+    <div class="card" id="card-10">
+        <div class="card-header">
+            <span class="slide-tag">Slide 10/10</span>
+            <span class="time-badge">T+30:00 to T+40:00</span>
+        </div>
+        <div class="slide-title">Credits, Links & Q&A</div>
+        <div class="cue-box">
+            Open floor for 10 minutes of audience Q&A, sound tweaking, and hacking.
+        </div>
+        <ul class="points-list">
+            <li>Credits: Gadgetto (intro), Jester (Elysium), BEAM community & Osko.</li>
+            <li>Toggle Outro Beat button for background groove during questions.</li>
+            <li>Repo: <code class="code-tag">github.com/octetta/skred-web</code></li>
+        </ul>
+        <div class="action-alert">Action: Toggle Outro Beat if desired, open floor for questions.</div>
+    </div>
+
+    <!-- Quick Footer Links -->
+    <div id="nav-footer">
+        <a href="codebeam.html">← Slides</a>
+        <a href="help.html" target="_blank">Playground ↗</a>
+        <a href="skode_reference.html" target="_blank">Cheatsheet ↗</a>
+    </div>
+
+    <script>
+        let seconds = 0;
+        let timerInterval = null;
+        let running = false;
+
+        function updateDisplay() {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            const formatted = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+            const el = document.getElementById('timer');
+            el.textContent = formatted;
+
+            // Highlight yellow at 25m, red at 30m
+            if (mins >= 30) {
+                el.style.color = 'var(--accent-red)';
+            } else if (mins >= 25) {
+                el.style.color = 'var(--accent-yellow)';
+            } else {
+                el.style.color = 'var(--accent-green)';
+            }
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('toggle-btn');
+            if (running) {
+                clearInterval(timerInterval);
+                running = false;
+                btn.textContent = 'RESUME';
+                btn.className = 'btn-pause';
+            } else {
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    updateDisplay();
+                }, 1000);
+                running = true;
+                btn.textContent = 'PAUSE';
+                btn.className = 'btn-pause';
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            running = false;
+            seconds = 0;
+            updateDisplay();
+            const btn = document.getElementById('toggle-btn');
+            btn.textContent = 'START';
+            btn.className = 'btn-start';
+        }
+    </script>
+</body>
+</html>

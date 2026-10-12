@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code BEAM Europe — Speaker Stage Cheat Sheet (40m Slot)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: letter portrait;
+            margin: 0.35in 0.4in 0.35in 0.4in;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #111;
+            background: #fff;
+            line-height: 1.25;
+            font-size: 8.5pt;
+        }
+
+        /* Screen only print button bar */
+        @media screen {
+            body {
+                background: #f1f5f9;
+                padding: 20px;
+            }
+            .page-container {
+                max-width: 8.5in;
+                margin: 0 auto;
+                background: #fff;
+                padding: 0.4in;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                border-radius: 8px;
+            }
+            .screen-toolbar {
+                max-width: 8.5in;
+                margin: 0 auto 16px auto;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: #0f172a;
+                color: #fff;
+                padding: 10px 16px;
+                border-radius: 8px;
+            }
+            .print-btn {
+                background: #22c55e;
+                color: #000;
+                font-weight: 700;
+                border: none;
+                padding: 8px 18px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 10pt;
+                font-family: 'Fira Code', monospace;
+            }
+            .print-btn:hover {
+                background: #16a34a;
+                color: #fff;
+            }
+        }
+
+        @media print {
+            .screen-toolbar { display: none; }
+            body { background: #fff; padding: 0; }
+            .page-container { width: 100%; padding: 0; box-shadow: none; }
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+        }
+
+        .title-block h1 {
+            font-size: 13pt;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .title-block p {
+            font-size: 8pt;
+            color: #555;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .meta-block {
+            text-align: right;
+            font-family: 'Fira Code', monospace;
+            font-size: 8pt;
+            font-weight: 700;
+        }
+
+        .meta-block span {
+            color: #0284c7;
+        }
+
+        /* 2-Column Grid of 10 Slides */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 6px 10px;
+        }
+
+        .card {
+            border: 1px solid #cbd5e1;
+            border-left: 4px solid #0f172a;
+            border-radius: 4px;
+            padding: 5px 7px;
+            background: #fafafa;
+            page-break-inside: avoid;
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .card-num {
+            font-family: 'Fira Code', monospace;
+            font-weight: 700;
+            font-size: 8pt;
+            color: #0f172a;
+        }
+
+        .card-time {
+            font-family: 'Fira Code', monospace;
+            font-weight: 700;
+            font-size: 8pt;
+            background: #e2e8f0;
+            padding: 1px 5px;
+            border-radius: 3px;
+            color: #0f172a;
+        }
+
+        .card-title {
+            font-size: 9.5pt;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 3px;
+            line-height: 1.15;
+        }
+
+        .action-box {
+            background: #f1f5f9;
+            border: 1px dashed #94a3b8;
+            padding: 3px 5px;
+            border-radius: 3px;
+            font-size: 7.8pt;
+            font-weight: 600;
+            color: #0369a1;
+            margin-bottom: 3px;
+        }
+
+        .bullets {
+            list-style: none;
+            padding-left: 0;
+            font-size: 7.8pt;
+            color: #334155;
+        }
+
+        .bullets li {
+            position: relative;
+            padding-left: 10px;
+            margin-bottom: 1.5px;
+        }
+
+        .bullets li::before {
+            content: "•";
+            position: absolute;
+            left: 1px;
+            color: #0284c7;
+            font-weight: 700;
+        }
+
+        .code {
+            font-family: 'Fira Code', monospace;
+            font-size: 7.2pt;
+            background: #e2e8f0;
+            padding: 0 3px;
+            border-radius: 2px;
+            color: #0f172a;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 6px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 3px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Fira Code', monospace;
+            font-size: 7pt;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="screen-toolbar">
+        <div><strong>Code BEAM Europe 1-Page Stage Cheat Sheet</strong> — Press print or <kbd>Ctrl+P</kbd></div>
+        <button class="print-btn" onclick="window.print()">PRINT / SAVE AS PDF</button>
+    </div>
+
+    <div class="page-container">
+        <header>
+            <div class="title-block">
+                <h1>SKRED: STAGE CHEAT SHEET & TIMING CUES</h1>
+                <p>Joe Stewart · Code BEAM Europe · 40m Slot (30m Talk/Demo + 10m Q&A)</p>
+            </div>
+            <div class="meta-block">
+                TOTAL: <span>40 MIN</span> | TALK: <span>30 MIN</span> | Q&A: <span>10 MIN</span>
+            </div>
+        </header>
+
+        <div class="grid">
+            <!-- Slide 1 -->
+            <div class="card" style="border-left-color: #0284c7;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 01</span>
+                    <span class="card-time">T+00:00 (2m)</span>
+                </div>
+                <div class="card-title">Title & Hook</div>
+                <div class="action-box">ACTION: Fade Gadgetto walk-in music. Set fast, playful vibe.</div>
+                <ul class="bullets">
+                    <li>Title: <em>Weird Live Audio Coding & Making Noise with the BEAM</em></li>
+                    <li>Hook: Audio in BEAM apps doesn't have to be hard or stuffy.</li>
+                    <li>Osko mascot macro click: <span class="code">e>1</span></li>
+                </ul>
+            </div>
+
+            <!-- Slide 2 -->
+            <div class="card" style="border-left-color: #0284c7;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 02</span>
+                    <span class="card-time">T+01:30 (30s)</span>
+                </div>
+                <div class="card-title">Who Am I? (Joe Stewart)</div>
+                <div class="action-box">ACTION: 30 seconds max! Advance straight to the live sound engine.</div>
+                <ul class="bullets">
+                    <li>Joe Stewart (<span class="code">octetta</span>) · Principal Firmware Engineer.</li>
+                    <li>Audio Programmer & BEAM Enthusiast · Creator of <span class="code">skred</span>.</li>
+                    <li>Don't stall on bio—get immediately into noise.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 3 -->
+            <div class="card" style="border-left-color: #22c55e;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 03</span>
+                    <span class="card-time">T+02:00 (3m)</span>
+                </div>
+                <div class="card-title">0 to Noise in One String</div>
+                <div class="action-box">ACTION: Tap [Fire Sequence] into PA. Wake up the room!</div>
+                <ul class="bullets">
+                    <li>Hit button or send: <span class="code">v0 w0 f440 a-15 t .01 1 0 0 l1</span></li>
+                    <li>Everything is driven by <strong>tiny ASCII strings</strong> in real time.</li>
+                    <li>No audio file playback—pure real-time C DSP synthesis running now.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 4 -->
+            <div class="card" style="border-left-color: #eab308;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 04</span>
+                    <span class="card-time">T+05:00 (3m)</span>
+                </div>
+                <div class="card-title">Why Audio is Weird & Hard</div>
+                <div class="action-box">TAKEAWAY: Hard-realtime = ZERO syscalls & ZERO allocs in render loop.</div>
+                <ul class="bullets">
+                    <li>Audio threads hate <span class="code">malloc/free</span>, mutexes, file/socket I/O, GC pauses.</li>
+                    <li>1ms unbounded latency = instant audible clicks & underruns.</li>
+                    <li>BEAM is built for concurrency, not microsecond sample callbacks.</li>
+                    <li><strong>Decoupled Solution:</strong> C does DSP math; BEAM conducts the orchestra.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 5 -->
+            <div class="card" style="border-left-color: #0284c7;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 05</span>
+                    <span class="card-time">T+08:00 (5m)</span>
+                </div>
+                <div class="card-title">Architecture: One Engine, Two Transports</div>
+                <div class="action-box">TAKEAWAY: Exactly the same C DSP core across Web and Native.</div>
+                <ul class="bullets">
+                    <li><strong>Pure C Core:</strong> Lock-free, zero-alloc audio loop driven by text commands.</li>
+                    <li><strong>Target A (Browser / WASM):</strong> Zero-install sandbox on any device right now.</li>
+                    <li><strong>Target B (Native BEAM):</strong> Headless server daemon for Linux, Pis, rigs.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 6 -->
+            <div class="card" style="border-left-color: #0284c7;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 06</span>
+                    <span class="card-time">T+13:00 (5m)</span>
+                </div>
+                <div class="card-title">Orchestrating from the BEAM</div>
+                <div class="action-box">TAKEAWAY: Managed Port vs Detached UDP Daemon crash isolation.</div>
+                <ul class="bullets">
+                    <li><strong>Option 1 (Port <span class="code">open_port</span>):</strong> OTP tree supervised, stdio pipes.</li>
+                    <li><strong>Option 2 (UDP <span class="code">gen_udp</span>):</strong> Crash isolation! Kill/reload BEAM node without dropping audio buffers.</li>
+                    <li>MIDI hardware controllers map cleanly to BEAM actors.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 7 -->
+            <div class="card" style="border-left-color: #22c55e;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 07</span>
+                    <span class="card-time">T+18:00 (4m)</span>
+                </div>
+                <div class="card-title">Hands-On: Make Some Noise!</div>
+                <div class="action-box">ACTION: Point to QR codes! Get everyone playing on help.html.</div>
+                <ul class="bullets">
+                    <li>QR 1: <strong>help.html</strong> (interactive playground in their browser).</li>
+                    <li>QR 2: <strong>skode_reference.html</strong> (full syntax cheatsheet).</li>
+                    <li>30-sec crash course: <span class="code">v0 n60 a-15 l1</span> (Voice, Note, Amp, Trigger).</li>
+                    <li>Encourage audience to trigger sounds on phones while you speak!</li>
+                </ul>
+            </div>
+
+            <!-- Slide 8 -->
+            <div class="card" style="border-left-color: #a855f7;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 08</span>
+                    <span class="card-time">T+22:00 (5m)</span>
+                </div>
+                <div class="card-title">Live Demo & Amiga Climax</div>
+                <div class="action-box">ACTION: Tap [Load .MOD File] & [PLAY] — let Elysium bump!</div>
+                <ul class="bullets">
+                    <li>Trigger quick live SFX: Success Chime, Error Alarm, Coin Pickup.</li>
+                    <li>The Climax: Load & play <strong>Elysium by Jester</strong> (Sanity Amiga demo).</li>
+                    <li>Runs via Emscripten VFS: <span class="code">[amiga.zip] %z</span>. Let music play through PA.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 9 -->
+            <div class="card" style="border-left-color: #0284c7;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 09</span>
+                    <span class="card-time">T+27:00 (3m)</span>
+                </div>
+                <div class="card-title">What Else Can You Build?</div>
+                <div class="action-box">TAKEAWAY: Spark imaginations: LiveView alerts, Games, Gleam DSLs.</div>
+                <ul class="bullets">
+                    <li><strong>LiveView Data Sonification:</strong> Queue backlog ramps tempo, errors = FM buzz.</li>
+                    <li><strong>Multiplayer Games:</strong> Phoenix Channels broadcasting tiny skode strings.</li>
+                    <li><strong>Hex Package:</strong> Call for community OTP GenServer contributors!</li>
+                </ul>
+            </div>
+
+            <!-- Slide 10 -->
+            <div class="card" style="border-left-color: #ef4444;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 10</span>
+                    <span class="card-time">T+30:00 to T+40:00 (10m)</span>
+                </div>
+                <div class="card-title">Credits, Links & Open Floor (Q&A)</div>
+                <div class="action-box">ACTION: Toggle Outro Beat if desired. Open floor for 10m Q&A.</div>
+                <ul class="bullets">
+                    <li>Credits: Gadgetto (intro), Jester (Elysium), BEAM community & Osko.</li>
+                    <li>GitHub Repo: <span class="code">github.com/octetta/skred-web</span> & <span class="code">octetta/pulp</span>.</li>
+                    <li>Full 10 minutes for audience questions, sound tweaking, and live hacking.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <span>Keyboard shortcuts on slides: [S] = Speaker Notes, [F] = Fullscreen, [O] = Overview</span>
+            <span>octetta.github.io/skred-web/cues.html</span>
+        </footer>
+    </div>
+
+</body>
+</html>
