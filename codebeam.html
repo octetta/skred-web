@@ -273,6 +273,8 @@ Demo each via PA button, and have audience type into wasm-skred console.</aside>
 Step 1: Joe Stewart (octetta.com) — Personal website & sound projects.
 Step 2 (Advance): Music by GADGETTO — Credit for walk-in music, Bandcamp QR.
 Step 3 (Advance): PULP sound engine — GitHub repo QR (github.com/octetta/pulp).
+Outro Beat: Button starts y0, y1 drums + y2 bassline in sync (y2 starts muted via ym1).
+Bass Drop: Type "y2 ym0" into top REPL bar to drop the bassline during Q&A!
 Action: Step through 1→2→3 to show each QR code. Toggle Outro Beat if desired. Open floor for 12m Q&A.</aside>
             </section>
 
@@ -420,9 +422,11 @@ Step 2 (Advance): Built-in Waveforms — Point to waveforms.html QR code: visual
         // 🎶 OUTRO PATTERN TOGGLE & CONTROLS
         // =====================================================================
         // Called when clicking "Play Outro Beat" on the Credits slide (Slide 8).
-        // To change which patterns start or stop, edit the commands below:
-        //   - y<N>z1  starts pattern N (e.g. y0z1 y1z1)
-        //   - y<N>z0  stops pattern N (e.g. y0z0 y1z0)
+        // Starts/stops drums (y0, y1) and bass (y2):
+        //   - y0 z1 y1 z1 y2 z1  starts all patterns in sync (y2 is ym1 muted by default)
+        //   - y0 z0 y1 z0 y2 z0  stops all patterns
+        // To unmute the bass line live during Q&A, enter in the REPL:
+        //   y2 ym0   (and "y2 ym1" to mute again)
         // NOTE: The actual pattern sequences, voices, and loops are configured
         // in startAudio() below (search: "OUTRO PATTERN SETUP").
         // =====================================================================
@@ -432,12 +436,12 @@ Step 2 (Advance): Built-in Waveforms — Point to waveforms.html QR code: visual
             if (!engineStarted) return;
             if (outroPlaying) {
                 // STOP OUTRO PATTERNS (z0 = stop pattern)
-                doSkred('y0z0 y1z0');
+                doSkred('y0 z0 y1 z0 y2 z0');
                 document.getElementById('outro-btn').textContent = 'Play Outro Beat';
                 outroPlaying = false;
             } else {
-                // START OUTRO PATTERNS (z1 = start pattern)
-                doSkred('y0z1 y1z1');
+                // START OUTRO PATTERNS (z1 = start pattern, y2 starts in sync but muted via ym1)
+                doSkred('y0 z1 y1 z1 y2 z1');
                 document.getElementById('outro-btn').textContent = 'Stop Outro Beat';
                 outroPlaying = true;
             }
@@ -563,21 +567,29 @@ Step 2 (Advance): Built-in Waveforms — Point to waveforms.html QR code: visual
                 // =============================================================
                 // To customize the background beat that plays during Q&A:
                 //
-                // 1. Define Synth Voices (v1, v2, v3, etc.):
+                // 1. Define Synth Voices (v1, v2, v3, v4):
                 doSkred('v1 w82 a5');
                 doSkred('v2 w83 a0');
                 doSkred('v3 w84 a-10');
+                doSkred('v4 w15 t .01 .25 0 0');
 
-                // 2. Define Patterns / Sequences (y0, y1, y2, etc.):
+                // 2. Note Sequence / Stream for Bassline:
+                doSkred('/SS 0 (40, 40, 42, 40, 43, 40, 45, 44)');
+
+                // 3. Define Patterns / Sequences (y0, y1, y2):
                 //    y<N> [commands]x<beat_step>   triggers commands on step
                 //    y<N> %<cycle_length>          sets loop duration in beats
+                //    ym1                           starts muted (unmute live with "y2 ym0")
                 doSkred('y0 [v1l1]x0');
                 doSkred('y0 [v2l1]x1');
                 doSkred('y0 %4');
                 doSkred('y1 [v3l1]x0 %1');
+                doSkred('y2 ym1 %2 [v4 n&0 l1] x0');
 
-                // 3. To start/stop patterns on button click, see toggleOutro()
+                // 4. To start/stop patterns on button click, see toggleOutro()
                 //    above (search: "OUTRO PATTERN TOGGLE & CONTROLS").
+                //    To unmute the bass line live during Q&A, send in REPL:
+                //    y2 ym0
                 // =============================================================
 
                 // Define your macros for the Osko clicks!
