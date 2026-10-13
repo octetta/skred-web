@@ -263,6 +263,109 @@
             background: #1e293b;
             border-radius: 6px;
         }
+
+        /* Left-Hand Thumb Dock & Navigation */
+        .thumb-nav {
+            position: fixed;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid #334155;
+            border-radius: 16px;
+            padding: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.15);
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            width: 60px;
+        }
+
+        .thumb-btn {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-family: 'Fira Code', monospace;
+            font-weight: 800;
+            transition: all 0.12s ease;
+            box-sizing: border-box;
+            touch-action: manipulation;
+            padding: 4px 0;
+        }
+
+        .thumb-btn:active {
+            transform: scale(0.92);
+        }
+
+        .thumb-btn .thumb-arrow {
+            font-size: 1.15rem;
+            line-height: 1;
+        }
+
+        .thumb-btn .thumb-label {
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+            margin-top: 2px;
+        }
+
+        .thumb-next {
+            height: 56px;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff;
+            border: 1.5px solid #38bdf8;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+        }
+
+        .thumb-next:active {
+            background: #0ea5e9;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.6);
+        }
+
+        .thumb-prev {
+            height: 44px;
+            background: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
+        }
+
+        .thumb-prev:active {
+            background: #334155;
+            color: #ffffff;
+        }
+
+        .thumb-badge {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #38bdf8;
+            background: #090d16;
+            padding: 3px 4px;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            cursor: ns-resize;
+            touch-action: none;
+        }
+
+        @media (max-width: 980px) {
+            #cards-container {
+                padding-left: 74px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -285,11 +388,27 @@
         <div class="bar-row">
             <div class="nav-controls">
                 <button class="btn-nav" onclick="prevSlide()" title="Previous Slide">◀ PREV</button>
-                <div id="slide-indicator" class="slide-counter-badge">01 / 10</div>
+                <div id="slide-indicator" class="slide-counter-badge">01 / 12</div>
                 <button class="btn-nav" onclick="nextSlide()" title="Next Slide">NEXT ▶</button>
             </div>
             <button class="view-mode-toggle" id="mode-btn" onclick="toggleSingleView()">1-BY-1</button>
         </div>
+    </div>
+
+    <!-- Left-Hand Thumb Dock Widget -->
+    <div id="left-thumb-nav" class="thumb-nav" aria-label="Left Thumb Navigation">
+        <button id="thumb-prev-btn" class="thumb-btn thumb-prev" onclick="prevSlide()" title="Previous Slide (Left Thumb)">
+            <span class="thumb-arrow">▲</span>
+            <span class="thumb-label">PREV</span>
+        </button>
+        <div id="thumb-drag-handle" class="thumb-badge" title="Drag vertically to reposition">
+            <span style="font-size: 0.55rem; opacity: 0.5; display: block; line-height: 1; letter-spacing: -1px; margin-bottom: 2px;">•••</span>
+            <span id="thumb-slide-badge">01/12</span>
+        </div>
+        <button id="thumb-next-btn" class="thumb-btn thumb-next" onclick="nextSlide()" title="Next Slide (Left Thumb)">
+            <span class="thumb-arrow">▼</span>
+            <span class="thumb-label">NEXT</span>
+        </button>
     </div>
 
     <!-- Cards Container -->
@@ -297,7 +416,7 @@
         <!-- Slide 1 -->
         <div class="card active-card" id="card-1">
             <div class="card-header">
-                <span class="slide-tag">Slide 01/10</span>
+                <span class="slide-tag">Slide 01/12</span>
                 <span class="time-badge">T+00:00</span>
             </div>
             <div class="slide-title">Title & Hook</div>
@@ -314,7 +433,7 @@
         <!-- Slide 2 -->
         <div class="card" id="card-2">
             <div class="card-header">
-                <span class="slide-tag">Slide 02/10</span>
+                <span class="slide-tag">Slide 02/12</span>
                 <span class="time-badge">T+01:30</span>
             </div>
             <div class="slide-title">Who Am I?</div>
@@ -322,8 +441,7 @@
                 Advance quickly to the live engine. 30 seconds max!
             </div>
             <ul class="points-list">
-                <li>Joe Stewart (<span class="code-tag">octetta</span>)</li>
-                <li>Principal Firmware Engineer · Audio Programmer & BEAM Enthusiast</li>
+                <li>Joe Stewart</li>
                 <li>Creator of <span class="code-tag">skred</span></li>
             </ul>
             <div class="action-alert">Action: Keep intro brief, don't stall before sound.</div>
@@ -332,10 +450,10 @@
         <!-- Slide 3 -->
         <div class="card" id="card-3">
             <div class="card-header">
-                <span class="slide-tag">Slide 03/10</span>
+                <span class="slide-tag">Slide 03/12</span>
                 <span class="time-badge">T+02:00</span>
             </div>
-            <div class="slide-title">0 to Noise in One String</div>
+            <div class="slide-title">Zero to Noise in One String</div>
             <div class="cue-box">
                 Fire first sound into the PA. Wake up the room!
             </div>
@@ -350,7 +468,7 @@
         <!-- Slide 4 -->
         <div class="card" id="card-4">
             <div class="card-header">
-                <span class="slide-tag">Slide 04/10</span>
+                <span class="slide-tag">Slide 04/12</span>
                 <span class="time-badge">T+05:00</span>
             </div>
             <div class="slide-title">Why Audio is Weird & Hard</div>
@@ -358,17 +476,17 @@
                 The hard-realtime constraint: zero syscalls, zero allocs in render loop.
             </div>
             <ul class="points-list">
-                <li>Audio render callbacks cannot block: no <code class="code-tag">malloc/free</code>, no mutexes, no sockets/files, no GC pauses.</li>
-                <li>Unbounded latency = immediate buffer underrun clicks.</li>
-                <li>BEAM is great at concurrency & fault tolerance, but wasn't designed for sub-millisecond audio loops.</li>
-                <li><strong>Solution:</strong> Decouple DSP math (C) from conductor orchestration (BEAM).</li>
+                <li><strong>Hard-Realtime Audio Threads:</strong> Zero syscalls, zero <code class="code-tag">malloc/free</code>, zero mutexes, zero GC pauses.</li>
+                <li><strong>Unbounded Latency = Glitches:</strong> Even a 1ms hitch causes instant clicks and buffer underruns.</li>
+                <li><strong>BEAM vs Audio:</strong> BEAM is built for concurrency and fault tolerance, not microsecond sample render callbacks.</li>
+                <li><strong>The Decoupled Solution:</strong> Let C crunch lock-free, zero-alloc DSP math; let the BEAM conduct the orchestra!</li>
             </ul>
         </div>
 
         <!-- Slide 5 -->
         <div class="card" id="card-5">
             <div class="card-header">
-                <span class="slide-tag">Slide 05/10</span>
+                <span class="slide-tag">Slide 05/12</span>
                 <span class="time-badge">T+08:00</span>
             </div>
             <div class="slide-title">The Architecture: One Engine, Two Transports</div>
@@ -376,100 +494,137 @@
                 Establish mental model: same C DSP core across Web and Native.
             </div>
             <ul class="points-list">
-                <li><strong>Pure C Core:</strong> Lock-free, zero-alloc, text-command driven.</li>
-                <li><strong>Target A (Browser / WASM):</strong> Zero-install sandbox on any device right now.</li>
-                <li><strong>Target B (Native):</strong> High performance headless daemon for servers, Raspberry Pis, rigs.</li>
+                <li><strong>Pure C Engine Core:</strong> Lock-free, zero-alloc audio loop driven by text commands.</li>
+                <li><strong>Target A: Browser (WASM):</strong> Zero-install audio sandbox. Runs right in the browser on everyone's phones and laptops today via WebAssembly.</li>
+                <li><strong>Target B: Native BEAM:</strong> Ultra-low-latency headless audio engine for desktop, Linux servers, Raspberry Pis, and live performance rigs.</li>
             </ul>
         </div>
 
         <!-- Slide 6 -->
         <div class="card" id="card-6">
             <div class="card-header">
-                <span class="slide-tag">Slide 06/10</span>
-                <span class="time-badge">T+13:00</span>
+                <span class="slide-tag">Slide 06/12</span>
+                <span class="time-badge">T+12:00</span>
             </div>
-            <div class="slide-title">Orchestrating from the BEAM</div>
+            <div class="slide-title">Hands-On: Make Some Noise!</div>
             <div class="cue-box">
-                The BEAM connection they came to see: ports, UDP, and OTP orchestration.
+                Get everyone in the room onto wasm-skred (index.html).
             </div>
             <ul class="points-list">
-                <li><strong>Option 1: Managed Port (<code class="code-tag">open_port</code>):</strong> Lifecycle tied to OTP supervision tree, stdio pipes.</li>
-                <li><strong>Option 2: UDP Daemon (<code class="code-tag">gen_udp</code>):</strong> Detached process. Kill/reload BEAM node without dropping audio buffers!</li>
-                <li>Mention hardware MIDI inputs routing into BEAM actors.</li>
+                <li>Point to QR code: <code class="code-tag">wasm-skred</code> (<code class="code-tag">octetta.github.io/skred-web/index.html</code>).</li>
+                <li><strong>Crash Course:</strong> Say to audience: <em>"Open the QR code and type: <code class="code-tag">v0 w15 t .01 .25 0 0</code> (enter), then type: <code class="code-tag">v0 n69 l1</code>"</em></li>
+                <li>Let attendees make noise on their phones right now.</li>
             </ul>
+            <div class="action-alert">Action: Tell room: "Open QR code, type v0 w15 t .01 .25 0 0 (enter), then v0 n69 l1"</div>
         </div>
 
         <!-- Slide 7 -->
         <div class="card" id="card-7">
             <div class="card-header">
-                <span class="slide-tag">Slide 07/10</span>
+                <span class="slide-tag">Slide 07/12</span>
                 <span class="time-badge">T+18:00</span>
             </div>
-            <div class="slide-title">Hands-On: Make Some Noise!</div>
+            <div class="slide-title">Examples (3 Steps)</div>
             <div class="cue-box">
-                Get everyone in the room onto help.html. Let them tap and trigger sounds!
+                Step through 3 examples on screen (each advance replaces the card). Demo through PA and have audience type into wasm-skred.
             </div>
             <ul class="points-list">
-                <li>Point to QR 1: <code class="code-tag">help.html</code> (interactive playground).</li>
-                <li>Point to QR 2: <code class="code-tag">skode_reference.html</code> (syntax cheatsheet).</li>
-                <li>30-sec breakdown: <code class="code-tag">v0 n60 a-15 l1</code> (Voice, Note, Amp, Trigger).</li>
-                <li>Let attendees trigger sounds on their own phones while you present.</li>
+                <li><strong>1. Success Chime:</strong> <code class="code-tag">v0 w0 f523.25 a-6 t .01 .1 0 0 l1</code> + defer notes: <code class="code-tag">+0.1 v0 f659.25 l1</code> and <code class="code-tag">+0.2 v0 f783.99 t .01 .5 0 0 l1</code>.</li>
+                <li><strong>2. Error Alarm (Advance):</strong> <code class="code-tag">v0 w1 f150 a-6 t .01 .2 0 0 l1</code> + defer buzzes: <code class="code-tag">+0.2 v0 f150 l1</code> and <code class="code-tag">+0.4 v0 f150 l1</code>.</li>
+                <li><strong>3. Coin Pickup (Advance):</strong> <code class="code-tag">v0 w2 f800 a-6 t .01 .1 0 0 fb 1200 fbp .1 l1</code> (pitch bend).</li>
+                <li>Tap [Play] on each card to demo live; each advance removes the prior card so nothing runs off screen.</li>
             </ul>
-            <div class="action-alert">Action: Encourage room to scan QR codes now.</div>
+            <div class="action-alert">Action: Step through 1→2→3, demo each sound into PA!</div>
         </div>
 
         <!-- Slide 8 -->
         <div class="card" id="card-8">
             <div class="card-header">
-                <span class="slide-tag">Slide 08/10</span>
-                <span class="time-badge">T+22:00</span>
-            </div>
-            <div class="slide-title">Live Demo & Amiga Climax</div>
-            <div class="cue-box">
-                Jam session + Amiga demo. Let the tracker bump through the venue speakers!
-            </div>
-            <ul class="points-list">
-                <li>Quick demo buttons: Success Chime, Error Alarm, Coin Pickup.</li>
-                <li>The Climax: Tap <code class="code-tag">[Load .MOD File]</code> & <code class="code-tag">[PLAY]</code>.</li>
-                <li>Track: <em>Elysium</em> by Jester (Amiga tracker replay via VFS).</li>
-            </ul>
-            <div class="action-alert">Action: Load .MOD, click PLAY, let it bump!</div>
-        </div>
-
-        <!-- Slide 9 -->
-        <div class="card" id="card-9">
-            <div class="card-header">
-                <span class="slide-tag">Slide 09/10</span>
-                <span class="time-badge">T+27:00</span>
+                <span class="slide-tag">Slide 08/12</span>
+                <span class="time-badge">T+24:00</span>
             </div>
             <div class="slide-title">What Else Can You Build?</div>
             <div class="cue-box">
                 Spark their imagination with real-world BEAM projects.
             </div>
             <ul class="points-list">
-                <li><strong>Data Sonification:</strong> Phoenix LiveView server alerts, backlog tempo ramps, FM buzz on errors.</li>
-                <li><strong>Multiplayer Games:</strong> Phoenix Channels broadcasting tiny skode strings.</li>
-                <li><strong>Type-Safe DSL:</strong> Gleam / Elixir DSL compiling down to skode.</li>
-                <li><strong>Call for Contributors:</strong> Core GenServer & <code class="code-tag">hex.pm</code> package!</li>
+                <li><strong>Live Data Sonification:</strong> Phoenix LiveView server alerts, spike tempos on queue backlog, FM buzz on error rates.</li>
+                <li><strong>Multiplayer Web Games:</strong> Phoenix Channels broadcasting lightweight skode strings to browser clients.</li>
+                <li><strong>Type-Safe DSLs:</strong> Build an expressive Gleam or Elixir DSL compiling down to skode.</li>
+                <li><strong>Hex Packages & Libraries:</strong> Help build the official <code class="code-tag">hex.pm</code> client library and OTP GenServer wrappers!</li>
             </ul>
         </div>
 
-        <!-- Slide 10 -->
-        <div class="card" id="card-10">
+        <!-- Slide 9 -->
+        <div class="card" id="card-9">
             <div class="card-header">
-                <span class="slide-tag">Slide 10/10</span>
-                <span class="time-badge">T+30:00 to T+40:00</span>
+                <span class="slide-tag">Slide 09/12</span>
+                <span class="time-badge">T+28:00 to T+40:00</span>
             </div>
-            <div class="slide-title">Credits, Links & Q&A</div>
+            <div class="slide-title">Credits, Links & Q&A (3 Steps)</div>
             <div class="cue-box">
-                Open floor for 10 minutes of audience Q&A, sound tweaking, and hacking.
+                Step through 3 bullets (each highlights and swaps the QR code in real-time). Open floor for 12m Q&A.
             </div>
             <ul class="points-list">
-                <li>Credits: Gadgetto (intro), Jester (Elysium), BEAM community & Osko.</li>
+                <li><strong>1. octetta.com:</strong> QR code links to <code class="code-tag">https://octetta.com</code>.</li>
+                <li><strong>2. GADGETTO (Advance):</strong> QR code links to Bandcamp (<code class="code-tag">gadgetto.bandcamp.com</code>).</li>
+                <li><strong>3. pulp (Advance):</strong> QR code links to engine repo (<code class="code-tag">github.com/octetta/pulp</code>).</li>
                 <li>Toggle Outro Beat button for background groove during questions.</li>
-                <li>Repo: <code class="code-tag">github.com/octetta/skred-web</code></li>
             </ul>
-            <div class="action-alert">Action: Toggle Outro Beat if desired, open floor for questions.</div>
+            <div class="action-alert">Action: Step through 1→2→3 (QR live-swaps with each bullet), toggle Outro Beat, open floor for Q&A.</div>
+        </div>
+
+        <!-- Slide 10 [Backup] -->
+        <div class="card" id="card-10">
+            <div class="card-header">
+                <span class="slide-tag">Slide 10/12 [Backup]</span>
+                <span class="time-badge">Q&A Deep-Dive</span>
+            </div>
+            <div class="slide-title">Orchestrating from the BEAM</div>
+            <div class="cue-box">
+                Backup slide for architecture Q&A: port lifecycle and UDP crash isolation.
+            </div>
+            <ul class="points-list">
+                <li><strong>Option 1: Managed Port (<code class="code-tag">open_port</code>):</strong> OTP supervised, stdio pipes. Linked fate: crash together, restart together.</li>
+                <li><strong>Option 2: UDP Daemon (<code class="code-tag">gen_udp</code>):</strong> Detached headless daemon. Crash isolation: restart/hot-upgrade BEAM nodes without dropping audio buffers!</li>
+                <li><strong>Hardware Integration:</strong> MIDI hardware controllers map to BEAM actors and fire skode strings in real time.</li>
+            </ul>
+            <div class="action-alert">Action: Advance to this slide if asked about BEAM/C interop.</div>
+        </div>
+
+        <!-- Slide 11 [Backup] -->
+        <div class="card" id="card-11">
+            <div class="card-header">
+                <span class="slide-tag">Slide 11/12 [Backup]</span>
+                <span class="time-badge">Architecture Q&A</span>
+            </div>
+            <div class="slide-title">Browser / WASM</div>
+            <div class="cue-box">
+                Backup slide for browser architecture deep-dive: Emscripten C compilation, WebAudio AudioWorklet, and interactive help playground.
+            </div>
+            <ul class="points-list">
+                <li><strong>Zero-Install Audio Sandbox:</strong> Runs anywhere via WebAssembly without local audio drivers or C toolchains.</li>
+                <li><strong>WebAudio Render Callback:</strong> Pure C DSP loop running inside browser audio context thread.</li>
+                <li><strong>Interactive Playground (<code class="code-tag">help.html</code>):</strong> Point to QR code for real-time slider workbench and visual waveform inspection.</li>
+            </ul>
+            <div class="action-alert">Action: Point to help.html QR code if asked about browser architecture or live testing.</div>
+        </div>
+
+        <!-- Slide 12 [Backup] -->
+        <div class="card" id="card-12">
+            <div class="card-header">
+                <span class="slide-tag">Slide 12/12 [Backup]</span>
+                <span class="time-badge">Syntax & Waveforms Q&A</span>
+            </div>
+            <div class="slide-title">Make Some Noise: Reference (2 Steps)</div>
+            <div class="cue-box">
+                Backup slide for syntax & wavetable exploration. QR code live-swaps between SKODE Reference and Waveforms gallery!
+            </div>
+            <ul class="points-list">
+                <li><strong>1. SKODE Command Reference:</strong> Point to QR code (<code class="code-tag">skode_reference.html</code>) for full syntax grammar: voice, notes, envelopes, filters, and macros.</li>
+                <li><strong>2. Built-in Waveforms (Advance):</strong> Point to QR code (<code class="code-tag">waveforms.html</code>) for visual gallery of all 100 synth wavetables (<code class="code-tag">w0</code> to <code class="code-tag">w99</code>).</li>
+            </ul>
+            <div class="action-alert">Action: Step 1→2 to toggle QR codes for command syntax or wavetable exploration.</div>
         </div>
     </div>
 
@@ -532,12 +687,17 @@
 
         // Slide navigation logic
         let currentSlide = 1;
-        const totalSlides = 10;
+        const totalSlides = 12;
         let singleCardMode = false; // toggle between showing only current card or scrolling all
 
         function updateSlideUI() {
             document.getElementById('slide-indicator').textContent = 
                 String(currentSlide).padStart(2, '0') + ' / ' + String(totalSlides).padStart(2, '0');
+
+            const thumbBadge = document.getElementById('thumb-slide-badge');
+            if (thumbBadge) {
+                thumbBadge.textContent = String(currentSlide).padStart(2, '0') + '/' + String(totalSlides).padStart(2, '0');
+            }
 
             for (let i = 1; i <= totalSlides; i++) {
                 const card = document.getElementById('card-' + i);
@@ -563,6 +723,7 @@
         function nextSlide() {
             if (currentSlide < totalSlides) {
                 currentSlide++;
+                if (navigator.vibrate) navigator.vibrate(20);
                 updateSlideUI();
             }
         }
@@ -570,6 +731,7 @@
         function prevSlide() {
             if (currentSlide > 1) {
                 currentSlide--;
+                if (navigator.vibrate) navigator.vibrate(20);
                 updateSlideUI();
             }
         }
@@ -590,6 +752,103 @@
                 prevSlide();
             }
         });
+
+        // Touch Gesture Support for Left Thumb & Mobile Swiping
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchStartTime = Date.now();
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            if (e.changedTouches.length === 1) {
+                const deltaX = e.changedTouches[0].clientX - touchStartX;
+                const deltaY = e.changedTouches[0].clientY - touchStartY;
+                const elapsed = Date.now() - touchStartTime;
+
+                // Quick horizontal flick: swipe left -> next, swipe right -> prev
+                if (elapsed < 600 && Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+                    if (deltaX < 0) {
+                        nextSlide();
+                    } else {
+                        prevSlide();
+                    }
+                }
+            }
+        }, { passive: true });
+
+        // Drag-to-reposition thumb dock vertically (persisted in localStorage)
+        const thumbNav = document.getElementById('left-thumb-nav');
+        const dragHandle = document.getElementById('thumb-drag-handle');
+        if (thumbNav && dragHandle) {
+            const savedTop = localStorage.getItem('skred_thumb_top');
+            if (savedTop) {
+                thumbNav.style.top = savedTop;
+                thumbNav.style.transform = 'none';
+            }
+
+            let isDragging = false;
+            let startY = 0;
+            let initialTop = 0;
+
+            const startDrag = (clientY) => {
+                isDragging = true;
+                startY = clientY;
+                const rect = thumbNav.getBoundingClientRect();
+                initialTop = rect.top;
+                thumbNav.style.transform = 'none';
+            };
+
+            const doDrag = (clientY) => {
+                if (!isDragging) return;
+                const deltaY = clientY - startY;
+                let newTop = initialTop + deltaY;
+                const minTop = 100;
+                const maxTop = window.innerHeight - thumbNav.offsetHeight - 40;
+                newTop = Math.max(minTop, Math.min(maxTop, newTop));
+                thumbNav.style.top = newTop + 'px';
+            };
+
+            const endDrag = () => {
+                if (!isDragging) return;
+                isDragging = false;
+                localStorage.setItem('skred_thumb_top', thumbNav.style.top);
+            };
+
+            dragHandle.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    startDrag(e.touches[0].clientY);
+                }
+            }, { passive: true });
+
+            window.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length === 1) {
+                    doDrag(e.touches[0].clientY);
+                }
+            }, { passive: true });
+
+            window.addEventListener('touchend', endDrag, { passive: true });
+
+            dragHandle.addEventListener('mousedown', (e) => {
+                startDrag(e.clientY);
+                e.preventDefault();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) doDrag(e.clientY);
+            });
+
+            window.addEventListener('mouseup', endDrag);
+        }
+
+        // Initialize UI
+        updateSlideUI();
     </script>
 </body>
 </html>

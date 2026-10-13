@@ -240,7 +240,7 @@
                 <ul class="bullets">
                     <li>Title: <em>Weird Live Audio Coding & Making Noise with the BEAM</em></li>
                     <li>Hook: Audio in BEAM apps doesn't have to be hard or stuffy.</li>
-                    <li>Osko mascot macro click: <span class="code">e>1</span></li>
+                    
                 </ul>
             </div>
 
@@ -253,8 +253,8 @@
                 <div class="card-title">Who Am I? (Joe Stewart)</div>
                 <div class="action-box">ACTION: 30 seconds max! Advance straight to the live sound engine.</div>
                 <ul class="bullets">
-                    <li>Joe Stewart (<span class="code">octetta</span>) · Principal Firmware Engineer.</li>
-                    <li>Audio Programmer & BEAM Enthusiast · Creator of <span class="code">skred</span>.</li>
+                    <li>Joe Stewart</li>
+                    <li>Creator of <span class="code">skred</span></li>
                     <li>Don't stall on bio—get immediately into noise.</li>
                 </ul>
             </div>
@@ -265,7 +265,7 @@
                     <span class="card-num">SLIDE 03</span>
                     <span class="card-time">T+02:00 (3m)</span>
                 </div>
-                <div class="card-title">0 to Noise in One String</div>
+                <div class="card-title">Zero to Noise in One String</div>
                 <div class="action-box">ACTION: Tap [Fire Sequence] into PA. Wake up the room!</div>
                 <ul class="bullets">
                     <li>Hit button or send: <span class="code">v0 w0 f440 a-15 t .01 1 0 0 l1</span></li>
@@ -283,10 +283,10 @@
                 <div class="card-title">Why Audio is Weird & Hard</div>
                 <div class="action-box">TAKEAWAY: Hard-realtime = ZERO syscalls & ZERO allocs in render loop.</div>
                 <ul class="bullets">
-                    <li>Audio threads hate <span class="code">malloc/free</span>, mutexes, file/socket I/O, GC pauses.</li>
-                    <li>1ms unbounded latency = instant audible clicks & underruns.</li>
-                    <li>BEAM is built for concurrency, not microsecond sample callbacks.</li>
-                    <li><strong>Decoupled Solution:</strong> C does DSP math; BEAM conducts the orchestra.</li>
+                    <li><strong>Hard-Realtime Audio Threads:</strong> Zero syscalls, zero <span class="code">malloc/free</span>, zero mutexes, zero GC pauses.</li>
+                    <li><strong>Unbounded Latency = Glitches:</strong> Even a 1ms hitch causes instant clicks & buffer underruns.</li>
+                    <li><strong>BEAM vs Audio:</strong> BEAM is built for concurrency, not microsecond sample callbacks.</li>
+                    <li><strong>The Decoupled Solution:</strong> Let C crunch lock-free, zero-alloc DSP math; let the BEAM conduct the orchestra!</li>
                 </ul>
             </div>
 
@@ -299,85 +299,115 @@
                 <div class="card-title">Architecture: One Engine, Two Transports</div>
                 <div class="action-box">TAKEAWAY: Exactly the same C DSP core across Web and Native.</div>
                 <ul class="bullets">
-                    <li><strong>Pure C Core:</strong> Lock-free, zero-alloc audio loop driven by text commands.</li>
-                    <li><strong>Target A (Browser / WASM):</strong> Zero-install sandbox on any device right now.</li>
-                    <li><strong>Target B (Native BEAM):</strong> Headless server daemon for Linux, Pis, rigs.</li>
+                    <li><strong>Pure C Engine Core:</strong> Lock-free, zero-alloc audio loop driven by text commands.</li>
+                    <li><strong>Target A: Browser (WASM):</strong> Zero-install audio sandbox. Runs right in the browser on everyone's phones and laptops today via WebAssembly.</li>
+                    <li><strong>Target B: Native BEAM:</strong> Ultra-low-latency headless audio engine for desktop, Linux servers, Raspberry Pis, and live performance rigs.</li>
                 </ul>
             </div>
 
             <!-- Slide 6 -->
-            <div class="card" style="border-left-color: #0284c7;">
+            <div class="card" style="border-left-color: #22c55e;">
                 <div class="card-top">
                     <span class="card-num">SLIDE 06</span>
-                    <span class="card-time">T+13:00 (5m)</span>
+                    <span class="card-time">T+12:00 (6m)</span>
                 </div>
-                <div class="card-title">Orchestrating from the BEAM</div>
-                <div class="action-box">TAKEAWAY: Managed Port vs Detached UDP Daemon crash isolation.</div>
+                <div class="card-title">Hands-On: Make Some Noise!</div>
+                <div class="action-box">ACTION: Point to QR code! Tell room to type the two commands.</div>
                 <ul class="bullets">
-                    <li><strong>Option 1 (Port <span class="code">open_port</span>):</strong> OTP tree supervised, stdio pipes.</li>
-                    <li><strong>Option 2 (UDP <span class="code">gen_udp</span>):</strong> Crash isolation! Kill/reload BEAM node without dropping audio buffers.</li>
-                    <li>MIDI hardware controllers map cleanly to BEAM actors.</li>
+                    <li>QR Code: <strong>wasm-skred</strong> (<span class="code">octetta.github.io/skred-web/index.html</span>).</li>
+                    <li><strong>Crash Course:</strong> <em>"Open the QR code and type: <span class="code">v0 w15 t .01 .25 0 0</span> (enter) then type: <span class="code">v0 n69 l1</span>"</em></li>
+                    <li>Let attendees make noise on their phones right now.</li>
                 </ul>
             </div>
 
             <!-- Slide 7 -->
-            <div class="card" style="border-left-color: #22c55e;">
+            <div class="card" style="border-left-color: #a855f7;">
                 <div class="card-top">
                     <span class="card-num">SLIDE 07</span>
-                    <span class="card-time">T+18:00 (4m)</span>
+                    <span class="card-time">T+18:00 (6m)</span>
                 </div>
-                <div class="card-title">Hands-On: Make Some Noise!</div>
-                <div class="action-box">ACTION: Point to QR codes! Get everyone playing on help.html.</div>
+                <div class="card-title">Examples (3 Steps)</div>
+                <div class="action-box">ACTION: Step through 3 examples (each replaces the last). Demo each into PA!</div>
                 <ul class="bullets">
-                    <li>QR 1: <strong>help.html</strong> (interactive playground in their browser).</li>
-                    <li>QR 2: <strong>skode_reference.html</strong> (full syntax cheatsheet).</li>
-                    <li>30-sec crash course: <span class="code">v0 n60 a-15 l1</span> (Voice, Note, Amp, Trigger).</li>
-                    <li>Encourage audience to trigger sounds on phones while you speak!</li>
+                    <li><strong>1. Chime:</strong> <span class="code">v0 w0 f523.25 a-6 t .01 .1 0 0 l1</span>, <span class="code">+0.1 v0 f659.25 l1</span>, <span class="code">+0.2 v0 f783.99 t .01 .5 0 0 l1</span>.</li>
+                    <li><strong>2. Alarm (Advance):</strong> <span class="code">v0 w1 f150 a-6 t .01 .2 0 0 l1</span>, <span class="code">+0.2 v0 f150 l1</span>, <span class="code">+0.4 v0 f150 l1</span>.</li>
+                    <li><strong>3. Coin Pickup (Advance):</strong> <span class="code">v0 w2 f800 a-6 t .01 .1 0 0 fb 1200 fbp .1 l1</span>.</li>
                 </ul>
             </div>
 
             <!-- Slide 8 -->
-            <div class="card" style="border-left-color: #a855f7;">
-                <div class="card-top">
-                    <span class="card-num">SLIDE 08</span>
-                    <span class="card-time">T+22:00 (5m)</span>
-                </div>
-                <div class="card-title">Live Demo & Amiga Climax</div>
-                <div class="action-box">ACTION: Tap [Load .MOD File] & [PLAY] — let Elysium bump!</div>
-                <ul class="bullets">
-                    <li>Trigger quick live SFX: Success Chime, Error Alarm, Coin Pickup.</li>
-                    <li>The Climax: Load & play <strong>Elysium by Jester</strong> (Sanity Amiga demo).</li>
-                    <li>Runs via Emscripten VFS: <span class="code">[amiga.zip] %z</span>. Let music play through PA.</li>
-                </ul>
-            </div>
-
-            <!-- Slide 9 -->
             <div class="card" style="border-left-color: #0284c7;">
                 <div class="card-top">
-                    <span class="card-num">SLIDE 09</span>
-                    <span class="card-time">T+27:00 (3m)</span>
+                    <span class="card-num">SLIDE 08</span>
+                    <span class="card-time">T+24:00 (4m)</span>
                 </div>
                 <div class="card-title">What Else Can You Build?</div>
                 <div class="action-box">TAKEAWAY: Spark imaginations: LiveView alerts, Games, Gleam DSLs.</div>
                 <ul class="bullets">
-                    <li><strong>LiveView Data Sonification:</strong> Queue backlog ramps tempo, errors = FM buzz.</li>
-                    <li><strong>Multiplayer Games:</strong> Phoenix Channels broadcasting tiny skode strings.</li>
-                    <li><strong>Hex Package:</strong> Call for community OTP GenServer contributors!</li>
+                    <li><strong>Live Data Sonification:</strong> Queue backlog ramps tempo, FM buzz on error rates.</li>
+                    <li><strong>Multiplayer Web Games:</strong> Phoenix Channels broadcasting tiny skode strings.</li>
+                    <li><strong>Type-Safe DSLs:</strong> Gleam / Elixir DSL compiling down to skode.</li>
+                    <li><strong>Hex Packages & Libraries:</strong> Call for official <span class="code">hex.pm</span> client library & OTP GenServer wrappers!</li>
                 </ul>
             </div>
 
-            <!-- Slide 10 -->
+            <!-- Slide 9 -->
             <div class="card" style="border-left-color: #ef4444;">
                 <div class="card-top">
-                    <span class="card-num">SLIDE 10</span>
-                    <span class="card-time">T+30:00 to T+40:00 (10m)</span>
+                    <span class="card-num">SLIDE 09</span>
+                    <span class="card-time">T+28:00 to T+40:00 (12m)</span>
                 </div>
-                <div class="card-title">Credits, Links & Open Floor (Q&A)</div>
-                <div class="action-box">ACTION: Toggle Outro Beat if desired. Open floor for 10m Q&A.</div>
+                <div class="card-title">Credits, Links & Q&A (3 Steps)</div>
+                <div class="action-box">ACTION: Step through 1→2→3 (QR code live-swaps with each bullet). 12m Q&A!</div>
                 <ul class="bullets">
-                    <li>Credits: Gadgetto (intro), Jester (Elysium), BEAM community & Osko.</li>
-                    <li>GitHub Repo: <span class="code">github.com/octetta/skred-web</span> & <span class="code">octetta/pulp</span>.</li>
-                    <li>Full 10 minutes for audience questions, sound tweaking, and live hacking.</li>
+                    <li><strong>1. octetta.com:</strong> QR code &rarr; <span class="code">octetta.com</span>.</li>
+                    <li><strong>2. GADGETTO (Advance):</strong> QR code &rarr; <span class="code">gadgetto.bandcamp.com</span>.</li>
+                    <li><strong>3. pulp (Advance):</strong> QR code &rarr; <span class="code">github.com/octetta/pulp</span>.</li>
+                    <li>Toggle Outro Beat if desired. Open floor for 12m audience Q&A.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 10 [Backup] -->
+            <div class="card" style="border-left-color: #38bdf8;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 10 [BACKUP]</span>
+                    <span class="card-time">Q&A Deep-Dive</span>
+                </div>
+                <div class="card-title">Orchestrating from the BEAM</div>
+                <div class="action-box">TAKEAWAY: Managed Port vs Detached UDP Daemon crash isolation.</div>
+                <ul class="bullets">
+                    <li><strong>Option 1 (Port <span class="code">open_port</span>):</strong> OTP tree supervised, stdio pipes. Crash & restart together.</li>
+                    <li><strong>Option 2 (UDP <span class="code">gen_udp</span>):</strong> Crash isolation! Kill/reload BEAM node without dropping audio buffers.</li>
+                    <li><strong>Hardware:</strong> MIDI hardware controllers map to BEAM actors and fire skode strings.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 11 [Backup] -->
+            <div class="card" style="border-left-color: #4ade80;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 11 [BACKUP]</span>
+                    <span class="card-time">Architecture Q&A</span>
+                </div>
+                <div class="card-title">Browser / WASM</div>
+                <div class="action-box">TAKEAWAY: Zero-install browser DSP via Emscripten; help.html workbench.</div>
+                <ul class="bullets">
+                    <li><strong>Zero-Install Sandbox:</strong> Runs in browser on phones & laptops without native drivers.</li>
+                    <li><strong>WebAudio Callback:</strong> Pure C DSP loop running inside browser audio context thread.</li>
+                    <li><strong>Playground (<span class="code">help.html</span>):</strong> Point to QR code for real-time interactive workbench.</li>
+                </ul>
+            </div>
+
+            <!-- Slide 12 [Backup] -->
+            <div class="card" style="border-left-color: #facc15;">
+                <div class="card-top">
+                    <span class="card-num">SLIDE 12 [BACKUP]</span>
+                    <span class="card-time">Reference Q&A</span>
+                </div>
+                <div class="card-title">Make Some Noise: Reference (2 Steps)</div>
+                <div class="action-box">ACTION: Step 1→2 (QR live-swaps between SKODE syntax & waveforms gallery).</div>
+                <ul class="bullets">
+                    <li><strong>1. SKODE Command Reference:</strong> QR code &rarr; <span class="code">skode_reference.html</span> (full grammar).</li>
+                    <li><strong>2. Built-in Waveforms (Advance):</strong> QR code &rarr; <span class="code">waveforms.html</span> (100 synth wavetables, w0–w99).</li>
                 </ul>
             </div>
         </div>

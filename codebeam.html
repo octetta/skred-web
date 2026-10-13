@@ -30,8 +30,24 @@
         .reveal { height: calc(100vh - 75px); overflow-y: auto; }
         .reveal .slides { min-height: 100%; overflow-y: visible !important; }
         .reveal .slide-number { position: absolute; left: 16px; right: auto; bottom: 16px; font-family: 'Fira Code', monospace; font-size: 14px; color: #4ade80; background-color: rgba(0, 0, 0, 0.6); padding: 4px 8px; border-radius: 4px; border: 1px solid #333; z-index: 30; }
-        
-    
+        .reveal .speaker-badge { position: absolute; top: 16px; right: 20px; left: auto; z-index: 30; display: inline-flex; flex-direction: column; text-align: right; border-right: 3px solid #38bdf8; padding: 4px 10px 4px 12px; line-height: 1.25; background: rgba(0, 0, 0, 0.6); border-radius: 6px 0 0 6px; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #333; pointer-events: auto; }
+        .reveal .speaker-badge .speaker-name { font-size: 14px; font-weight: 700; color: #f1f5f9; letter-spacing: 0.02em; white-space: nowrap; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .reveal .speaker-badge .speaker-url { font-size: 12px; color: #38bdf8; font-family: 'Fira Code', monospace; text-decoration: none; white-space: nowrap; }
+        .reveal .speaker-badge .speaker-url:hover { text-decoration: underline; color: #7dd3fc; }
+        .example-stage { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; width: 100%; max-width: 680px; margin: 25px auto 0 auto; min-height: 220px; box-sizing: border-box; }
+        .example-card { grid-column: 1 / 2; grid-row: 1 / 2; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 18px 22px; text-align: left; box-sizing: border-box; }
+        .credit-item { cursor: pointer; transition: all 0.25s ease; border-radius: 8px; padding: 10px 14px; }
+        .credit-item.active-credit { opacity: 1 !important; transform: translateX(6px); }
+        .credit-item:not(.active-credit) { opacity: 0.45; }
+        .credit-item:not(.active-credit):hover { opacity: 0.8; }
+        .qr-stage { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; width: 180px; }
+        .qr-card { grid-column: 1 / 2; grid-row: 1 / 2; background: #161b22; padding: 14px 16px; border-radius: 12px; border: 1px solid #30363d; text-align: center; box-sizing: border-box; }
+        .ref-item { cursor: pointer; transition: all 0.25s ease; border-radius: 8px; padding: 12px 14px; }
+        .ref-item.active-ref { opacity: 1 !important; transform: translateX(6px); }
+        .ref-item:not(.active-ref) { opacity: 0.45; }
+        .ref-item:not(.active-ref):hover { opacity: 0.8; }
+        .ref-qr-stage { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; width: 180px; }
+        .ref-qr-card { grid-column: 1 / 2; grid-row: 1 / 2; background: #161b22; padding: 14px 16px; border-radius: 12px; border: 1px solid #30363d; text-align: center; box-sizing: border-box; }
         
         @keyframes phosphor-throb {
             0%, 100% { filter: blur(0.8px) brightness(1.2); }
@@ -44,45 +60,39 @@
 </head>
 <body>
     <div class="reveal">
+        <div class="speaker-badge">
+            <span class="speaker-name">Joe Stewart</span>
+            <a href="https://octetta.com" target="_blank" class="speaker-url">octetta.com</a>
+        </div>
         <div class="slides">
             
             <!-- Slide 1: Title & Hook -->
             <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 35px;">
-                    <h1 style="margin: 0;"><span class="skred-brand-title">skred</span></h1>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-00.png" style="cursor: pointer; width: 140px; background-color: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>1')" alt="Osko the Octopus">
-                </div>
+                <h1 style="margin: 0;"><span class="skred-brand-title">skred</span></h1>
                 <h3 style="text-align: center; margin-top: 35px; color: #facc15; font-size: 1.15em;">Weird Live Audio Coding & Making Noise with the BEAM</h3>
                 <aside class="notes">[T+00:00 | Fade Gadgetto walk-in music. Acknowledge the vibe: we're here to make real noise. No stuffiness.]</aside>
             </section>
             
             <!-- Slide 2: Who Am I? -->
             <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 25px;">
-                    <h2 style="margin: 0;">Who Am I?</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-01.png" style="cursor: pointer; width: 110px; background-color: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>2')" alt="Osko the Octopus">
-                </div>
-                <ul style="text-align: left; margin-top: 25px;">
-                    <li class="fragment">Joe Stewart (aka <span class="highlight-text">octetta</span>).</li>
-                    <li class="fragment">Principal Firmware Engineer.</li>
-                    <li class="fragment">Audio Programmer & BEAM Enthusiast.</li>
-                    <li class="fragment">Creator of <span class="skred-brand-text">skred</span>.</li>
+                <h2 style="margin: 0;">Who Am I?</h2>
+                <ul style="text-align: left; margin-top: 30px; font-size: 1.1em; line-height: 1.8;">
+                    <li class="fragment">Joe Stewart</li>
+                    <li class="fragment">Creator of <span class="skred-brand-text">skred</span></li>
                 </ul>
                 <aside class="notes">[T+01:30 | Advance quickly to the live engine.]</aside>
             </section>
 
-            <!-- Slide 3: 0 to Noise in One String -->
+            <!-- Slide 3: Zero to Noise in One String -->
             <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; margin-bottom: 20px;">
-                    <h2 style="margin: 0;">0 to Noise in One String</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-06.png" style="cursor: pointer; width: 110px; background-color: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>3')" alt="Osko the Octopus">
-                </div>
+                <h2 style="margin: 0;">Zero to Noise in One String</h2>
                 
-                <p class="fragment">Everything you hear is driven by <span class="highlight-text">tiny ASCII strings</span>.</p>
-                <p class="fragment">Pure real-time C DSP synthesis running right now.</p>
-                <p class="fragment">Try it: <code class="skred-cmd">v0 w0 f440 a-15 t .01 1 0 0 l1</code></p>
+                <ul style="text-align: left; margin-top: 30px; font-size: 1.1em; line-height: 1.8;">
+                    <li class="fragment">Tiny ASCII strings</li>
+                    <li class="fragment">Pure real-time C DSP synthesis</li>
+                </ul>
                 
-                <div class="fragment" style="margin-top: 20px;">
+                <div class="fragment" style="margin-top: 30px;">
                     <button class="sound-btn" onclick="doSkred('v0 w0 f440 a-15 t .01 1 0 0 l1'); doSkred('+0.5 v0 f660 l1'); doSkred('+1.0 v0 f880 l1')">Fire Sequence</button>
                 </div>
                 <aside class="notes">[T+02:00 | Fire first sound into the PA. Wake up the room.]</aside>
@@ -90,172 +100,292 @@
             
             <!-- Slide 4: Why Audio is Weird & Hard -->
             <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 12px;">
-                    <h2 style="margin: 0; font-size: 1.45em;">Why Audio is Weird & Hard</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-03.png" style="cursor: pointer; width: 85px; background-color: rgba(255, 255, 255, 0.95); border-radius: 18px; padding: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>4')" alt="Osko the Octopus">
-                </div>
+                <h2 style="margin: 0; font-size: 1.45em;">Why Audio is Weird & Hard</h2>
                 
-                <ul style="text-align: left; font-size: 0.78em; line-height: 1.35;">
-                    <li class="fragment" style="margin-bottom: 8px;"><span class="highlight-text">Hard-Realtime Audio Threads:</span> Zero syscalls, zero <code style="color:#ef4444;">malloc/free</code>, zero mutexes, zero GC pauses.</li>
-                    <li class="fragment" style="margin-bottom: 8px;"><span class="highlight-text">Unbounded Latency = Glitches:</span> Even a 1ms hitch causes instant clicks and buffer underruns.</li>
-                    <li class="fragment" style="margin-bottom: 8px;"><span class="highlight-text">BEAM vs Audio:</span> BEAM is built for concurrency and fault tolerance, not microsecond sample render callbacks.</li>
-                    <li class="fragment" style="margin-bottom: 8px;"><span class="highlight-text">The Decoupled Solution:</span> Let C crunch lock-free, zero-alloc DSP math; let the BEAM conduct the orchestra!</li>
+                <ul style="text-align: left; margin-top: 35px; font-size: 1.1em; line-height: 1.9;">
+                    <li class="fragment"><span class="highlight-text">Hard-Realtime Audio Threads</span></li>
+                    <li class="fragment"><span class="highlight-text">Unbounded Latency = Glitches</span></li>
+                    <li class="fragment"><span class="highlight-text">BEAM vs Audio</span></li>
+                    <li class="fragment"><span class="highlight-text">The Decoupled Solution</span></li>
                 </ul>
-                <aside class="notes">[T+05:00 | The hard-realtime constraint: zero syscalls, zero allocs in render loop.]</aside>
+                <aside class="notes">[T+05:00 | Hard-realtime constraints]
+1. Hard-Realtime Audio Threads: Zero syscalls, zero malloc/free, zero mutexes, zero GC pauses.
+2. Unbounded Latency = Glitches: Even a 1ms hitch causes instant clicks and buffer underruns.
+3. BEAM vs Audio: BEAM is built for concurrency and fault tolerance, not microsecond sample render callbacks.
+4. The Decoupled Solution: Let C crunch lock-free, zero-alloc DSP math; let the BEAM conduct the orchestra!</aside>
             </section>
 
             <!-- Slide 5: The Architecture: One Engine, Two Transports -->
             <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; margin-bottom: 20px;">
-                    <h2 style="margin: 0;">The Architecture</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-05.png" style="cursor: pointer; width: 110px; background-color: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>5')" alt="Osko the Octopus">
-                </div>
+                <h2 style="margin: 0;">The Architecture</h2>
                 
-                <p style="font-size: 0.9em; margin-bottom: 15px;"><span class="highlight-text">Pure C Engine Core:</span> Lock-free, zero-alloc audio loop driven by text commands.</p>
-                <div style="display: flex; justify-content: space-around; gap: 20px; margin-top: 20px; text-align: left; font-size: 0.85em;">
-                    <div class="fragment" style="flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px;">
-                        <h4 style="color: #4ade80; margin-top: 0;">🌐 Target A: Browser (WASM)</h4>
-                        <p>Zero-install audio sandbox. Runs right in the browser on everyone's phones and laptops today via WebAssembly.</p>
+                <p class="fragment" style="font-size: 1.2em; margin-top: 35px; margin-bottom: 30px;"><span class="highlight-text">Pure C Engine Core</span></p>
+                <div style="display: flex; justify-content: space-around; gap: 25px; margin-top: 20px;">
+                    <div class="fragment" style="flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 22px 16px; text-align: center;">
+                        <h3 style="color: #4ade80; margin: 0; font-size: 1.15em;">🌐 Target A: Browser (WASM)</h3>
                     </div>
-                    <div class="fragment" style="flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px;">
-                        <h4 style="color: #38bdf8; margin-top: 0;">⚡ Target B: Native BEAM</h4>
-                        <p>Ultra-low-latency headless audio engine for desktop, Linux servers, Raspberry Pis, and live performance rigs.</p>
+                    <div class="fragment" style="flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 22px 16px; text-align: center;">
+                        <h3 style="color: #38bdf8; margin: 0; font-size: 1.15em;">⚡ Target B: Native BEAM</h3>
                     </div>
                 </div>
-                <aside class="notes">[T+08:00 | Establish the mental model: same C DSP core across Web and Native.]</aside>
+                <aside class="notes">[T+08:00 | Establish mental model: same C DSP core across Web and Native]
+1. Pure C Engine Core: Lock-free, zero-alloc audio loop driven by text commands.
+2. Target A (Browser WASM): Zero-install audio sandbox. Runs right in the browser on everyone's phones and laptops today via WebAssembly.
+3. Target B (Native BEAM): Ultra-low-latency headless audio engine for desktop, Linux servers, Raspberry Pis, and live performance rigs.</aside>
             </section>
 
-            <!-- Slide 6: Orchestrating from the BEAM (Port vs. UDP Daemon) -->
+            <!-- Slide 6: Hands-On: Make Some Noise! -->
             <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; margin-bottom: 15px;">
-                    <h2 style="margin: 0; font-size: 1.5em;">Orchestrating from the BEAM</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-07.png" style="cursor: pointer; width: 100px; background-color: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>6')" alt="Osko the Octopus">
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; gap: 20px; text-align: left; font-size: 0.82em; margin-top: 15px;">
-                    <div class="fragment" style="flex: 1; background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px;">
-                        <h4 style="color: #facc15; margin-top: 0;">Option 1: Managed Port (<code style="color:#38bdf8;">open_port</code>)</h4>
-                        <ul style="padding-left: 20px; margin: 0;">
-                            <li>Tied directly to the OTP supervision tree.</li>
-                            <li>Simple lifecycle via stdio pipes.</li>
-                            <li>Crash together, restart together.</li>
-                        </ul>
-                    </div>
-                    <div class="fragment" style="flex: 1; background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px;">
-                        <h4 style="color: #facc15; margin-top: 0;">Option 2: UDP Daemon (<code style="color:#38bdf8;">gen_udp</code>)</h4>
-                        <ul style="padding-left: 20px; margin: 0;">
-                            <li>Detached background daemon process.</li>
-                            <li>True crash isolation: restart or hot-reload BEAM nodes without dropping audio buffers!</li>
-                        </ul>
-                    </div>
-                </div>
-                <p class="fragment" style="font-size: 0.8em; color: #aaa; margin-top: 18px;">
-                    <em>Bonus:</em> MIDI controllers and hardware inputs can map directly into BEAM actors and fire skode strings in real time.
-                </p>
-                <aside class="notes">[T+13:00 | The BEAM connection they came to see: ports, UDP, and OTP orchestration.]</aside>
-            </section>
+                <h2 style="margin: 0; font-size: 1.5em;">Hands-On: Make Some Noise!</h2>
 
-            <!-- Slide 7: Hands-On: Your Turn to Make Noise -->
-            <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; margin-bottom: 15px;">
-                    <h2 style="margin: 0; font-size: 1.5em;">Hands-On: Make Some Noise!</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-09.png" style="cursor: pointer; width: 95px; background-color: rgba(255, 255, 255, 0.95); border-radius: 18px; padding: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>7')" alt="Osko the Octopus">
-                </div>
-
-                <div style="display: flex; justify-content: center; gap: 30px; align-items: center; margin-top: 10px;">
-                    <div style="text-align: center; background: #161b22; padding: 12px 18px; border-radius: 12px; border: 1px solid #30363d;">
-                        <a href="https://octetta.github.io/skred-web/help.html" target="_blank">
-                            <img src="qr-help.svg?v=2" alt="Playground QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
+                <div style="display: flex; justify-content: center; align-items: center; margin-top: 25px;">
+                    <div style="text-align: center; background: #161b22; padding: 16px 24px; border-radius: 12px; border: 1px solid #30363d;">
+                        <a href="https://octetta.github.io/skred-web/index.html" target="_blank">
+                            <img src="qr-wasm.svg" alt="wasm-skred QR" style="width: 160px; background: white; padding: 10px; border-radius: 8px; display: block; margin: 0 auto;">
                         </a>
-                        <span style="font-size: 14px; color: #4ade80; font-family: 'Fira Code', monospace; display: block; margin-top: 8px; font-weight: bold;">Interactive Playground<br>(help.html)</span>
-                    </div>
-
-                    <div style="text-align: center; background: #161b22; padding: 12px 18px; border-radius: 12px; border: 1px solid #30363d;">
-                        <a href="skode_reference.html" target="_blank">
-                            <img src="qr-cheatsheet.svg?v=2" alt="Cheatsheet QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
-                        </a>
-                        <span style="font-size: 14px; color: #38bdf8; font-family: 'Fira Code', monospace; display: block; margin-top: 8px; font-weight: bold;">Syntax Cheatsheet<br>(skode_reference)</span>
+                        <span style="font-size: 15px; color: #4ade80; font-family: 'Fira Code', monospace; display: block; margin-top: 10px; font-weight: bold;">wasm-skred<br><span style="font-size: 12px; color: #94a3b8; font-weight: normal;">octetta.github.io/skred-web</span></span>
                     </div>
                 </div>
 
-                <div style="margin-top: 15px; font-size: 0.8em; text-align: left;">
-                    <span class="highlight-text">30-Second Syntax Crash Course:</span>
-                    <ul style="margin: 5px 0 0 20px;">
-                        <li><code class="skred-cmd">v0 n60 a-15 l1</code> &rarr; <b>V</b>oice 0, <b>N</b>ote 60 (Middle C), <b>A</b>mplitude -15dB, <b>L</b>evel trigger</li>
-                        <li>Case context: <code class="skred-cmd">f</code> (freq) vs <code class="skred-cmd">F</code> (modulation) | Punctuation: <code class="skred-cmd">?</code> inspect, <code class="skred-cmd">/</code> control</li>
-                    </ul>
-                </div>
-                <aside class="notes">[T+18:00 | Get everyone in the room onto help.html. Let them tap and trigger sounds.]</aside>
-            </section>
-
-            <!-- Slide 8: The Live Demo & Show-and-Tell Climax -->
-            <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; margin-bottom: 15px;">
-                    <h2 style="margin: 0; font-size: 1.4em;">Live Demo & Amiga Climax</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-13.png" style="cursor: pointer; width: 100px; background-color: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>8')" alt="Osko the Octopus">
-                </div>
-
-                <p style="font-size: 0.85em; margin: 5px 0 12px 0;">Live SFX patterns directly triggered in real-time:</p>
-                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 12px;">
-                    <button class="sound-btn" style="font-size: 17px; background: #22c55e; padding: 6px 14px;" onclick="playDemo(['v0 w0 f523.25 a-6 t .01 .1 0 0 l1', '+0.1 v0 f659.25 l1', '+0.2 v0 f783.99 t .01 .5 0 0 l1'])">Success Chime</button>
-                    <button class="sound-btn" style="font-size: 17px; background: #ef4444; padding: 6px 14px;" onclick="playDemo(['v0 w1 f150 a-6 t .01 .2 0 0 l1', '+0.2 v0 f150 l1', '+0.4 v0 f150 l1'])">Error Alarm</button>
-                    <button class="sound-btn" style="font-size: 17px; background: #a855f7; padding: 6px 14px;" onclick="playDemo(['v0 w2 f800 a-6 t .01 .1 0 0 fb 1200 fbp .1 l1'])">Coin Pickup</button>
-                </div>
-
-                <pre style="width: 85%; margin: 0 auto 15px auto; background: #111; border: 1px solid #333; border-radius: 8px;"><code id="live-code-display" class="skred-cmd" style="font-size: 0.85em; padding: 8px 14px; display: block; white-space: pre-wrap; color: #4ade80;">Click a button above to inspect skode...</code></pre>
-
-                <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 10px; padding: 12px; margin-top: 10px;">
-                    <h4 style="color: #eab308; margin: 0 0 8px 0; font-size: 1em;">The Retro Climax: Amiga .MOD Tracker Replay</h4>
-                    <button id="retro-btn" class="sound-btn" style="background: #eab308; color: #000; font-size: 18px; padding: 6px 16px; margin: 4px;" onclick="loadAmigaZip()">Load .MOD File</button>
-                    <button id="play-retro-btn" class="sound-btn" style="background: #22c55e; color: #fff; font-size: 18px; padding: 6px 16px; margin: 4px; display: none;" onclick="toggleRetroPlay()">PLAY</button>
-                    <p style="font-size: 0.55em; color: #aaa; margin: 5px 0 0 0; font-style: italic;">Track: "Elysium" by Jester (Sanity demo) running via Emscripten VFS: <code class="skred-cmd">[amiga.zip] %z</code></p>
-                </div>
-                <aside class="notes">[T+22:00 | Jam session + Amiga demo. Let the tracker bump through the venue speakers!]</aside>
-            </section>
-
-            <!-- Slide 9: What Else Can You Build? -->
-            <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; margin-bottom: 20px;">
-                    <h2 style="margin: 0;">What Else Can You Build?</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-08.png" style="cursor: pointer; width: 110px; background-color: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>9')" alt="Osko the Octopus">
-                </div>
-                
-                <ul style="text-align: left; font-size: 0.88em;">
-                    <li class="fragment"><span class="highlight-text">Live Data Sonification:</span> Phoenix LiveView server alerts, spike tempos on queue backlog, FM buzz on error rates.</li>
-                    <li class="fragment"><span class="highlight-text">Multiplayer Web Games:</span> Phoenix Channels broadcasting lightweight skode strings to browser clients.</li>
-                    <li class="fragment"><span class="highlight-text">Type-Safe DSLs:</span> Build an expressive Gleam or Elixir DSL compiling down to skode.</li>
-                    <li class="fragment"><span class="highlight-text">Hex Packages & Libraries:</span> Help build the official <code style="color:#4ade80;">hex.pm</code> client library and OTP GenServer wrappers!</li>
+                <ul style="text-align: left; margin-top: 30px; font-size: 1.15em; line-height: 1.8;">
+                    <li class="fragment"><span class="highlight-text">Crash Course</span></li>
                 </ul>
-                <aside class="notes">[T+27:00 | Spark their imagination with real-world BEAM projects.]</aside>
+                <aside class="notes">[T+12:00 | Hands-On: Make Some Noise]
+Point to the QR code (wasm-skred).
+Crash course: Say: "Open the QR code and type: v0 w15 t .01 .25 0 0 (enter) then type: v0 n69 l1"</aside>
             </section>
 
-            <!-- Slide 10: Credits, Links & Open Floor (Q&A) -->
-            <section>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 25px; margin-bottom: 15px;">
-                    <h2 style="margin: 0; font-size: 1.5em;">Credits, Links & Q&A</h2>
-                    <img src="assets/img/beeps-and-ports-sprites/beeps-and-ports-19-heart.png" style="cursor: pointer; width: 100px; background-color: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" onclick="doSkred('e>10')" alt="Osko the Octopus">
-                </div>
+            <!-- ============================================================= -->
+            <!-- SLIDE 7: SOUND EXAMPLES                                       -->
+            <!-- ============================================================= -->
+            <!-- OFFLINE EDITING NOTE:                                         -->
+            <!-- To edit any example, simply change the text in its <pre> tag! -->
+            <!-- The Play button reads directly from the <pre> block.          -->
+            <!-- Lines starting with + (e.g. +0.1) schedule deferred notes.    -->
+            <!-- ============================================================= -->
+            <section id="slide-examples">
+                <h2 style="margin: 0; font-size: 1.5em;">Examples</h2>
+                
+                <div class="example-stage">
+                    <!-- Example 1: Success Chime -->
+                    <div class="example-card fragment fade-out" data-fragment-index="1">
+                        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+                            <span class="highlight-text" style="font-size: 1.15em; font-weight: bold;">1. Success Chime</span>
+                            <button class="sound-btn" style="background: #22c55e; padding: 5px 14px; font-size: 14px;" onclick="playExample(this)">▶ Play Chime</button>
+                        </div>
+                        <pre class="skred-cmd" style="font-size: 1.05em; line-height: 1.6; padding: 12px 16px; background: #000; border: 1px solid #334155; border-radius: 8px; color: #4ade80; margin: 0; overflow-x: auto;">v0 w0 f523.25 a-6 t .01 .1 0 0 l1
++0.1 v0 f659.25 l1
++0.2 v0 f783.99 t .01 .5 0 0 l1</pre>
+                    </div>
 
-                <div style="display: flex; justify-content: space-around; align-items: center; gap: 20px;">
-                    <div style="flex: 1; text-align: left; font-size: 0.78em;">
-                        <p style="margin: 5px 0;"><strong>Intro Music:</strong> Gadgetto (<a href="https://gadgetto.bandcamp.com/track/bicycling-holding-dolly-oh-o-ho" target="_blank" style="color: #38bdf8;">Bicycling Holding Dolly Oh-O-Ho</a>)</p>
-                        <p style="margin: 5px 0;"><strong>Demo Track:</strong> <em>Elysium</em> by Jester (Amiga demo by Sanity)</p>
-                        <p style="margin: 5px 0;"><strong>Engine Core:</strong> <a href="https://github.com/octetta/pulp" target="_blank" style="color: #38bdf8;">github.com/octetta/pulp</a></p>
-                        <p style="margin: 5px 0;"><strong>Slides & Playground:</strong> <a href="https://github.com/octetta/skred-web" target="_blank" style="color: #38bdf8;">github.com/octetta/skred-web</a></p>
-                        <div style="margin-top: 15px;">
-                            <button id="outro-btn" class="sound-btn" style="background: #a855f7; font-size: 16px; padding: 6px 14px; margin: 0;" onclick="toggleOutro()">Play Outro Beat</button>
+                    <!-- Example 2: Error Alarm -->
+                    <div class="example-card fragment current-visible" data-fragment-index="1">
+                        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+                            <span class="highlight-text" style="font-size: 1.15em; font-weight: bold; color: #ef4444;">2. Error Alarm</span>
+                            <button class="sound-btn" style="background: #ef4444; padding: 5px 14px; font-size: 14px;" onclick="playExample(this)">▶ Play Alarm</button>
+                        </div>
+                        <pre class="skred-cmd" style="font-size: 1.05em; line-height: 1.6; padding: 12px 16px; background: #000; border: 1px solid #334155; border-radius: 8px; color: #ef4444; margin: 0; overflow-x: auto;">v0 w1 f150 a-6 t .01 .2 0 0 l1
++0.2 v0 f150 l1
++0.4 v0 f150 l1</pre>
+                    </div>
+
+                    <!-- Example 3: Coin Pickup -->
+                    <div class="example-card fragment" data-fragment-index="2">
+                        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+                            <span class="highlight-text" style="font-size: 1.15em; font-weight: bold; color: #c084fc;">3. Coin Pickup</span>
+                            <button class="sound-btn" style="background: #a855f7; padding: 5px 14px; font-size: 14px;" onclick="playExample(this)">▶ Play Coin</button>
+                        </div>
+                        <pre class="skred-cmd" style="font-size: 1.05em; line-height: 1.6; padding: 12px 16px; background: #000; border: 1px solid #334155; border-radius: 8px; color: #c084fc; margin: 0; overflow-x: auto;">v0 w2 f800 a-6 t .01 .1 0 0 fb 1200 fbp .1 l1</pre>
+                    </div>
+                </div>
+                
+                <aside class="notes">[T+18:00 | Examples]
+Step 1: Success Chime — 3-note arpeggio (+0.1, +0.2 defer lines).
+Step 2: Error Alarm — 3 low buzzes (+0.2, +0.4 defer lines).
+Step 3: Coin Pickup — 8-bit square pitch bend.
+Demo each via PA button, and have audience type into wasm-skred console.</aside>
+            </section>
+
+            <!-- Slide 8: What Else Can You Build? -->
+            <section>
+                <h2 style="margin: 0;">What Else Can You Build?</h2>
+                
+                <ul style="text-align: left; margin-top: 35px; font-size: 1.1em; line-height: 1.9;">
+                    <li class="fragment"><span class="highlight-text">Live Data Sonification</span></li>
+                    <li class="fragment"><span class="highlight-text">Multiplayer Web Games</span></li>
+                    <li class="fragment"><span class="highlight-text">Type-Safe DSLs</span></li>
+                    <li class="fragment"><span class="highlight-text">Hex Packages & Libraries</span></li>
+                </ul>
+                <aside class="notes">[T+24:00 | Spark imagination with real-world BEAM projects]
+1. Live Data Sonification: Phoenix LiveView server alerts, spike tempos on queue backlog, FM buzz on error rates.
+2. Multiplayer Web Games: Phoenix Channels broadcasting lightweight skode strings to browser clients.
+3. Type-Safe DSLs: Build an expressive Gleam or Elixir DSL compiling down to skode.
+4. Hex Packages & Libraries: Help build the official hex.pm client library and OTP GenServer wrappers!</aside>
+            </section>
+
+            <!-- Slide 9: Credits, Links & Open Floor (Q&A) -->
+            <section id="slide-credits">
+                <h2 style="margin: 0; font-size: 1.5em;">Credits, Links & Q&A</h2>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 40px; margin-top: 30px; max-width: 840px; margin-left: auto; margin-right: auto;">
+                    <div style="flex: 1.3; text-align: left;">
+                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px;">
+                            <li id="credit-item-0" class="credit-item active-credit" onclick="selectCredit(0)" style="border-left: 4px solid #38bdf8; background: rgba(56, 189, 248, 0.1);">
+                                <div style="font-size: 1.05em; font-weight: bold; color: #38bdf8; margin-bottom: 2px;">https://octetta.com</div>
+                                <a href="https://octetta.com" target="_blank" style="font-size: 0.9em; color: #cbd5e1; text-decoration: none; font-family: 'Fira Code', monospace;" onclick="event.stopPropagation()">octetta.com</a>
+                            </li>
+
+                            <li id="credit-item-1" class="credit-item" onclick="selectCredit(1)" style="border-left: 4px solid #facc15; background: rgba(250, 204, 21, 0.08);">
+                                <div style="font-size: 1.05em; font-weight: bold; color: #facc15; margin-bottom: 2px;">GADGETTO</div>
+                                <a href="https://gadgetto.bandcamp.com" target="_blank" style="font-size: 0.9em; color: #cbd5e1; text-decoration: none; font-family: 'Fira Code', monospace;" onclick="event.stopPropagation()">gadgetto.bandcamp.com</a>
+                            </li>
+
+                            <li id="credit-item-2" class="credit-item" onclick="selectCredit(2)" style="border-left: 4px solid #4ade80; background: rgba(74, 222, 128, 0.08);">
+                                <div style="font-size: 1.05em; font-weight: bold; color: #4ade80; margin-bottom: 2px;">pulp</div>
+                                <a href="https://github.com/octetta/pulp" target="_blank" style="font-size: 0.9em; color: #cbd5e1; text-decoration: none; font-family: 'Fira Code', monospace;" onclick="event.stopPropagation()">github.com/octetta/pulp</a>
+                            </li>
+                        </ul>
+                        <div style="margin-top: 24px;">
+                            <button id="outro-btn" class="sound-btn" style="background: #a855f7; font-size: 15px; padding: 6px 14px; margin: 0;" onclick="toggleOutro()">Play Outro Beat</button>
                         </div>
                     </div>
 
-                    <div style="text-align: center; background: #161b22; padding: 12px; border-radius: 12px; border: 1px solid #30363d;">
-                        <a href="https://github.com/octetta/skred-web" target="_blank">
-                            <img src="qr-repo.svg?v=2" alt="GitHub Repo QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
-                        </a>
-                        <span style="font-size: 13px; color: #0ea5e9; font-family: 'Fira Code', monospace; display: block; margin-top: 6px;">octetta/skred-web</span>
+                    <div class="qr-stage">
+                        <!-- QR 0: octetta.com (visible initially, hides on fragment 1) -->
+                        <div id="qr-card-0" class="qr-card fragment fade-out" data-fragment-index="1">
+                            <a href="https://octetta.com" target="_blank">
+                                <img src="qr-octetta.svg" alt="octetta.com QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
+                            </a>
+                            <span style="font-size: 13px; color: #38bdf8; font-family: 'Fira Code', monospace; display: block; margin-top: 8px; font-weight: bold;">octetta.com</span>
+                        </div>
+
+                        <!-- QR 1: GADGETTO (visible only on fragment 1) -->
+                        <div id="qr-card-1" class="qr-card fragment current-visible" data-fragment-index="1">
+                            <a href="https://gadgetto.bandcamp.com" target="_blank">
+                                <img src="qr-gadgetto.svg" alt="GADGETTO Bandcamp QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
+                            </a>
+                            <span style="font-size: 13px; color: #facc15; font-family: 'Fira Code', monospace; display: block; margin-top: 8px; font-weight: bold;">gadgetto</span>
+                        </div>
+
+                        <!-- QR 2: pulp (visible from fragment 2 onward) -->
+                        <div id="qr-card-2" class="qr-card fragment" data-fragment-index="2">
+                            <a href="https://github.com/octetta/pulp" target="_blank">
+                                <img src="qr-pulp.svg" alt="Pulp GitHub QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
+                            </a>
+                            <span style="font-size: 13px; color: #4ade80; font-family: 'Fira Code', monospace; display: block; margin-top: 8px; font-weight: bold;">octetta/pulp</span>
+                        </div>
                     </div>
                 </div>
 
-                <aside class="notes">[T+30:00 to T+40:00 | Open floor for 10 minutes of audience Q&A, sound tweaking, and hacking.]</aside>
+                <aside class="notes">[T+28:00 to T+40:00 | Credits & Q&A (3 Steps)]
+Step 1: octetta.com — Personal website & sound projects.
+Step 2 (Advance): GADGETTO — Credit for walk-in music, Bandcamp QR.
+Step 3 (Advance): pulp — GitHub repo QR (github.com/octetta/pulp).
+Action: Step through 1→2→3 to show each QR code. Toggle Outro Beat if desired. Open floor for 12m Q&A.</aside>
+            </section>
+
+            <!-- Slide 10 [Backup]: Orchestrating from the BEAM -->
+            <section>
+                <div style="display: inline-block; padding: 4px 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; border-radius: 6px; font-size: 0.75em; color: #38bdf8; margin-bottom: 10px; font-weight: bold;">[Backup / Q&A]</div>
+                <h2 style="margin: 0; font-size: 1.5em;">Orchestrating from the BEAM</h2>
+                
+                <div style="display: flex; justify-content: space-between; gap: 24px; text-align: left; font-size: 0.95em; margin-top: 25px;">
+                    <div class="fragment" style="flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px;">
+                        <h4 style="color: #facc15; margin-top: 0; font-size: 1.1em;">Option 1: Managed Port (<code style="color:#38bdf8;">open_port</code>)</h4>
+                        <ul style="padding-left: 20px; margin: 12px 0 0 0; line-height: 1.8;">
+                            <li><span class="highlight-text">OTP Supervision Tree</span></li>
+                            <li><span class="highlight-text">Stdio Pipes Lifecycle</span></li>
+                            <li><span class="highlight-text">Linked Process Fate</span></li>
+                        </ul>
+                    </div>
+                    <div class="fragment" style="flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px;">
+                        <h4 style="color: #facc15; margin-top: 0; font-size: 1.1em;">Option 2: UDP Daemon (<code style="color:#38bdf8;">gen_udp</code>)</h4>
+                        <ul style="padding-left: 20px; margin: 12px 0 0 0; line-height: 1.8;">
+                            <li><span class="highlight-text">Detached Background Process</span></li>
+                            <li><span class="highlight-text">True Crash Isolation</span></li>
+                            <li><span class="highlight-text">Zero-Dropout Hot-Reloading</span></li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="fragment" style="font-size: 0.9em; margin-top: 25px;">
+                    <span class="highlight-text">Hardware MIDI Controllers &rarr; BEAM Actors</span>
+                </p>
+                <aside class="notes">[Q&A Backup | Port vs UDP Orchestration]
+1. Option 1 (open_port): Supervised directly in OTP tree via stdio pipes. Linked process fate: crash together, restart together.
+2. Option 2 (gen_udp): Detached headless daemon. Complete crash isolation: you can restart or hot-upgrade BEAM nodes without dropping audio buffers.
+3. Hardware Integration: MIDI hardware controllers map into BEAM actors and broadcast skode strings in real time.</aside>
+            </section>
+
+            <!-- Slide 11 [Backup]: Browser / WASM -->
+            <section id="slide-wasm-target">
+                <div style="display: inline-block; padding: 4px 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; border-radius: 6px; font-size: 0.75em; color: #38bdf8; margin-bottom: 10px; font-weight: bold;">[Backup / Q&A]</div>
+                <h2 style="margin: 0; font-size: 1.5em;">Browser / WASM</h2>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 40px; margin-top: 30px; max-width: 840px; margin-left: auto; margin-right: auto;">
+                    <div style="flex: 1.2; text-align: left;">
+                        <ul style="text-align: left; font-size: 1.05em; line-height: 2.0; padding-left: 20px;">
+                            <li class="fragment"><span class="highlight-text">Zero-Install Audio Sandbox</span></li>
+                            <li class="fragment"><span class="highlight-text">WebAssembly AudioWorklet Callback</span></li>
+                            <li class="fragment"><span class="highlight-text">Interactive Playground (<code style="color:#4ade80;">help.html</code>)</span></li>
+                        </ul>
+                    </div>
+
+                    <div style="text-align: center; background: #161b22; padding: 16px 20px; border-radius: 12px; border: 1px solid #30363d; width: 180px; flex-shrink: 0; box-sizing: border-box;">
+                        <a href="https://octetta.github.io/skred-web/help.html" target="_blank">
+                            <img src="qr-wasm-help.svg" alt="Skred WASM Help QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
+                        </a>
+                        <span style="font-size: 13px; color: #4ade80; font-family: 'Fira Code', monospace; display: block; margin-top: 8px; font-weight: bold;">help.html</span>
+                    </div>
+                </div>
+
+                <aside class="notes">[Q&A Backup | Browser / WASM]
+1. Zero-Install Audio Sandbox: Runs everywhere on phones and desktops without audio drivers or native compilers.
+2. WebAssembly Audio Callback: Pure C DSP compiled via Emscripten, driving WebAudio render callbacks with sub-millisecond DSP ticks.
+3. Interactive Playground (help.html): Point to QR code — full interactive browser workbench with parameter sliders, real-time REPL, and visual waveform inspection.</aside>
+            </section>
+
+            <!-- Slide 12 [Backup]: Make Some Noise: Reference -->
+            <section id="slide-noise-ref">
+                <div style="display: inline-block; padding: 4px 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; border-radius: 6px; font-size: 0.75em; color: #38bdf8; margin-bottom: 10px; font-weight: bold;">[Backup / Q&A]</div>
+                <h2 style="margin: 0; font-size: 1.5em;">Make Some Noise: Reference</h2>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 40px; margin-top: 30px; max-width: 840px; margin-left: auto; margin-right: auto;">
+                    <div style="flex: 1.3; text-align: left;">
+                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px;">
+                            <li id="ref-item-0" class="ref-item active-ref" onclick="selectRef(0)" style="border-left: 4px solid #38bdf8; background: rgba(56, 189, 248, 0.1);">
+                                <div style="font-size: 1.05em; font-weight: bold; color: #38bdf8; margin-bottom: 2px;">SKODE Command Reference</div>
+                                <a href="https://octetta.github.io/skred-web/skode_reference.html" target="_blank" style="font-size: 0.88em; color: #cbd5e1; text-decoration: none; font-family: 'Fira Code', monospace;" onclick="event.stopPropagation()">skode_reference.html</a>
+                            </li>
+
+                            <li id="ref-item-1" class="ref-item" onclick="selectRef(1)" style="border-left: 4px solid #facc15; background: rgba(250, 204, 21, 0.08);">
+                                <div style="font-size: 1.05em; font-weight: bold; color: #facc15; margin-bottom: 2px;">Built-in Waveforms (w0 – w99)</div>
+                                <a href="https://octetta.github.io/skred-web/waveforms.html" target="_blank" style="font-size: 0.88em; color: #cbd5e1; text-decoration: none; font-family: 'Fira Code', monospace;" onclick="event.stopPropagation()">waveforms.html</a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="ref-qr-stage">
+                        <!-- QR 0: SKODE Command Reference (visible initially, hides on fragment 1) -->
+                        <div id="ref-qr-card-0" class="ref-qr-card fragment fade-out" data-fragment-index="1">
+                            <a href="https://octetta.github.io/skred-web/skode_reference.html" target="_blank">
+                                <img src="qr-skode-ref.svg" alt="SKODE Reference QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
+                            </a>
+                            <span style="font-size: 12px; color: #38bdf8; font-family: 'Fira Code', monospace; display: block; margin-top: 8px; font-weight: bold;">skode_reference</span>
+                        </div>
+
+                        <!-- QR 1: Built-in Waveforms (visible on fragment 1) -->
+                        <div id="ref-qr-card-1" class="ref-qr-card fragment" data-fragment-index="1">
+                            <a href="https://octetta.github.io/skred-web/waveforms.html" target="_blank">
+                                <img src="qr-waveforms.svg" alt="Waveforms QR" style="width: 140px; background: white; padding: 8px; border-radius: 8px; display: block; margin: 0 auto;">
+                            </a>
+                            <span style="font-size: 12px; color: #facc15; font-family: 'Fira Code', monospace; display: block; margin-top: 8px; font-weight: bold;">waveforms.html</span>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="notes">[Q&A Backup | Make Some Noise: Reference (2 Steps)]
+Step 1: SKODE User Command Reference — Point to skode_reference.html QR code: full grammar cheatsheet for voice, note, frequency, envelope, and filters.
+Step 2 (Advance): Built-in Waveforms — Point to waveforms.html QR code: visual table and audio previews of all 100 wavetables (w0–w99).</aside>
             </section>
         </div>
     </div>
@@ -309,6 +439,93 @@
             }
         }
 
+        function updateCreditsHighlight() {
+            const slide = Reveal.getCurrentSlide();
+            if (!slide || slide.id !== 'slide-credits') return;
+            
+            const card2 = document.getElementById('qr-card-2');
+            const card1 = document.getElementById('qr-card-1');
+            
+            let activeIdx = 0;
+            if (card2 && card2.classList.contains('visible')) {
+                activeIdx = 2;
+            } else if (card1 && card1.classList.contains('visible')) {
+                activeIdx = 1;
+            } else {
+                activeIdx = 0;
+            }
+            applyCreditHighlight(activeIdx);
+        }
+
+        function applyCreditHighlight(idx) {
+            [0, 1, 2].forEach(i => {
+                const item = document.getElementById(`credit-item-${i}`);
+                if (!item) return;
+                if (i === idx) {
+                    item.classList.add('active-credit');
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateX(6px)';
+                } else {
+                    item.classList.remove('active-credit');
+                    item.style.opacity = '0.45';
+                    item.style.transform = 'translateX(0)';
+                }
+            });
+        }
+
+        function selectCredit(idx) {
+            const slide = document.getElementById('slide-credits');
+            if (!slide) return;
+            const indices = Reveal.getIndices(slide);
+            const f = (idx === 0) ? -1 : (idx === 1 ? 0 : 1);
+            Reveal.slide(indices.h, indices.v, f);
+            applyCreditHighlight(idx);
+        }
+
+        function updateRefHighlight() {
+            const slide = Reveal.getCurrentSlide();
+            if (!slide || slide.id !== 'slide-noise-ref') return;
+            
+            const card1 = document.getElementById('ref-qr-card-1');
+            const activeIdx = (card1 && card1.classList.contains('visible')) ? 1 : 0;
+            applyRefHighlight(activeIdx);
+        }
+
+        function applyRefHighlight(idx) {
+            [0, 1].forEach(i => {
+                const item = document.getElementById(`ref-item-${i}`);
+                if (!item) return;
+                if (i === idx) {
+                    item.classList.add('active-ref');
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateX(6px)';
+                } else {
+                    item.classList.remove('active-ref');
+                    item.style.opacity = '0.45';
+                    item.style.transform = 'translateX(0)';
+                }
+            });
+        }
+
+        function selectRef(idx) {
+            const slide = document.getElementById('slide-noise-ref');
+            if (!slide) return;
+            const indices = Reveal.getIndices(slide);
+            const f = (idx === 0) ? -1 : 0;
+            Reveal.slide(indices.h, indices.v, f);
+            applyRefHighlight(idx);
+        }
+
+        function handleSlideOrFragmentUpdate() {
+            updateCreditsHighlight();
+            updateRefHighlight();
+        }
+
+        Reveal.on('slidechanged', handleSlideOrFragmentUpdate);
+        Reveal.on('fragmentshown', handleSlideOrFragmentUpdate);
+        Reveal.on('fragmenthidden', handleSlideOrFragmentUpdate);
+        Reveal.on('ready', handleSlideOrFragmentUpdate);
+
         function startAudio() {
             if (engineStarted) return;
             if (typeof Module !== 'undefined' && Module._skred_start) {
@@ -356,8 +573,22 @@
         }
 
         function playDemo(cmds) {
-            document.getElementById('live-code-display').innerText = cmds.join('\n');
+            const display = document.getElementById('live-code-display');
+            if (display) display.innerText = cmds.join('\n');
             cmds.forEach(cmd => doSkred(cmd));
+        }
+
+        function playExample(btn) {
+            if (!engineStarted) {
+                startAudio();
+            }
+            const card = btn.closest('.example-card');
+            if (!card) return;
+            const pre = card.querySelector('pre');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent || "";
+            const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
+            lines.forEach(cmd => doSkred(cmd));
         }
 
         let lastRecordedFile = null;
