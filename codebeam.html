@@ -237,6 +237,7 @@ Demo each via PA button, and have audience type into wasm-skred console.</aside>
                             </li>
                         </ul>
                         <div style="margin-top: 24px;">
+                            <!-- OUTRO BUTTON: Triggers toggleOutro(). Pattern setup is in <script> (search: "OUTRO PATTERN SETUP") -->
                             <button id="outro-btn" class="sound-btn" style="background: #a855f7; font-size: 15px; padding: 6px 14px; margin: 0;" onclick="toggleOutro()">Play Outro Beat</button>
                         </div>
                     </div>
@@ -415,15 +416,27 @@ Step 2 (Advance): Built-in Waveforms — Point to waveforms.html QR code: visual
             plugins: [ RevealNotes ]
         });
 
+        // =====================================================================
+        // 🎶 OUTRO PATTERN TOGGLE & CONTROLS
+        // =====================================================================
+        // Called when clicking "Play Outro Beat" on the Credits slide (Slide 8).
+        // To change which patterns start or stop, edit the commands below:
+        //   - y<N>z1  starts pattern N (e.g. y0z1 y1z1)
+        //   - y<N>z0  stops pattern N (e.g. y0z0 y1z0)
+        // NOTE: The actual pattern sequences, voices, and loops are configured
+        // in startAudio() below (search: "OUTRO PATTERN SETUP").
+        // =====================================================================
         let engineStarted = false;
         let outroPlaying = false;
         function toggleOutro() {
             if (!engineStarted) return;
             if (outroPlaying) {
+                // STOP OUTRO PATTERNS (z0 = stop pattern)
                 doSkred('y0z0 y1z0');
                 document.getElementById('outro-btn').textContent = 'Play Outro Beat';
                 outroPlaying = false;
             } else {
+                // START OUTRO PATTERNS (z1 = start pattern)
                 doSkred('y0z1 y1z1');
                 document.getElementById('outro-btn').textContent = 'Stop Outro Beat';
                 outroPlaying = true;
@@ -545,14 +558,27 @@ Step 2 (Advance): Built-in Waveforms — Point to waveforms.html QR code: visual
                 doSkred('v255 w15 n48 a-10 t .01 .4 0 0 pt .01 .1 0 0 pd 4 j1 k200 q5 ft .01 .4 0 0 fd 4000 G254 H254,252');
                 doSkred('v253 w1 f80 a-25 t .01 .1 0 0 fb 40 fbp .05');
 
-                // Setup Outro Beat
+                // =============================================================
+                // 🎶 OUTRO PATTERN SETUP (EDIT YOUR OUTRO BEAT & VOICES HERE)
+                // =============================================================
+                // To customize the background beat that plays during Q&A:
+                //
+                // 1. Define Synth Voices (v1, v2, v3, etc.):
                 doSkred('v1 w82 a5');
                 doSkred('v2 w83 a0');
                 doSkred('v3 w84 a-10');
+
+                // 2. Define Patterns / Sequences (y0, y1, y2, etc.):
+                //    y<N> [commands]x<beat_step>   triggers commands on step
+                //    y<N> %<cycle_length>          sets loop duration in beats
                 doSkred('y0 [v1l1]x0');
                 doSkred('y0 [v2l1]x1');
                 doSkred('y0 %4');
                 doSkred('y1 [v3l1]x0 %1');
+
+                // 3. To start/stop patterns on button click, see toggleOutro()
+                //    above (search: "OUTRO PATTERN TOGGLE & CONTROLS").
+                // =============================================================
 
                 // Define your macros for the Osko clicks!
                 // e.g.: doSkred('+1.6 e1> v0 w1 f440 a-15 t .01 .1 0 0 l1');
