@@ -207,7 +207,7 @@ def run_checks(repo_root: Path, verbose: bool = False) -> bool:
 
         if all_cmds_found:
             log_pass("All Slide 06 audio DSP commands match line-for-line across deck, cues, and print")
-            log_info(f"Verified Coin Pickup: 'v0 w1 g0 / n60 l1 g.1 n80 l1'")
+            log_info(f"Verified Coin Pickup: 'v0 g0 w1 a-6 t.01 .25 0 0 / n60 l1 g.1 n80 l1'")
 
     # Check 4: Slide 8 Credits, Links, Dedication & Outro Controls
     print(f"\n{BOLD}4. Slide 08 Credits, Dedication & Outro Sync:{RESET}")
