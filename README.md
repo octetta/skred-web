@@ -12,7 +12,12 @@ Try the interactive environment in your browser:
 - **[Learn Skred](https://octetta.github.io/skred-web/learn.html)**: Interactive tutorial notebook to learn Skred.
 - **[Tokyo ADC Stage](https://octetta.github.io/skred-web/tokyo-adc-stage.html)**: Presentation slides and live demos.
 - **[Minimal WASM Example](https://octetta.github.io/skred-web/help.html)**: Boilerplate integration example for web developers.
-- **[Code BEAM Presentation](https://octetta.github.io/skred-web/codebeam.html)**: Slide deck mapping Skred's architecture to the BEAM philosophy.
+
+### Code BEAM Presentation
+
+- **[Slide Deck](https://octetta.github.io/skred-web/codebeam.html)**: Interactive Reveal.js presentation with live DSP audio coding.
+- **[Mobile Speaker Cues](https://octetta.github.io/skred-web/cues.html)**: One-handed mobile teleprompter app with timer and thumb navigation dock.
+- **[Printable Cue Sheet](https://octetta.github.io/skred-web/print-cues.html)**: Printable 12-card offline cheat sheet and speaker notes.
 
 ## Local Development
 
