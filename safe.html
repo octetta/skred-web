@@ -2,6 +2,28 @@
 <html>
 <head>
     <script src="coi-serviceworker.min.js"></script>
+    <script>
+        (function() {
+            try {
+                var f = localStorage.getItem('skred_font');
+                if (f === 'mono' || f === 'monospace') {
+                    document.documentElement.style.setProperty('--main-font', 'monospace');
+                    document.documentElement.style.setProperty('--main-font-weight', 'bold');
+                    document.documentElement.style.setProperty('--main-line-height', '1.25');
+                } else {
+                    document.documentElement.style.setProperty('--main-font', "'Press Start 2P', cursive");
+                    document.documentElement.style.setProperty('--main-font-weight', 'normal');
+                    document.documentElement.style.setProperty('--main-line-height', '1.5');
+                }
+                var t = localStorage.getItem('skred_theme');
+                if (t === 'light') {
+                    document.documentElement.dataset.theme = 'light';
+                } else {
+                    document.documentElement.dataset.theme = 'dark';
+                }
+            } catch (e) {}
+        })();
+    </script>
     <title>skred-web shell</title>
 
     <style>
@@ -10,17 +32,106 @@
 :root {
     --main-font: 'Press Start 2P', cursive;
     --main-font-weight: normal;
-    --atari-blue: #0042ff;
-    --atari-dark: #001a66;
-    --atari-gold: #ffd700;
-    --atari-light: #90b0ff;
-    --atari-rust: #FF3C3C;
-    --atari-grass: #afff00;
-    --bar-bg: #1a2a1a; 
+    --main-line-height: 1.5;
+
+    /* Theme colors - Dark (default Atari) */
+    --page-bg: #000000;
+    --term-bg: #0042ff;
+    --term-text: #90b0ff;
+    --input-bg: #001a66;
+    --input-text: #ffffff;
+    --bar-bg: #1a2a1a;
+    --bar-border: rgba(144, 176, 255, 0.3);
+    --bar-shadow: rgba(0, 0, 0, 0.5);
+    --bar-btn-text: #90b0ff;
+    --bar-btn-border: rgba(144, 176, 255, 0.2);
+    --bar-btn-active-bg: #90b0ff;
+    --bar-btn-active-text: #001a66;
+    --slider-row-border: rgba(144, 176, 255, 0.12);
+    --status-bg: #90b0ff;
+    --status-text: #001a66;
+    --status-center: #0030cc;
+    --status-audio-off: #0042ff;
+    --status-audio-on: #afff00;
+    --status-border: #000000;
+    --slider-thumb: #90b0ff;
+    --slider-toggle: #cc0033;
+
+    --color-system: #ffd700;
+    --color-error: #FF3C3C;
+    --color-info: #afff00;
+    --color-dim: #ffffff;
+
+    --graph-bg: rgba(0, 26, 102, 0.5);
+    --graph-border: rgba(144, 176, 255, 0.55);
+    --graph-edge: #90b0ff;
+    --graph-edge-text: #ffffff;
+    --graph-edge-stroke: #001a66;
+    --graph-node-fill: #001a66;
+    --graph-node-stroke: #90b0ff;
+    --graph-root-fill: #332b00;
+    --graph-root-stroke: #ffd700;
+    --graph-node-text: #ffffff;
+
+    /* Backward compatibility aliases */
+    --atari-blue: var(--term-bg);
+    --atari-dark: var(--input-bg);
+    --atari-gold: var(--color-system);
+    --atari-light: var(--term-text);
+    --atari-rust: var(--color-error);
+    --atari-grass: var(--color-info);
+}
+
+[data-theme="light"] {
+    /* Theme colors - Light (Sonic Pi inspired) */
+    --page-bg: #ffffff;
+    --term-bg: #ffffff;
+    --term-text: #2d3748;
+    --input-bg: #f3f4f6;
+    --input-text: #111827;
+    --bar-bg: #e5e7eb;
+    --bar-border: rgba(0, 0, 0, 0.15);
+    --bar-shadow: rgba(0, 0, 0, 0.08);
+    --bar-btn-text: #374151;
+    --bar-btn-border: rgba(0, 0, 0, 0.12);
+    --bar-btn-active-bg: #ff1493;
+    --bar-btn-active-text: #ffffff;
+    --slider-row-border: rgba(0, 0, 0, 0.08);
+    --status-bg: #ededed;
+    --status-text: #1f2937;
+    --status-center: #ff1493;
+    --status-audio-off: #64748b;
+    --status-audio-on: #16a34a;
+    --status-border: #cbd5e1;
+    --slider-thumb: #ff1493;
+    --slider-toggle: #ff1493;
+
+    --color-system: #d97706;
+    --color-error: #dc2626;
+    --color-info: #16a34a;
+    --color-dim: #64748b;
+
+    --graph-bg: rgba(243, 244, 246, 0.95);
+    --graph-border: rgba(0, 0, 0, 0.18);
+    --graph-edge: #1e90ff;
+    --graph-edge-text: #111827;
+    --graph-edge-stroke: #ffffff;
+    --graph-node-fill: #ffffff;
+    --graph-node-stroke: #1e90ff;
+    --graph-root-fill: #fef3c7;
+    --graph-root-stroke: #d97706;
+    --graph-node-text: #111827;
+
+    --atari-blue: var(--term-bg);
+    --atari-dark: var(--input-bg);
+    --atari-gold: var(--color-system);
+    --atari-light: var(--term-text);
+    --atari-rust: var(--color-error);
+    --atari-grass: var(--color-info);
 }
 
 body {
-    background-color: #000000; 
+    background-color: var(--page-bg); 
     display: flex;
     flex-direction: column;
     height: 100dvh; 
@@ -29,7 +140,7 @@ body {
 }
 
 #terminal-container {
-    background-color: var(--atari-blue);
+    background-color: var(--term-bg);
     flex-grow: 1;
     display: flex;
     flex-direction: column;
@@ -41,7 +152,7 @@ body {
     overflow-y: auto;
     padding: 20px;
     white-space: pre-wrap;
-    line-height: 1.5;
+    line-height: var(--main-line-height, 1.5);
     -webkit-overflow-scrolling: touch; 
 }
 
@@ -53,25 +164,24 @@ body {
 /* Function Bar: Text-field style between entry and status */
 #function-bar {
     display: flex;
-    background: var(--bar-bg); /* Use the new variable here */
-    border-top: 1px solid rgba(144, 176, 255, 0.3);
+    background: var(--bar-bg);
+    border-top: 1px solid var(--bar-border);
     flex-shrink: 0;
     height: 44px;
     align-items: stretch;
-    /* Optional: adds a subtle "input field" depth */
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); 
+    box-shadow: inset 0 2px 5px var(--bar-shadow); 
 }
 
 #slider-bar {
     display: flex;
     flex-direction: column;
     background: var(--bar-bg);
-    border-top: 1px solid rgba(144, 176, 255, 0.3);
+    border-top: 1px solid var(--bar-border);
     flex-shrink: 0;
     height: 176px;
     align-items: stretch;
     gap: 0;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+    box-shadow: inset 0 2px 5px var(--bar-shadow);
 }
 
 #slider-bar.slider-hidden {
@@ -84,7 +194,7 @@ body {
     gap: 8px;
     height: 44px;
     padding: 0 10px;
-    border-top: 1px solid rgba(144, 176, 255, 0.12);
+    border-top: 1px solid var(--slider-row-border);
 }
 
 .slider-row:first-child {
@@ -94,8 +204,8 @@ body {
 #function-bar button {
     background: transparent;
     border: none;
-    border-right: 1px solid rgba(144, 176, 255, 0.2);
-    color: var(--atari-light);
+    border-right: 1px solid var(--bar-btn-border);
+    color: var(--bar-btn-text);
     font-family: var(--main-font, 'Press Start 2P', cursive);
     font-weight: var(--main-font-weight, normal);
     font-size: 11px;
@@ -109,8 +219,8 @@ body {
 #slider-bar input {
     background: transparent;
     border: none;
-    border-right: 1px solid rgba(144, 176, 255, 0.2);
-    color: #ffffff;
+    border-right: 1px solid var(--bar-btn-border);
+    color: var(--input-text);
     font-family: var(--main-font, 'Press Start 2P', cursive);
     font-weight: var(--main-font-weight, normal);
     font-size: 10px;
@@ -132,18 +242,18 @@ body {
 
 .slider-cmd { flex: 2; }
 .slider-min, .slider-max, .slider-step { flex: 0 0 78px; text-align: center; }
-.cmd-slider { flex: 3; accent-color: var(--atari-light); }
+.cmd-slider { flex: 3; accent-color: var(--slider-thumb); }
 
 #function-bar button:active {
-    background: var(--atari-light);
-    color: var(--atari-dark);
+    background: var(--bar-btn-active-bg);
+    color: var(--bar-btn-active-text);
 }
 
 .input-line {
     display: flex;
     align-items: center;
     padding: 15px 20px;
-    background: var(--atari-dark);
+    background: var(--input-bg);
     flex-shrink: 0;
 }
 
@@ -151,7 +261,7 @@ body {
     font-family: var(--main-font, 'Press Start 2P', cursive);
     font-weight: var(--main-font-weight, normal);
     font-size: 16px; 
-    color: var(--atari-light);
+    color: var(--term-text);
 }
 
 #cmdInput {
@@ -159,19 +269,29 @@ body {
     border: none;
     outline: none;
     flex-grow: 1;
-    color: #ffffff;
+    color: var(--input-text);
     font-size: 16px; 
+    line-height: var(--main-line-height, 1.5);
+}
+
+#cmdInput::placeholder {
+    color: var(--input-text);
+    opacity: 0.45;
+}
+
+.prompt {
+    line-height: var(--main-line-height, 1.5);
 }
 
 .status-bar {
     padding: 10px 20px;
-    background: var(--atari-light);
-    color: var(--atari-dark);
+    background: var(--status-bg);
+    color: var(--status-text);
     display: flex;
     gap: 10px;
     flex-shrink: 0;
     font-size: 12px;
-    border-top: 2px solid #000;
+    border-top: 2px solid var(--status-border);
     padding-bottom: calc(10px + env(safe-area-inset-bottom));
 }
 
@@ -183,11 +303,11 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #0030cc;
+    color: var(--status-center);
 }
 #engine-status {
     flex: 1;
-    color: #0042ff;
+    color: var(--status-audio-off);
     text-align: right;
     white-space: nowrap;
 }
@@ -204,7 +324,7 @@ body {
 #slider-toggle {
     background: transparent;
     border: none;
-    color: #cc0033;
+    color: var(--slider-toggle);
     cursor: pointer;
     font-family: var(--main-font, 'Press Start 2P', cursive);
     font-weight: var(--main-font-weight, normal);
@@ -222,23 +342,23 @@ body {
     .slider-min, .slider-max, .slider-step { flex-basis: 56px; }
 }
 
-.system { color: var(--atari-gold); }
-.error { color: var(--atari-rust); }
-.info { color: var(--atari-grass); }
-.dim { color: #ffffff; }
+.system { color: var(--color-system); }
+.error { color: var(--color-error); }
+.info { color: var(--color-info); }
+.dim { color: var(--color-dim); }
 
 .voice-graph-output {
     margin: 8px 0 14px;
     padding: 10px;
     overflow-x: auto;
-    background: rgba(0, 26, 102, 0.5);
-    border: 1px solid rgba(144, 176, 255, 0.55);
+    background: var(--graph-bg);
+    border: 1px solid var(--graph-border);
     white-space: normal;
 }
 
 .voice-graph-title {
     margin-bottom: 8px;
-    color: var(--atari-gold);
+    color: var(--color-system);
     font-size: 11px;
 }
 
@@ -251,36 +371,36 @@ body {
 
 .voice-graph-edge {
     fill: none;
-    stroke: var(--atari-light);
+    stroke: var(--graph-edge);
     stroke-width: 1.5;
     opacity: 0.85;
 }
 
 .voice-graph-edge-label {
-    fill: #ffffff;
+    fill: var(--graph-edge-text);
     font-family: var(--main-font, 'Press Start 2P', cursive);
     font-weight: var(--main-font-weight, normal);
     font-size: 6px;
     text-anchor: middle;
     paint-order: stroke;
-    stroke: var(--atari-dark);
+    stroke: var(--graph-edge-stroke);
     stroke-width: 3px;
     stroke-linejoin: round;
 }
 
 .voice-graph-node circle {
-    fill: var(--atari-dark);
-    stroke: var(--atari-light);
+    fill: var(--graph-node-fill);
+    stroke: var(--graph-node-stroke);
     stroke-width: 2;
 }
 
 .voice-graph-node.root circle {
-    fill: #332b00;
-    stroke: var(--atari-gold);
+    fill: var(--graph-root-fill);
+    stroke: var(--graph-root-stroke);
 }
 
 .voice-graph-node text {
-    fill: #ffffff;
+    fill: var(--graph-node-text);
     font-family: var(--main-font, 'Press Start 2P', cursive);
     font-weight: var(--main-font-weight, normal);
     font-size: 8px;
@@ -354,7 +474,7 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
 
         <div class="status-bar">
-            <span id="engine-left">skred-web <span class="app-hash">911dedd</span> (<span class="skred-version">...</span>)</span>
+            <span id="engine-left">skred-web <span class="app-hash">5344542</span> (<span class="skred-version">...</span>)</span>
             <span id="engine-center">log 0</span>
             <span id="engine-right">
                 <span id="engine-status">AUDIO OFF</span>
@@ -379,7 +499,10 @@ function usage() {
   printToTerminal("/ain off # disable input");
   printToTerminal("/a? # show audio status");
   printToTerminal("-graph (voice) (depth) # draw voice dependencies");
-  printToTerminal("-font # toggle terminal font");
+  printToTerminal("-font [2p|mono] # toggle terminal font & line spacing");
+  printToTerminal("-dark # switch to dark Atari theme");
+  printToTerminal("-light # switch to light Sonic Pi theme");
+  printToTerminal("-clear # clear terminal output");
   printToTerminal("-learn # open skode tutorial");
   printToTerminal("-ksynth # open k-synth tool");
   printToTerminal("-load # select a wav file");
@@ -416,6 +539,40 @@ const sliderRows = Array.from(document.querySelectorAll('.slider-row'));
 
 let commandHistory = [];
 let historyIndex = -1;
+
+function applyFont(fontKey) {
+    if (fontKey === 'mono' || fontKey === 'monospace') {
+        document.documentElement.style.setProperty('--main-font', 'monospace');
+        document.documentElement.style.setProperty('--main-font-weight', 'bold');
+        document.documentElement.style.setProperty('--main-line-height', '1.25');
+        try { localStorage.setItem('skred_font', 'mono'); } catch (e) {}
+        return 'mono';
+    } else {
+        document.documentElement.style.setProperty('--main-font', "'Press Start 2P', cursive");
+        document.documentElement.style.setProperty('--main-font-weight', 'normal');
+        document.documentElement.style.setProperty('--main-line-height', '1.5');
+        try { localStorage.setItem('skred_font', '2p'); } catch (e) {}
+        return '2p';
+    }
+}
+
+function applyTheme(themeKey) {
+    if (themeKey === 'light') {
+        document.documentElement.dataset.theme = 'light';
+        try { localStorage.setItem('skred_theme', 'light'); } catch (e) {}
+    } else {
+        document.documentElement.dataset.theme = 'dark';
+        try { localStorage.setItem('skred_theme', 'dark'); } catch (e) {}
+    }
+    if (statusSpan) {
+        statusSpan.style.color = running ? "var(--status-audio-on)" : "var(--status-audio-off)";
+    }
+    return document.documentElement.dataset.theme;
+}
+
+if (statusSpan) {
+    statusSpan.style.color = running ? "var(--status-audio-on)" : "var(--status-audio-off)";
+}
 
 function setSkredVersion(version) {
     document.querySelectorAll('.skred-version').forEach(el => {
@@ -563,7 +720,7 @@ function appendVoiceGraph(graph) {
         id: markerId, markerWidth: 6, markerHeight: 6,
         refX: 5, refY: 3, orient: 'auto', markerUnits: 'strokeWidth'
     });
-    marker.appendChild(svgElement('path', { d: 'M0,0 L6,3 L0,6 Z', fill: '#90b0ff' }));
+    marker.appendChild(svgElement('path', { d: 'M0,0 L6,3 L0,6 Z', fill: 'var(--graph-edge, #90b0ff)' }));
     defs.appendChild(marker);
     svg.appendChild(defs);
 
@@ -710,7 +867,7 @@ function ensureBooted() {
         const result = Module._skred_start(bufsize, nvoices, 0); 
         
         statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
-        statusSpan.style.color = "#0042ff";
+        statusSpan.style.color = "var(--status-audio-on)";
         const ptr = Module._skred_features();
         printToTerminal(`${Module.UTF8ToString(ptr)}`);
         Module.ccall('skred_command', null, ['string'], ["log 1"]);
@@ -857,21 +1014,46 @@ function processCommand(cmd) {
             Module._skred_stop();
             printToTerminal("System: Engine stopped.", "system");
             statusSpan.innerText = "AUDIO OFF";
-            statusSpan.style.color = "#0042ff";
+            statusSpan.style.color = "var(--status-audio-off)";
             running = 0;
             break;
-                case '-':
+        case '-':
         case '.':
         case '-font':
         case '.font':
-            if (document.documentElement.style.getPropertyValue('--main-font') === 'monospace') {
-                document.documentElement.style.setProperty('--main-font', "'Press Start 2P', cursive");
-                document.documentElement.style.setProperty('--main-font-weight', 'normal');
-                printToTerminal("Font: Press Start 2P", 'system');
+            const currentFont = (document.documentElement.style.getPropertyValue('--main-font') === 'monospace') ? 'mono' : '2p';
+            let targetFont = (currentFont === 'mono') ? '2p' : 'mono';
+            if (arg.length > 1) {
+                const requested = arg[1].toLowerCase();
+                if (requested === 'mono' || requested === 'monospace') targetFont = 'mono';
+                else if (requested === '2p' || requested === 'retro' || requested === 'press') targetFont = '2p';
+            }
+            applyFont(targetFont);
+            printToTerminal("Font: " + (targetFont === 'mono' ? "monospace" : "Press Start 2P"), 'system');
+            break;
+        case '-dark':
+        case '.dark':
+            applyTheme('dark');
+            printToTerminal("Theme: dark (Atari)", 'system');
+            break;
+        case '-light':
+        case '.light':
+            applyTheme('light');
+            printToTerminal("Theme: light (Sonic Pi)", 'system');
+            break;
+        case '-theme':
+        case '.theme':
+            if (arg.length > 1 && arg[1].toLowerCase() === 'light') {
+                applyTheme('light');
+                printToTerminal("Theme: light (Sonic Pi)", 'system');
+            } else if (arg.length > 1 && arg[1].toLowerCase() === 'dark') {
+                applyTheme('dark');
+                printToTerminal("Theme: dark (Atari)", 'system');
             } else {
-                document.documentElement.style.setProperty('--main-font', "monospace");
-                document.documentElement.style.setProperty('--main-font-weight', 'bold');
-                printToTerminal("Font: monospace", 'system');
+                const cur = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+                const nxt = cur === 'light' ? 'dark' : 'light';
+                applyTheme(nxt);
+                printToTerminal("Theme: " + (nxt === 'light' ? "light (Sonic Pi)" : "dark (Atari)"), 'system');
             }
             break;
         case '-help':
@@ -893,8 +1075,12 @@ function processCommand(cmd) {
         case '.unzip':
             unmountZipBundle();
             break;
+        case 'clear':
         case '-clear':
-        case '.clear': output.innerHTML = ''; break;
+        case '.clear':
+            output.innerHTML = '<div class="terminal-spacer"></div>';
+            output.scrollTop = output.scrollHeight;
+            break;
         case '-graph':
         case '.graph':
             showVoiceGraph(arg.length > 1 ? Number(arg[1]) : 0,
