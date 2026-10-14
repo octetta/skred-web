@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
     <script src="coi-serviceworker.min.js"></script>
     <script>
         (function() {
@@ -11,7 +12,7 @@
                     document.documentElement.style.setProperty('--main-font-weight', 'bold');
                     document.documentElement.style.setProperty('--main-line-height', '1.25');
                 } else {
-                    document.documentElement.style.setProperty('--main-font', "'Press Start 2P', cursive");
+                    document.documentElement.style.setProperty('--main-font', "'Press Start 2P', monospace");
                     document.documentElement.style.setProperty('--main-font-weight', 'normal');
                     document.documentElement.style.setProperty('--main-line-height', '1.5');
                 }
@@ -30,7 +31,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
-    --main-font: 'Press Start 2P', cursive;
+    --main-font: 'Press Start 2P', monospace;
     --main-font-weight: normal;
     --main-line-height: 1.5;
 
@@ -206,7 +207,7 @@ body {
     border: none;
     border-right: 1px solid var(--bar-btn-border);
     color: var(--bar-btn-text);
-    font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-family: var(--main-font, 'Press Start 2P', monospace);
     font-weight: var(--main-font-weight, normal);
     font-size: 11px;
     cursor: pointer;
@@ -221,7 +222,7 @@ body {
     border: none;
     border-right: 1px solid var(--bar-btn-border);
     color: var(--input-text);
-    font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-family: var(--main-font, 'Press Start 2P', monospace);
     font-weight: var(--main-font-weight, normal);
     font-size: 10px;
     outline: none;
@@ -258,7 +259,7 @@ body {
 }
 
 #output, #cmdInput, .prompt, .status-bar, .extra-line {
-    font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-family: var(--main-font, 'Press Start 2P', monospace);
     font-weight: var(--main-font-weight, normal);
     font-size: 16px; 
     color: var(--term-text);
@@ -326,7 +327,7 @@ body {
     border: none;
     color: var(--slider-toggle);
     cursor: pointer;
-    font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-family: var(--main-font, 'Press Start 2P', monospace);
     font-weight: var(--main-font-weight, normal);
     font-size: 14px;
     line-height: 1;
@@ -335,7 +336,7 @@ body {
 
 @media (max-width: 600px) {
     #output, .prompt, #cmdInput { font-size: 12px; }
-    .logo-art { font-size: 10px; line-height: 1.15; }
+    .logo-art { font-family: monospace; font-weight: bold; font-size: 10px; line-height: 1.15; }
     .status-bar { font-size: 9px; }
     #function-bar button { font-size: 9px; }
     .slider-row { gap: 4px; padding: 0 6px; }
@@ -352,6 +353,8 @@ body {
     line-height: 1.15;
     letter-spacing: 0;
     white-space: pre;
+    font-family: monospace;
+    font-weight: bold;
 }
 
 .voice-graph-output {
@@ -385,7 +388,7 @@ body {
 
 .voice-graph-edge-label {
     fill: var(--graph-edge-text);
-    font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-family: var(--main-font, 'Press Start 2P', monospace);
     font-weight: var(--main-font-weight, normal);
     font-size: 6px;
     text-anchor: middle;
@@ -408,7 +411,7 @@ body {
 
 .voice-graph-node text {
     fill: var(--graph-node-text);
-    font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-family: var(--main-font, 'Press Start 2P', monospace);
     font-weight: var(--main-font-weight, normal);
     font-size: 8px;
     text-anchor: middle;
@@ -530,11 +533,12 @@ function usage() {
   printToTerminal("(played when '0' button pressed)");
 }
 
-const logo = `\x1b[38;2;255;85;135m ████\x1b[0m  \x1b[38;2;255;140;25m█   █\x1b[0m  \x1b[38;2;245;175;10m████ \x1b[0m  \x1b[38;2;35;215;120m█████\x1b[0m  \x1b[38;2;35;195;240m████ \x1b[0m
-\x1b[38;2;255;85;135m█    \x1b[0m  \x1b[38;2;255;140;25m█  █ \x1b[0m  \x1b[38;2;245;175;10m█   █\x1b[0m  \x1b[38;2;35;215;120m█    \x1b[0m  \x1b[38;2;35;195;240m█   █\x1b[0m
-\x1b[38;2;255;45;115m█████\x1b[0m  \x1b[38;2;255;110;0m███  \x1b[0m  \x1b[38;2;230;150;0m████ \x1b[0m  \x1b[38;2;0;190;95m████ \x1b[0m  \x1b[38;2;0;175;225m█   █\x1b[0m
-\x1b[38;2;230;30;95m    █\x1b[0m  \x1b[38;2;230;85;0m█  █ \x1b[0m  \x1b[38;2;210;125;0m█  █ \x1b[0m  \x1b[38;2;0;165;80m█    \x1b[0m  \x1b[38;2;0;145;200m█   █\x1b[0m
-\x1b[38;2;230;30;95m████ \x1b[0m  \x1b[38;2;230;85;0m█   █\x1b[0m  \x1b[38;2;210;125;0m█   █\x1b[0m  \x1b[38;2;0;165;80m█████\x1b[0m  \x1b[38;2;0;145;200m████ \x1b[0m
+const B = '\u2588';
+const logo = `\x1b[38;2;255;85;135m ${B}${B}${B}${B}\x1b[0m  \x1b[38;2;255;140;25m${B}   ${B}\x1b[0m  \x1b[38;2;245;175;10m${B}${B}${B}${B} \x1b[0m  \x1b[38;2;35;215;120m${B}${B}${B}${B}${B}\x1b[0m  \x1b[38;2;35;195;240m${B}${B}${B}${B} \x1b[0m
+\x1b[38;2;255;85;135m${B}    \x1b[0m  \x1b[38;2;255;140;25m${B}  ${B} \x1b[0m  \x1b[38;2;245;175;10m${B}   ${B}\x1b[0m  \x1b[38;2;35;215;120m${B}    \x1b[0m  \x1b[38;2;35;195;240m${B}   ${B}\x1b[0m
+\x1b[38;2;255;45;115m${B}${B}${B}${B}${B}\x1b[0m  \x1b[38;2;255;110;0m${B}${B}${B}  \x1b[0m  \x1b[38;2;230;150;0m${B}${B}${B}${B} \x1b[0m  \x1b[38;2;0;190;95m${B}${B}${B}${B} \x1b[0m  \x1b[38;2;0;175;225m${B}   ${B}\x1b[0m
+\x1b[38;2;230;30;95m    ${B}\x1b[0m  \x1b[38;2;230;85;0m${B}  ${B} \x1b[0m  \x1b[38;2;210;125;0m${B}  ${B} \x1b[0m  \x1b[38;2;0;165;80m${B}    \x1b[0m  \x1b[38;2;0;145;200m${B}   ${B}\x1b[0m
+\x1b[38;2;230;30;95m${B}${B}${B}${B} \x1b[0m  \x1b[38;2;230;85;0m${B}   ${B}\x1b[0m  \x1b[38;2;210;125;0m${B}   ${B}\x1b[0m  \x1b[38;2;0;165;80m${B}${B}${B}${B}${B}\x1b[0m  \x1b[38;2;0;145;200m${B}${B}${B}${B} \x1b[0m
   -=* 8-BIT DSP AUDIO ENGINE *=-`;
 
 const output = document.getElementById('output');
@@ -556,7 +560,7 @@ function applyFont(fontKey) {
         try { localStorage.setItem('skred_font', 'mono'); } catch (e) {}
         return 'mono';
     } else {
-        document.documentElement.style.setProperty('--main-font', "'Press Start 2P', cursive");
+        document.documentElement.style.setProperty('--main-font', "'Press Start 2P', monospace");
         document.documentElement.style.setProperty('--main-font-weight', 'normal');
         document.documentElement.style.setProperty('--main-line-height', '1.5');
         try { localStorage.setItem('skred_font', '2p'); } catch (e) {}
