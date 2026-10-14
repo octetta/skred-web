@@ -426,6 +426,7 @@ function usage() {
   printToTerminal("-font # toggle terminal font");
   printToTerminal("-learn # open skode tutorial");
   printToTerminal("-ksynth # open k-synth tool");
+  printToTerminal("-add # attach file to virtual filesystem");
   printToTerminal("-load # select a wav file");
   printToTerminal("-zip # select and mount a zip asset bundle");
   printToTerminal("-unzip # unmount zip asset bundle");
@@ -981,6 +982,11 @@ function processCommand(cmd) {
             break;
         case '-help':
         case '.help': usage(); break;
+        case '-add':
+        case '.add':
+            if (!ensureBooted()) return;
+            addFileViaDialog();
+            break;
         case '-load':
         case '.load':
             if (!ensureBooted()) return;
@@ -1154,6 +1160,37 @@ document.addEventListener('click', (e) => {
     if (e.target.closest('#output')) return;
     cmdInput.focus();
 });
+
+async function addFileViaDialog() {
+    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
+    if (!fs || !fs.writeFile) {
+        printToTerminal("Error: filesystem is not ready.", "error");
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+
+    input.onchange = async (e) => {
+        const files = e.target.files;
+        if (!files || !files.length) return;
+
+        for (const file of files) {
+            try {
+                const bytes = new Uint8Array(await file.arrayBuffer());
+                fs.writeFile(file.name, bytes);
+                printToTerminal(`Attached [${file.name}] (${bytes.length} bytes)`, 'system');
+                centerSpan.innerText = `[${file.name}]`;
+            } catch (err) {
+                console.error(`Failed to attach ${file.name}:`, err);
+                printToTerminal(`Error adding ${file.name}: ${err.message || err}`, 'error');
+            }
+        }
+        cmdInput.focus();
+    };
+    input.click();
+}
 
 let waveFileCounter = 900;
 const MIN_WAV = 900;
