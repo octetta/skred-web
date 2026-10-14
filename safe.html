@@ -52,8 +52,7 @@
     --status-bg: #90b0ff;
     --status-text: #001a66;
     --status-center: #0030cc;
-    --status-audio-off: #0042ff;
-    --status-audio-on: #afff00;
+    --status-audio: #0042ff;
     --status-border: #000000;
     --slider-thumb: #90b0ff;
     --slider-toggle: #cc0033;
@@ -101,8 +100,7 @@
     --status-bg: #ededed;
     --status-text: #1f2937;
     --status-center: #ff1493;
-    --status-audio-off: #64748b;
-    --status-audio-on: #16a34a;
+    --status-audio: #1f2937;
     --status-border: #cbd5e1;
     --slider-thumb: #ff1493;
     --slider-toggle: #ff1493;
@@ -308,7 +306,7 @@ body {
 }
 #engine-status {
     flex: 1;
-    color: var(--status-audio-off);
+    color: var(--status-audio);
     text-align: right;
     white-space: nowrap;
 }
@@ -575,14 +573,7 @@ function applyTheme(themeKey) {
         document.documentElement.dataset.theme = 'dark';
         try { localStorage.setItem('skred_theme', 'dark'); } catch (e) {}
     }
-    if (statusSpan) {
-        statusSpan.style.color = running ? "var(--status-audio-on)" : "var(--status-audio-off)";
-    }
     return document.documentElement.dataset.theme;
-}
-
-if (statusSpan) {
-    statusSpan.style.color = running ? "var(--status-audio-on)" : "var(--status-audio-off)";
 }
 
 function setSkredVersion(version) {
@@ -940,7 +931,6 @@ function ensureBooted() {
         const result = Module._skred_start(bufsize, nvoices, 0); 
         
         statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
-        statusSpan.style.color = "var(--status-audio-on)";
         const ptr = Module._skred_features();
         printToTerminal(`${Module.UTF8ToString(ptr)}`);
         Module.ccall('skred_command', null, ['string'], ["log 1"]);
@@ -1087,7 +1077,6 @@ function processCommand(cmd) {
             Module._skred_stop();
             printToTerminal("System: Engine stopped.", "system");
             statusSpan.innerText = "AUDIO OFF";
-            statusSpan.style.color = "var(--status-audio-off)";
             running = 0;
             break;
         case '-':
