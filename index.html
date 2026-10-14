@@ -10,6 +10,7 @@
 
 :root {
     --main-font: 'Press Start 2P', cursive;
+    --main-font-weight: normal;
     --atari-blue: #0042ff;
     --atari-dark: #001a66;
     --atari-gold: #ffd700;
@@ -98,6 +99,7 @@ body {
     border-right: 1px solid rgba(144, 176, 255, 0.2);
     color: var(--atari-light);
     font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-weight: var(--main-font-weight, normal);
     font-size: 11px;
     cursor: pointer;
     flex: 1;
@@ -112,6 +114,7 @@ body {
     border-right: 1px solid rgba(144, 176, 255, 0.2);
     color: #ffffff;
     font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-weight: var(--main-font-weight, normal);
     font-size: 10px;
     outline: none;
     height: 100%;
@@ -149,6 +152,7 @@ body {
 
 #output, #cmdInput, .prompt, .status-bar, .extra-line {
     font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-weight: var(--main-font-weight, normal);
     font-size: 16px; 
     color: var(--atari-light);
 }
@@ -206,6 +210,7 @@ body {
     color: #cc0033;
     cursor: pointer;
     font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-weight: var(--main-font-weight, normal);
     font-size: 14px;
     line-height: 1;
     padding: 0;
@@ -305,6 +310,7 @@ body {
 .voice-graph-edge-label {
     fill: #ffffff;
     font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-weight: var(--main-font-weight, normal);
     font-size: 6px;
     text-anchor: middle;
     paint-order: stroke;
@@ -327,6 +333,7 @@ body {
 .voice-graph-node text {
     fill: #ffffff;
     font-family: var(--main-font, 'Press Start 2P', cursive);
+    font-weight: var(--main-font-weight, normal);
     font-size: 8px;
     text-anchor: middle;
     dominant-baseline: central;
@@ -974,9 +981,11 @@ function processCommand(cmd) {
         case '.font':
             if (document.documentElement.style.getPropertyValue('--main-font') === 'monospace') {
                 document.documentElement.style.setProperty('--main-font', "'Press Start 2P', cursive");
+                document.documentElement.style.setProperty('--main-font-weight', 'normal');
                 printToTerminal("Font: Press Start 2P", 'system');
             } else {
                 document.documentElement.style.setProperty('--main-font', "monospace");
+                document.documentElement.style.setProperty('--main-font-weight', 'bold');
                 printToTerminal("Font: monospace", 'system');
             }
             break;
