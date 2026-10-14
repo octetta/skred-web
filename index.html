@@ -590,7 +590,7 @@ function usage() {
   printToTerminal("t A D S R     # set amp envelope (A,D,R in secs)");
   printToTerminal("l(0..5)       # trigger ADSR with velocity");
   printToTerminal("p(-1..1)      # pan in stereo");
-  printToTerminal("{v0l1}e>0     # store {string} to macro-0");
+  printToTerminal("[v0l1]e>0     # store [string] to macro-0");
   printToTerminal("(played when '0' button pressed)");
 }
 
@@ -1372,7 +1372,7 @@ function handleFuncBtn(action) {
         case '0': case '1': case '2': case '3': case '4': 
         case '5': case '6': case '7': case '8': case '9':
             // send e!# which does whatever
-            // {v0l1}e>0 for example...
+            // [v0l1]e>0 for example...
             sendSkredCommand(`e!${action}`);
             break;
     }
