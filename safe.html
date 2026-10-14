@@ -335,6 +335,7 @@ body {
 
 @media (max-width: 600px) {
     #output, .prompt, #cmdInput { font-size: 12px; }
+    .logo-art { font-size: 10px; line-height: 1.15; }
     .status-bar { font-size: 9px; }
     #function-bar button { font-size: 9px; }
     .slider-row { gap: 4px; padding: 0 6px; }
@@ -346,6 +347,12 @@ body {
 .error { color: var(--color-error); }
 .info { color: var(--color-info); }
 .dim { color: var(--color-dim); }
+.logo-art {
+    margin: 6px 0;
+    line-height: 1.15;
+    letter-spacing: 0;
+    white-space: pre;
+}
 
 .voice-graph-output {
     margin: 8px 0 14px;
@@ -499,12 +506,14 @@ function usage() {
   printToTerminal("/ain off # disable input");
   printToTerminal("/a? # show audio status");
   printToTerminal("-graph (voice) (depth) # draw voice dependencies");
+  printToTerminal("-logo # display pixel art logo");
   printToTerminal("-font [2p|mono] # toggle terminal font & line spacing");
   printToTerminal("-dark # switch to dark Atari theme");
   printToTerminal("-light # switch to light Sonic Pi theme");
   printToTerminal("-clear # clear terminal output");
   printToTerminal("-learn # open skode tutorial");
   printToTerminal("-ksynth # open k-synth tool");
+  printToTerminal("-add # attach file to virtual filesystem");
   printToTerminal("-load # select a wav file");
   printToTerminal("-zip # select and mount a zip asset bundle");
   printToTerminal("-unzip # unmount zip asset bundle");
@@ -521,13 +530,12 @@ function usage() {
   printToTerminal("(played when '0' button pressed)");
 }
 
-const logo = `
-     _                 _ 
- ___| | ___ __ ___  __| |
-/ __| |/ / '__/ _ \\/ _  |
-\\__ \\   <| | |  __/ (_| |
-|___/_|\\_\\_|  \\___|\\__,_|
-`;
+const logo = `\x1b[38;2;255;85;135m ████\x1b[0m  \x1b[38;2;255;140;25m█   █\x1b[0m  \x1b[38;2;245;175;10m████ \x1b[0m  \x1b[38;2;35;215;120m█████\x1b[0m  \x1b[38;2;35;195;240m████ \x1b[0m
+\x1b[38;2;255;85;135m█    \x1b[0m  \x1b[38;2;255;140;25m█  █ \x1b[0m  \x1b[38;2;245;175;10m█   █\x1b[0m  \x1b[38;2;35;215;120m█    \x1b[0m  \x1b[38;2;35;195;240m█   █\x1b[0m
+\x1b[38;2;255;45;115m█████\x1b[0m  \x1b[38;2;255;110;0m███  \x1b[0m  \x1b[38;2;230;150;0m████ \x1b[0m  \x1b[38;2;0;190;95m████ \x1b[0m  \x1b[38;2;0;175;225m█   █\x1b[0m
+\x1b[38;2;230;30;95m    █\x1b[0m  \x1b[38;2;230;85;0m█  █ \x1b[0m  \x1b[38;2;210;125;0m█  █ \x1b[0m  \x1b[38;2;0;165;80m█    \x1b[0m  \x1b[38;2;0;145;200m█   █\x1b[0m
+\x1b[38;2;230;30;95m████ \x1b[0m  \x1b[38;2;230;85;0m█   █\x1b[0m  \x1b[38;2;210;125;0m█   █\x1b[0m  \x1b[38;2;0;165;80m█████\x1b[0m  \x1b[38;2;0;145;200m████ \x1b[0m
+  -=* 8-BIT DSP AUDIO ENGINE *=-`;
 
 const output = document.getElementById('output');
 const cmdInput = document.getElementById('cmdInput');
@@ -603,11 +611,73 @@ function outputNearBottom() {
     return output.scrollHeight - output.scrollTop - output.clientHeight < 24;
 }
 
+function ansi256ToRGB(code) {
+    if (code < 16) {
+        const colors = [
+            '#000000', '#cd0000', '#00cd00', '#cdcd00', '#0000ee', '#cd00cd', '#00cdcd', '#e5e5e5',
+            '#7f7f7f', '#ff0000', '#00ff00', '#ffff00', '#5c5cff', '#ff00ff', '#00ffff', '#ffffff'
+        ];
+        return colors[code];
+    } else if (code >= 16 && code <= 231) {
+        const c = code - 16;
+        const b = (c % 6) * 51;
+        const g = (Math.floor(c / 6) % 6) * 51;
+        const r = (Math.floor(c / 36) % 6) * 51;
+        return `rgb(${r},${g},${b})`;
+    } else if (code >= 232 && code <= 255) {
+        const g = (code - 232) * 10 + 8;
+        return `rgb(${g},${g},${g})`;
+    }
+    return '';
+}
+
 function printToTerminal(text, className = '') {
     const shouldFollow = outputNearBottom();
     const line = document.createElement('div');
     if (className) line.className = className;
-    line.textContent = text;
+
+    const parts = text.split(/\x1b\[([0-9;]+)m/);
+    if (parts.length === 1) {
+        line.textContent = text;
+    } else {
+        let fgColor = '';
+        let bgColor = '';
+
+        for (let i = 0; i < parts.length; i++) {
+            if (i % 2 === 0) {
+                if (parts[i]) {
+                    const span = document.createElement('span');
+                    if (fgColor) span.style.color = fgColor;
+                    if (bgColor) span.style.backgroundColor = bgColor;
+                    span.appendChild(document.createTextNode(parts[i]));
+                    line.appendChild(span);
+                }
+            } else {
+                const codes = parts[i].split(';');
+                if (codes[0] === '38' && codes[1] === '2' && codes.length === 5) {
+                    fgColor = `rgb(${codes[2]},${codes[3]},${codes[4]})`;
+                } else if (codes[0] === '48' && codes[1] === '2' && codes.length === 5) {
+                    bgColor = `rgb(${codes[2]},${codes[3]},${codes[4]})`;
+                } else if (codes[0] === '38' && codes[1] === '5' && codes.length === 3) {
+                    fgColor = ansi256ToRGB(Number(codes[2]));
+                } else if (codes[0] === '48' && codes[1] === '5' && codes.length === 3) {
+                    bgColor = ansi256ToRGB(Number(codes[2]));
+                } else if (codes[0] === '0') {
+                    fgColor = '';
+                    bgColor = '';
+                } else if (codes.length === 1 && codes[0] >= 30 && codes[0] <= 37) {
+                    fgColor = ansi256ToRGB(codes[0] - 30);
+                } else if (codes.length === 1 && codes[0] >= 40 && codes[0] <= 47) {
+                    bgColor = ansi256ToRGB(codes[0] - 40);
+                } else if (codes.length === 1 && codes[0] >= 90 && codes[0] <= 97) {
+                    fgColor = ansi256ToRGB(codes[0] - 90 + 8);
+                } else if (codes.length === 1 && codes[0] >= 100 && codes[0] <= 107) {
+                    bgColor = ansi256ToRGB(codes[0] - 100 + 8);
+                }
+            }
+        }
+    }
+
     output.appendChild(line);
     if (shouldFollow) output.scrollTop = output.scrollHeight;
 }
@@ -1058,6 +1128,11 @@ function processCommand(cmd) {
             break;
         case '-help':
         case '.help': usage(); break;
+        case '-add':
+        case '.add':
+            if (!ensureBooted()) return;
+            addFileViaDialog();
+            break;
         case '-load':
         case '.load':
             if (!ensureBooted()) return;
@@ -1085,6 +1160,10 @@ function processCommand(cmd) {
         case '.graph':
             showVoiceGraph(arg.length > 1 ? Number(arg[1]) : 0,
                 arg.length > 2 ? Number(arg[2]) : 0);
+            break;
+        case '-logo':
+        case '.logo':
+            printToTerminal(logo, 'logo-art');
             break;
         case '-learn':
         case '.learn':
@@ -1236,6 +1315,37 @@ document.addEventListener('click', (e) => {
     cmdInput.focus();
 });
 
+async function addFileViaDialog() {
+    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
+    if (!fs || !fs.writeFile) {
+        printToTerminal("Error: filesystem is not ready.", "error");
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+
+    input.onchange = async (e) => {
+        const files = e.target.files;
+        if (!files || !files.length) return;
+
+        for (const file of files) {
+            try {
+                const bytes = new Uint8Array(await file.arrayBuffer());
+                fs.writeFile(file.name, bytes);
+                printToTerminal(`Attached [${file.name}] (${bytes.length} bytes)`, 'system');
+                centerSpan.innerText = `[${file.name}]`;
+            } catch (err) {
+                console.error(`Failed to attach ${file.name}:`, err);
+                printToTerminal(`Error adding ${file.name}: ${err.message || err}`, 'error');
+            }
+        }
+        cmdInput.focus();
+    };
+    input.click();
+}
+
 let waveFileCounter = 900;
 const MIN_WAV = 900;
 const MAX_WAV = 999;
@@ -1316,7 +1426,7 @@ function unmountZipBundle() {
     printToTerminal(`# vfs ${status}`, "system");
     centerSpan.innerText = "%zu";
 }
-    printToTerminal(logo, 'info');
+    printToTerminal(logo, 'logo-art');
 </script>
 </body>
 </html>

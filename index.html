@@ -343,6 +343,11 @@ body {
         font-size: 12px;
     }
 
+    .logo-art {
+        font-size: 10px;
+        line-height: 1.15;
+    }
+
     /* Critical: never drop #cmdInput below 16px or iOS will zoom */
     #cmdInput {
         font-size: 16px;
@@ -398,6 +403,12 @@ body {
 .error { color: var(--color-error); }
 .info { color: var(--color-info); }
 .dim { color: var(--color-dim); }
+.logo-art {
+    margin: 6px 0;
+    line-height: 1.15;
+    letter-spacing: 0;
+    white-space: pre;
+}
 
 .voice-graph-output {
     margin: 8px 0 14px;
@@ -551,6 +562,7 @@ function usage() {
   printToTerminal("/ain off # disable input");
   printToTerminal("/a? # show audio status");
   printToTerminal("-graph (voice) (depth) # draw voice dependencies");
+  printToTerminal("-logo # display pixel art logo");
   printToTerminal("-font [2p|mono] # toggle terminal font & line spacing");
   printToTerminal("-dark # switch to dark Atari theme");
   printToTerminal("-light # switch to light Sonic Pi theme");
@@ -574,13 +586,12 @@ function usage() {
   printToTerminal("(played when '0' button pressed)");
 }
 
-const logo = `
-     _                 _ 
- ___| | ___ __ ___  __| |
-/ __| |/ / '__/ _ \\/ _  |
-\\__ \\   <| | |  __/ (_| |
-|___/_|\\_\\_|  \\___|\\__,_|
-`;
+const logo = `\x1b[38;2;255;85;135m ████\x1b[0m  \x1b[38;2;255;140;25m█   █\x1b[0m  \x1b[38;2;245;175;10m████ \x1b[0m  \x1b[38;2;35;215;120m█████\x1b[0m  \x1b[38;2;35;195;240m████ \x1b[0m
+\x1b[38;2;255;85;135m█    \x1b[0m  \x1b[38;2;255;140;25m█  █ \x1b[0m  \x1b[38;2;245;175;10m█   █\x1b[0m  \x1b[38;2;35;215;120m█    \x1b[0m  \x1b[38;2;35;195;240m█   █\x1b[0m
+\x1b[38;2;255;45;115m█████\x1b[0m  \x1b[38;2;255;110;0m███  \x1b[0m  \x1b[38;2;230;150;0m████ \x1b[0m  \x1b[38;2;0;190;95m████ \x1b[0m  \x1b[38;2;0;175;225m█   █\x1b[0m
+\x1b[38;2;230;30;95m    █\x1b[0m  \x1b[38;2;230;85;0m█  █ \x1b[0m  \x1b[38;2;210;125;0m█  █ \x1b[0m  \x1b[38;2;0;165;80m█    \x1b[0m  \x1b[38;2;0;145;200m█   █\x1b[0m
+\x1b[38;2;230;30;95m████ \x1b[0m  \x1b[38;2;230;85;0m█   █\x1b[0m  \x1b[38;2;210;125;0m█   █\x1b[0m  \x1b[38;2;0;165;80m█████\x1b[0m  \x1b[38;2;0;145;200m████ \x1b[0m
+  -=* 8-BIT DSP AUDIO ENGINE *=-`;
 
 
 const output = document.getElementById('output');
@@ -1207,6 +1218,10 @@ function processCommand(cmd) {
             showVoiceGraph(arg.length > 1 ? Number(arg[1]) : 0,
                 arg.length > 2 ? Number(arg[2]) : 0);
             break;
+        case '-logo':
+        case '.logo':
+            printToTerminal(logo, 'logo-art');
+            break;
         case '-learn':
         case '.learn':
           window.open('https://octetta.github.io/skred-web/learn.html', "_blank");
@@ -1468,7 +1483,7 @@ function unmountZipBundle() {
     printToTerminal(`# vfs ${status}`, "system");
     centerSpan.innerText = "%zu";
 }
-    printToTerminal(logo, 'info');
+    printToTerminal(logo, 'logo-art');
 </script>
 </body>
 </html>
