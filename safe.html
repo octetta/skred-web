@@ -375,6 +375,7 @@ body {
     width: auto;
     max-width: none;
     height: auto;
+    overflow: visible;
 }
 
 .voice-graph-edge {
@@ -382,6 +383,10 @@ body {
     stroke: var(--graph-edge);
     stroke-width: 1.5;
     opacity: 0.85;
+}
+
+.voice-graph-arrow {
+    fill: var(--graph-edge);
 }
 
 .voice-graph-edge-label {
@@ -784,7 +789,11 @@ function appendVoiceGraph(graph) {
         id: markerId, markerWidth: 6, markerHeight: 6,
         refX: 5, refY: 3, orient: 'auto', markerUnits: 'strokeWidth'
     });
-    marker.appendChild(svgElement('path', { d: 'M0,0 L6,3 L0,6 Z', fill: 'var(--graph-edge, #90b0ff)' }));
+    marker.appendChild(svgElement('path', {
+        d: 'M0,0 L6,3 L0,6 Z',
+        class: 'voice-graph-arrow',
+        fill: 'var(--graph-edge, #90b0ff)'
+    }));
     defs.appendChild(marker);
     svg.appendChild(defs);
 
@@ -870,17 +879,26 @@ function appendVoiceGraph(graph) {
     if (shouldFollow) output.scrollTop = output.scrollHeight;
 }
 
-function showVoiceGraph(voice, depth) {
+function showVoiceGraph(voice = 0, depth = 0) {
     if (!ensureBooted()) return;
+    if (typeof Module === 'undefined' || typeof Module._skred_voice_graph !== 'function') {
+        printToTerminal('Error: voice graph is not supported by this engine build', 'error');
+        return;
+    }
     if (!Number.isInteger(voice) || voice < 0 || voice >= nvoices ||
         !Number.isInteger(depth) || depth < 0) {
-        printToTerminal('Usage: graph [voice [depth]]', 'error');
+        printToTerminal('Usage: -graph [voice [depth]]', 'error');
         return;
     }
     try {
         const ptr = Module._skred_voice_graph(voice, 1, depth);
         if (!ptr) throw new Error('voice graph unavailable');
-        appendVoiceGraph(parseVoiceGraph(Module.UTF8ToString(ptr)));
+        const text = Module.UTF8ToString(ptr).trim();
+        if (text.startsWith('#')) {
+            printToTerminal(text, 'error');
+            return;
+        }
+        appendVoiceGraph(parseVoiceGraph(text));
     } catch (error) {
         printToTerminal(`Error: ${error.message}`, 'error');
     }
@@ -1045,8 +1063,10 @@ function saveRecordedFile(requestedName) {
 }
 
 function processCommand(cmd) {
-    const action = cmd.split(' ')[0].toLowerCase();
-    var arg = cmd.split(' ');
+    const trimmed = cmd.trim();
+    if (!trimmed) return;
+    const arg = trimmed.split(/\s+/);
+    const action = arg[0].toLowerCase();
 
     const rgMatch = cmd.match(/\[([^\]]+)\]\s*\/rg/);
     if (rgMatch) {
@@ -1148,11 +1168,21 @@ function processCommand(cmd) {
             output.innerHTML = '<div class="terminal-spacer"></div>';
             output.scrollTop = output.scrollHeight;
             break;
+        case 'graph':
         case '-graph':
-        case '.graph':
-            showVoiceGraph(arg.length > 1 ? Number(arg[1]) : 0,
-                arg.length > 2 ? Number(arg[2]) : 0);
+        case '.graph': {
+            let voice = 0;
+            let depth = 0;
+            if (arg.length > 1) {
+                const vStr = arg[1].replace(/^[vV]/, '');
+                voice = Number(vStr);
+            }
+            if (arg.length > 2) {
+                depth = Number(arg[2]);
+            }
+            showVoiceGraph(voice, depth);
             break;
+        }
         case '-logo':
         case '.logo':
             printToTerminal(logo, 'logo-art');
