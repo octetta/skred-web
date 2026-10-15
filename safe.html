@@ -520,6 +520,7 @@ function usage() {
   printToTerminal("-learn # open skode tutorial");
   printToTerminal("-ksynth # open k-synth tool");
   printToTerminal("-add # attach file to virtual filesystem");
+  printToTerminal("-paste # paste clipboard into paste.sk");
   printToTerminal("-load # select a wav file");
   printToTerminal("-zip # select and mount a zip asset bundle");
   printToTerminal("-unzip # unmount zip asset bundle");
@@ -1145,6 +1146,11 @@ function processCommand(cmd) {
             if (!ensureBooted()) return;
             addFileViaDialog();
             break;
+        case 'paste':
+        case '-paste':
+        case '.paste':
+            pasteToVirtualFile(arg.length > 1 ? arg[1] : 'paste.sk');
+            break;
         case '-load':
         case '.load':
             if (!ensureBooted()) return;
@@ -1336,6 +1342,50 @@ document.addEventListener('click', (e) => {
     if (e.target.closest('#output')) return;
     cmdInput.focus();
 });
+
+async function pasteToVirtualFile(targetName = 'paste.sk') {
+    if (!ensureBooted()) return;
+    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
+    if (!fs || !fs.writeFile) {
+        printToTerminal("Error: filesystem is not ready.", "error");
+        return;
+    }
+
+    let text = null;
+    if (navigator.clipboard && navigator.clipboard.readText) {
+        try {
+            text = await navigator.clipboard.readText();
+        } catch (err) {
+            console.warn("Clipboard readText failed, falling back to prompt:", err);
+        }
+    }
+
+    if (text === null || text === undefined) {
+        text = window.prompt(`Paste Skode code for ${targetName}:`);
+    }
+
+    if (text === null) {
+        return;
+    }
+
+    if (!text || text.trim().length === 0) {
+        printToTerminal("Clipboard / input is empty.", "error");
+        return;
+    }
+
+    try {
+        const bytes = new TextEncoder().encode(text);
+        fs.writeFile(targetName, bytes);
+        const lineCount = text.split(/\r?\n/).length;
+        printToTerminal(`Pasted ${bytes.length} bytes (${lineCount} lines) into [${targetName}] (run with [${targetName}] /ls)`, "system");
+        if (typeof centerSpan !== "undefined" && centerSpan) {
+            centerSpan.innerText = `[${targetName}]`;
+        }
+    } catch (err) {
+        console.error(`Failed to write ${targetName}:`, err);
+        printToTerminal(`Error writing ${targetName}: ${err.message || err}`, "error");
+    }
+}
 
 async function addFileViaDialog() {
     const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
