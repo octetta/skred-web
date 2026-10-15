@@ -83,7 +83,7 @@
 }
 
 [data-theme="light"] {
-    /* Theme colors - Light (Sonic Pi inspired) */
+    /* Theme colors - Light (Erasmus) */
     --page-bg: #ffffff;
     --term-bg: #ffffff;
     --term-text: #2d3748;
@@ -515,7 +515,7 @@ function usage() {
   printToTerminal("-logo # display pixel art logo");
   printToTerminal("-font [2p|mono] # toggle terminal font & line spacing");
   printToTerminal("-dark # switch to dark Atari theme");
-  printToTerminal("-light # switch to light Sonic Pi theme");
+  printToTerminal("-light # switch to light Erasmus theme");
   printToTerminal("-clear # clear terminal output");
   printToTerminal("-learn # open skode tutorial");
   printToTerminal("-ksynth # open k-synth tool");
@@ -1116,27 +1116,33 @@ function processCommand(cmd) {
             break;
         case '-dark':
         case '.dark':
+        case 'dark':
             applyTheme('dark');
             printToTerminal("Theme: dark (Atari)", 'system');
             break;
         case '-light':
         case '.light':
+        case 'light':
+        case '-erasmus':
+        case '.erasmus':
+        case 'erasmus':
             applyTheme('light');
-            printToTerminal("Theme: light (Sonic Pi)", 'system');
+            printToTerminal("Theme: light (Erasmus)", 'system');
             break;
         case '-theme':
         case '.theme':
-            if (arg.length > 1 && arg[1].toLowerCase() === 'light') {
+        case 'theme':
+            if (arg.length > 1 && (arg[1].toLowerCase() === 'light' || arg[1].toLowerCase() === 'erasmus')) {
                 applyTheme('light');
-                printToTerminal("Theme: light (Sonic Pi)", 'system');
-            } else if (arg.length > 1 && arg[1].toLowerCase() === 'dark') {
+                printToTerminal("Theme: light (Erasmus)", 'system');
+            } else if (arg.length > 1 && (arg[1].toLowerCase() === 'dark' || arg[1].toLowerCase() === 'atari')) {
                 applyTheme('dark');
                 printToTerminal("Theme: dark (Atari)", 'system');
             } else {
                 const cur = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
                 const nxt = cur === 'light' ? 'dark' : 'light';
                 applyTheme(nxt);
-                printToTerminal("Theme: " + (nxt === 'light' ? "light (Sonic Pi)" : "dark (Atari)"), 'system');
+                printToTerminal("Theme: " + (nxt === 'light' ? "light (Erasmus)" : "dark (Atari)"), 'system');
             }
             break;
         case '-help':
