@@ -225,7 +225,7 @@ v0 a0 l1 f220
         };
 
         document.getElementById('btn-quiet').onclick = () => {
-            if(isRunning) Module.ccall('skred_command', null, ['string'], ['S256']);
+            if(isRunning) Module.ccall('skred_command', null, ['string'], ['S-1']);
         };
 
         // 5. Code Execution & Log Polling

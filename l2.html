@@ -198,7 +198,7 @@ Commands like `debug` or `status` (depending on your build) might return multi-l
         };
 
         btnQuiet.onclick = () => {
-            if(isRunning) Module.ccall('skred_command', null, ['string'], ['q']);
+            if(isRunning) Module.ccall('skred_command', null, ['string'], ['S-1']);
         };
 
         // 3. Command Execution & Output Capture

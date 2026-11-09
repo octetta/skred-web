@@ -195,7 +195,7 @@ The `??` command reveals the state of running voices.
         };
 
         btnQuiet.onclick = () => {
-            if(isRunning) Module.ccall('skred_command', null, ['string'], ['q']);
+            if(isRunning) Module.ccall('skred_command', null, ['string'], ['S-1']);
         };
 
         // Execution logic with logging integration
