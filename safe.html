@@ -487,7 +487,7 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
 
         <div class="status-bar">
-            <span id="engine-left">skred-web <span class="app-hash">5344542</span> (<span class="skred-version">...</span>)</span>
+            <span id="engine-left">skred-web <span class="app-hash">8cba909</span> (<span class="skred-version">0.83.0</span>)</span>
             <span id="engine-center">log 0</span>
             <span id="engine-right">
                 <span id="engine-status">AUDIO OFF</span>
@@ -496,7 +496,7 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
     </div>
 
-    <script src="skred_api.js?v=0.77.0"></script>
+    <script src="skred_api.js?v=0.83.0"></script>
 
 <script>
 var bufsize = 256;
@@ -597,6 +597,13 @@ function setSkredVersionFromWasm() {
     return true;
 }
 
+async function setSkredVersionFallback() {
+    try {
+        const response = await fetch('WASM_VERSION.txt?v=' + Date.now());
+        if (response.ok) setSkredVersion((await response.text()).trim());
+    } catch {}
+}
+
 if (typeof Module !== "undefined") {
     const previousRuntimeInitialized = Module.onRuntimeInitialized;
     Module.onRuntimeInitialized = function() {
@@ -604,8 +611,12 @@ if (typeof Module !== "undefined") {
             previousRuntimeInitialized();
         setSkredVersionFromWasm();
     };
+    if (Module.ready && typeof Module.ready.then === "function") {
+        Module.ready.then(setSkredVersionFromWasm);
+    }
     setSkredVersionFromWasm();
 }
+setSkredVersionFallback();
 
 function outputNearBottom() {
     return output.scrollHeight - output.scrollTop - output.clientHeight < 24;
