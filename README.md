@@ -1,6 +1,6 @@
 # Skred Web UI
 
-This repository hosts the web-based user interface for [Skred](https://github.com/octetta/pulp), a powerful music programming and synthesis language.
+This repository hosts the web-based user interface for [Skred](https://github.com/octetta/sk3), a powerful music programming and synthesis language.
 
 ## Live Demo
 
