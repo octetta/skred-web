@@ -1,4 +1,5 @@
 mini-skred-history.txt
 skred_api.js
 skred_api.wasm
+skred_worklet*
 tmp/*
