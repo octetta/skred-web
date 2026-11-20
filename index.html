@@ -554,7 +554,7 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
     </div>
 
-    <script src="skred_api.js?v=1.3.14"></script>
+    <script src="skred_api.js?v=1.3.15"></script>
 
 <script>
 var bufsize = 256;
@@ -950,26 +950,38 @@ function appendVoiceGraph(graph) {
     if (shouldFollow) output.scrollTop = output.scrollHeight;
 }
 
-function showVoiceGraph(voice = 0, depth = 0) {
-    if (!ensureBooted()) return;
-    if (typeof Module === 'undefined' || typeof Module._skred_voice_graph !== 'function') {
-        printToTerminal('Error: voice graph is not supported by this engine build', 'error');
+function handleVoiceGraphText(text) {
+    if (!text) {
+        printToTerminal('Error: voice graph unavailable', 'error');
         return;
     }
+    if (text.startsWith('#')) {
+        printToTerminal(text, 'error');
+        return;
+    }
+    appendVoiceGraph(parseVoiceGraph(text));
+}
+
+function showVoiceGraph(voice = 0, depth = 0) {
+    if (!ensureBooted()) return;
     if (!Number.isInteger(voice) || voice < 0 || voice >= nvoices ||
         !Number.isInteger(depth) || depth < 0) {
         printToTerminal('Usage: -graph [voice [depth]]', 'error');
+        return;
+    }
+    if (useWorklet && workletNode) {
+        workletNode.port.postMessage({ type: 'graph', voice, depth });
+        return;
+    }
+    if (typeof Module === 'undefined' || typeof Module._skred_voice_graph !== 'function') {
+        printToTerminal('Error: voice graph is not supported by this engine build', 'error');
         return;
     }
     try {
         const ptr = Module._skred_voice_graph(voice, 1, depth);
         if (!ptr) throw new Error('voice graph unavailable');
         const text = Module.UTF8ToString(ptr).trim();
-        if (text.startsWith('#')) {
-            printToTerminal(text, 'error');
-            return;
-        }
-        appendVoiceGraph(parseVoiceGraph(text));
+        handleVoiceGraphText(text);
     } catch (error) {
         printToTerminal(`Error: ${error.message}`, 'error');
     }
@@ -979,6 +991,61 @@ function wasmHeapU8() {
     return typeof Module !== "undefined" ?
         (Module.HEAPU8 || globalThis.HEAPU8) : null;
 }
+
+let workletNode = null;
+let workletAudioContext = null;
+let useWorklet = false;
+let workletInitAttempted = false;
+
+async function initAudioWorklet() {
+    if (workletInitAttempted) return;
+    workletInitAttempted = true;
+    if (typeof window === "undefined" || !window.AudioContext || !window.AudioWorkletNode) {
+        return;
+    }
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        workletAudioContext = new AudioCtx({ latencyHint: "interactive" });
+        await workletAudioContext.audioWorklet.addModule("skred_worklet_processor.js?v=1.3.15");
+        const resp = await fetch("skred_worklet_engine.wasm?v=1.3.15");
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const wasmBinary = await resp.arrayBuffer();
+
+        workletNode = new AudioWorkletNode(workletAudioContext, "skred-worklet-processor", {
+            numberOfInputs: 0,
+            numberOfOutputs: 1,
+            outputChannelCount: [2],
+            processorOptions: {
+                wasmBinary,
+                sampleRate: workletAudioContext.sampleRate
+            }
+        });
+
+        workletNode.port.onmessage = (event) => {
+            const data = event.data;
+            if (!data) return;
+            if (data.type === "ready") {
+                useWorklet = true;
+                running = 1;
+                statusSpan.innerText = `AUDIO ON (worklet ${data.sampleRate}Hz)`;
+                setSkredVersion(data.version || "1.3.15");
+                workletNode.port.postMessage({ type: "features" });
+            } else if (data.type === "log") {
+                if (data.text) printToTerminal(data.text, 'info');
+            } else if (data.type === "features") {
+                if (data.text) printToTerminal(data.text);
+            } else if (data.type === "graph") {
+                handleVoiceGraphText(data.text);
+            }
+        };
+
+        workletNode.connect(workletAudioContext.destination);
+    } catch (err) {
+        console.warn("AudioWorklet init failed, using main-thread fallback:", err);
+        useWorklet = false;
+    }
+}
+initAudioWorklet();
 
 cmdInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -1015,10 +1082,25 @@ cmdInput.addEventListener('keydown', (e) => {
 
 
 function ensureBooted() {
-    if (running) return true;
+    if (running) {
+        if (useWorklet && workletAudioContext && workletAudioContext.state === "suspended") {
+            workletAudioContext.resume();
+        }
+        return true;
+    }
+    if (workletAudioContext) {
+        if (workletAudioContext.state === "suspended") {
+            workletAudioContext.resume();
+        }
+        if (workletNode) {
+            useWorklet = true;
+            running = 1;
+            statusSpan.innerText = `AUDIO ON (worklet ${workletAudioContext.sampleRate}Hz)`;
+            return true;
+        }
+    }
     try {
         const result = Module._skred_start(bufsize, nvoices, 0); 
-        
         statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
         const ptr = Module._skred_features();
         printToTerminal(`${Module.UTF8ToString(ptr)}`);
@@ -1165,7 +1247,11 @@ function processCommand(cmd) {
         case '-stop':
         case '.stop':
             if (!ensureBooted()) return;
-            Module._skred_stop();
+            if (useWorklet && workletAudioContext) {
+                workletAudioContext.suspend();
+            } else {
+                Module._skred_stop();
+            }
             printToTerminal("System: Engine stopped.", "system");
             statusSpan.innerText = "AUDIO OFF";
             running = 0;
@@ -1280,9 +1366,7 @@ function processCommand(cmd) {
 
         default:
             if (ensureBooted()) {
-                Module.ccall('skred_command', null, ['string'], [cmd]);
-                const log = skredLogString();
-                if (log != "") printToTerminal(log, 'info');
+                sendSkredCommand(cmd);
             }
             break;
     }
@@ -1293,6 +1377,10 @@ function sendSkredCommand(cmd) {
     const rgMatch = cmd.match(/\[([^\]]+)\]\s*\/rg/);
     if (rgMatch) {
         lastRecordedFile = rgMatch[1].trim();
+    }
+    if (useWorklet && workletNode) {
+        workletNode.port.postMessage({ type: 'cmd', text: cmd });
+        return true;
     }
     Module.ccall('skred_command', null, ['string'], [cmd]);
     const log = skredLogString();
@@ -1354,12 +1442,22 @@ function sendSliderCommand(row) {
     if (sendSkredCommand(cmd)) centerSpan.innerText = cmd;
 }
 
+const sliderPending = new Set();
+function onSliderInput(row) {
+    if (sliderPending.has(row)) return;
+    sliderPending.add(row);
+    requestAnimationFrame(() => {
+        sliderPending.delete(row);
+        sendSliderCommand(row);
+    });
+}
+
 sliderRows.forEach(row => {
     const parts = sliderParts(row);
     parts.min.addEventListener('change', () => updateCommandSliderRange(row));
     parts.max.addEventListener('change', () => updateCommandSliderRange(row));
     parts.step.addEventListener('change', () => updateCommandSliderRange(row));
-    parts.slider.addEventListener('input', () => sendSliderCommand(row));
+    parts.slider.addEventListener('input', () => onSliderInput(row));
 });
 
 sliderToggle.addEventListener('click', (e) => {
@@ -1419,13 +1517,18 @@ document.addEventListener('click', (e) => {
     cmdInput.focus();
 });
 
+function writeVirtualFile(name, bytes) {
+    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
+    if (fs && fs.writeFile) {
+        try { fs.writeFile(name, bytes); } catch (e) {}
+    }
+    if (useWorklet && workletNode) {
+        workletNode.port.postMessage({ type: "file", path: name, data: bytes });
+    }
+}
+
 async function pasteToVirtualFile(targetName = 'paste.sk') {
     if (!ensureBooted()) return;
-    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
-    if (!fs || !fs.writeFile) {
-        printToTerminal("Error: filesystem is not ready.", "error");
-        return;
-    }
 
     let text = null;
     if (navigator.clipboard && navigator.clipboard.readText) {
@@ -1451,7 +1554,7 @@ async function pasteToVirtualFile(targetName = 'paste.sk') {
 
     try {
         const bytes = new TextEncoder().encode(text);
-        fs.writeFile(targetName, bytes);
+        writeVirtualFile(targetName, bytes);
         const lineCount = text.split(/\r?\n/).length;
         printToTerminal(`Pasted ${bytes.length} bytes (${lineCount} lines) into [${targetName}] (run with [${targetName}] /ls)`, "system");
         if (typeof centerSpan !== "undefined" && centerSpan) {
@@ -1464,12 +1567,6 @@ async function pasteToVirtualFile(targetName = 'paste.sk') {
 }
 
 async function addFileViaDialog() {
-    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
-    if (!fs || !fs.writeFile) {
-        printToTerminal("Error: filesystem is not ready.", "error");
-        return;
-    }
-
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
@@ -1481,7 +1578,7 @@ async function addFileViaDialog() {
         for (const file of files) {
             try {
                 const bytes = new Uint8Array(await file.arrayBuffer());
-                fs.writeFile(file.name, bytes);
+                writeVirtualFile(file.name, bytes);
                 printToTerminal(`Attached [${file.name}] (${bytes.length} bytes)`, 'system');
                 centerSpan.innerText = `[${file.name}]`;
             } catch (err) {
@@ -1512,7 +1609,7 @@ async function addWavViaDialog() {
         try {
             const buffer = await file.arrayBuffer();
             const fileName = `${waveFileCounter}.wav`;
-            Module.FS.writeFile(fileName, new Uint8Array(buffer));
+            writeVirtualFile(fileName, new Uint8Array(buffer));
             
             // Re-applying the explicit display string
             // centerSpan.innerText = `{${file.name}} /ws ${waveFileCounter}`;
@@ -1531,14 +1628,6 @@ async function addWavViaDialog() {
 }
 
 async function mountZipViaDialog() {
-    const heapU8 = wasmHeapU8();
-    if (typeof Module === "undefined" || !Module._malloc ||
-        !Module._free || !heapU8 ||
-        !Module._skred_vfs_mount_zip_memory) {
-        printToTerminal("Error: zip mount support is not ready.", "error");
-        return;
-    }
-
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.zip,application/zip,application/x-zip-compressed';
@@ -1548,11 +1637,10 @@ async function mountZipViaDialog() {
         const files = e.target.files;
         if (!files.length) return;
         const file = files[0];
-        let ptr = 0;
 
         try {
             const bytes = new Uint8Array(await file.arrayBuffer());
-            Module.FS.writeFile(file.name, bytes);
+            writeVirtualFile(file.name, bytes);
             sendSkredCommand(`[${file.name}] %z`);
             centerSpan.innerText = `[${file.name}] %z`;
         } catch (err) {
