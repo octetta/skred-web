@@ -554,7 +554,7 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
     </div>
 
-    <script src="skred_api.js?v=1.3.16"></script>
+    <script src="skred_api.js?v=1.3.16.1"></script>
 
 <script>
 var bufsize = 256;
@@ -1009,8 +1009,8 @@ async function initAudioWorklet() {
     try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         workletAudioContext = new AudioCtx({ latencyHint: "interactive" });
-        await workletAudioContext.audioWorklet.addModule("skred_worklet_processor.js?v=1.3.16");
-        const resp = await fetch("skred_worklet_engine.wasm?v=1.3.16");
+        await workletAudioContext.audioWorklet.addModule("skred_worklet_processor.js?v=1.3.16.1");
+        const resp = await fetch("skred_worklet_engine.wasm?v=1.3.16.1");
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const wasmBinary = await resp.arrayBuffer();
 
