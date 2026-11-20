@@ -969,7 +969,7 @@ function showVoiceGraph(voice = 0, depth = 0) {
         printToTerminal('Usage: -graph [voice [depth]]', 'error');
         return;
     }
-    if (useWorklet && workletNode) {
+    if ((useWorklet || workletReady || (!workletFailed && workletNode)) && workletNode) {
         workletNode.port.postMessage({ type: 'graph', voice, depth });
         return;
     }
@@ -996,12 +996,14 @@ let workletNode = null;
 let workletAudioContext = null;
 let useWorklet = false;
 let workletReady = false;
+let workletFailed = false;
 let workletInitAttempted = false;
 
 async function initAudioWorklet() {
     if (workletInitAttempted) return;
     workletInitAttempted = true;
     if (typeof window === "undefined" || !window.AudioContext || !window.AudioWorkletNode) {
+        workletFailed = true;
         return;
     }
     try {
@@ -1042,6 +1044,7 @@ async function initAudioWorklet() {
                 console.warn("[SkredWorklet] Runtime error, falling back to main-thread engine:", data.error);
                 useWorklet = false;
                 workletReady = false;
+                workletFailed = true;
                 workletNode = null;
                 running = 0;
                 ensureBooted();
@@ -1053,6 +1056,7 @@ async function initAudioWorklet() {
         console.warn("[SkredWorklet] Init failed, falling back to main-thread engine:", err);
         useWorklet = false;
         workletReady = false;
+        workletFailed = true;
         workletNode = null;
     }
 }
@@ -1099,7 +1103,7 @@ function ensureBooted() {
         }
         return true;
     }
-    if (workletReady && workletNode && workletAudioContext) {
+    if (!workletFailed && (workletReady || workletNode) && workletAudioContext) {
         if (workletAudioContext.state === "suspended") {
             workletAudioContext.resume();
         }
@@ -1108,8 +1112,11 @@ function ensureBooted() {
         statusSpan.innerText = `AUDIO ON (worklet ${workletAudioContext.sampleRate}Hz)`;
         return true;
     }
-    if (workletAudioContext && workletAudioContext.state === "suspended") {
-        workletAudioContext.resume();
+    if (!workletFailed) {
+        if (workletAudioContext && workletAudioContext.state === "suspended") {
+            workletAudioContext.resume();
+        }
+        return false;
     }
     try {
         const result = Module._skred_start(bufsize, nvoices, 0); 
@@ -1390,7 +1397,7 @@ function sendSkredCommand(cmd) {
     if (rgMatch) {
         lastRecordedFile = rgMatch[1].trim();
     }
-    if ((useWorklet || workletReady) && workletNode) {
+    if ((useWorklet || workletReady || (!workletFailed && workletNode)) && workletNode) {
         workletNode.port.postMessage({ type: 'cmd', text: cmd });
         return true;
     }
@@ -1534,7 +1541,7 @@ function writeVirtualFile(name, bytes) {
     if (fs && fs.writeFile) {
         try { fs.writeFile(name, bytes); } catch (e) {}
     }
-    if (useWorklet && workletNode) {
+    if ((useWorklet || workletReady || (!workletFailed && workletNode)) && workletNode) {
         workletNode.port.postMessage({ type: "file", path: name, data: bytes });
     }
 }
