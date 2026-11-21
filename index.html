@@ -1006,9 +1006,16 @@ async function initAudioWorklet() {
         workletFailed = true;
         return;
     }
+    if ('audioSession' in navigator) {
+        try { navigator.audioSession.type = 'playback'; } catch (e) {}
+    }
     try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         workletAudioContext = new AudioCtx({ latencyHint: "interactive" });
+        workletAudioContext.addEventListener("statechange", () => {
+            updateAudioStatus();
+        });
+
         await workletAudioContext.audioWorklet.addModule("skred_worklet_processor.js?v=1.3.19");
         const resp = await fetch("skred_worklet_engine.wasm?v=1.3.19");
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -1028,7 +1035,8 @@ async function initAudioWorklet() {
         // drop or do not clone ArrayBuffers in processorOptions (e.g. Firefox, iOS Safari)
         workletNode.port.postMessage({
             type: "init",
-            wasmBinary: wasmBinary.slice ? wasmBinary.slice(0) : wasmBinary
+            wasmBinary: wasmBinary.slice ? wasmBinary.slice(0) : wasmBinary,
+            sampleRate: workletAudioContext.sampleRate
         });
 
         workletNode.port.onmessage = (event) => {
@@ -1038,7 +1046,7 @@ async function initAudioWorklet() {
                 workletReady = true;
                 useWorklet = true;
                 running = 1;
-                statusSpan.innerText = `AUDIO ON (worklet ${data.sampleRate}Hz)`;
+                updateAudioStatus();
                 setSkredVersion(data.version || "1.3.19");
                 workletNode.port.postMessage({ type: "features" });
             } else if (data.type === "log") {
@@ -1059,6 +1067,7 @@ async function initAudioWorklet() {
         };
 
         workletNode.connect(workletAudioContext.destination);
+        updateAudioStatus();
     } catch (err) {
         console.warn("[SkredWorklet] Init failed, falling back to main-thread engine:", err);
         useWorklet = false;
@@ -1069,15 +1078,70 @@ async function initAudioWorklet() {
 }
 initAudioWorklet();
 
+function updateAudioStatus() {
+    if (!statusSpan) return;
+    if (useWorklet && workletAudioContext) {
+        const state = workletAudioContext.state;
+        if (state === "running") {
+            statusSpan.innerText = `AUDIO ON (worklet ${workletAudioContext.sampleRate}Hz)`;
+            statusSpan.title = "Audio engine is running";
+            statusSpan.style.cursor = "default";
+        } else if (state === "suspended" || state === "interrupted") {
+            statusSpan.innerText = `AUDIO PAUSED (tap to play)`;
+            statusSpan.title = "Audio is paused - tap here or touch screen to activate";
+            statusSpan.style.cursor = "pointer";
+        } else {
+            statusSpan.innerText = `AUDIO OFF`;
+            statusSpan.style.cursor = "default";
+        }
+    } else if (running) {
+        statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
+        statusSpan.style.cursor = "default";
+    } else {
+        statusSpan.innerText = `AUDIO OFF`;
+        statusSpan.style.cursor = "default";
+    }
+}
+
 function unlockAudio() {
-    if (workletAudioContext && workletAudioContext.state === "suspended") {
-        workletAudioContext.resume().catch(() => {});
+    if ('audioSession' in navigator) {
+        try { navigator.audioSession.type = 'playback'; } catch (e) {}
+    }
+    if (workletAudioContext) {
+        if (workletAudioContext.state === "suspended" || workletAudioContext.state === "interrupted") {
+            workletAudioContext.resume().then(() => {
+                updateAudioStatus();
+            }).catch(() => {});
+            try {
+                const buf = workletAudioContext.createBuffer(1, 1, workletAudioContext.sampleRate);
+                const src = workletAudioContext.createBufferSource();
+                src.buffer = buf;
+                src.connect(workletAudioContext.destination);
+                src.start(0);
+            } catch (e) {}
+        }
     }
 }
 window.addEventListener("pointerdown", unlockAudio, { passive: true });
+window.addEventListener("pointerup", unlockAudio, { passive: true });
 window.addEventListener("touchstart", unlockAudio, { passive: true });
+window.addEventListener("touchend", unlockAudio, { passive: true });
 window.addEventListener("click", unlockAudio, { passive: true });
 window.addEventListener("keydown", unlockAudio, { passive: true });
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        unlockAudio();
+        updateAudioStatus();
+    }
+});
+statusSpan.addEventListener("click", (e) => {
+    e.stopPropagation();
+    unlockAudio();
+});
+statusSpan.addEventListener("touchend", (e) => {
+    e.stopPropagation();
+    unlockAudio();
+});
 
 cmdInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -1111,28 +1175,20 @@ cmdInput.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
 });
-
+cmdInput.addEventListener('focus', unlockAudio);
 
 function ensureBooted() {
+    unlockAudio();
     if (running) {
-        if (useWorklet && workletAudioContext && workletAudioContext.state === "suspended") {
-            workletAudioContext.resume();
-        }
         return true;
     }
     if (!workletFailed && (workletReady || workletNode) && workletAudioContext) {
-        if (workletAudioContext.state === "suspended") {
-            workletAudioContext.resume();
-        }
         useWorklet = true;
         running = 1;
-        statusSpan.innerText = `AUDIO ON (worklet ${workletAudioContext.sampleRate}Hz)`;
+        updateAudioStatus();
         return true;
     }
     if (!workletFailed) {
-        if (workletAudioContext && workletAudioContext.state === "suspended") {
-            workletAudioContext.resume();
-        }
         return false;
     }
     try {
@@ -1480,6 +1536,7 @@ function sendSliderCommand(row) {
 
 const sliderPending = new Set();
 function onSliderInput(row) {
+    unlockAudio();
     if (sliderPending.has(row)) return;
     sliderPending.add(row);
     requestAnimationFrame(() => {
@@ -1512,6 +1569,7 @@ sliderToggle.addEventListener('click', (e) => {
 });
 
 function handleFuncBtn(action) {
+    unlockAudio();
     let pos = cmdInput.selectionStart;
     switch(action) {
         case 'left':
