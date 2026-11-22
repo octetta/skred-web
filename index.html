@@ -324,7 +324,7 @@ body {
     white-space: nowrap;
 }
 
-#slider-toggle {
+#slider-toggle, #clip-toggle {
     background: transparent;
     border: none;
     color: var(--slider-toggle);
@@ -545,10 +545,11 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
 
         <div class="status-bar">
-            <span id="engine-left">skred-web <span class="app-hash">ce61a08</span> (<span class="skred-version">1.3.0</span>)</span>
+            <span id="engine-left">skred-web <span class="app-hash">1939edb</span> (<span class="skred-version">1.4.12</span>)</span>
             <span id="engine-center">log 0</span>
             <span id="engine-right">
                 <span id="engine-status">AUDIO OFF</span>
+                <button id="clip-toggle" title="share/load code" aria-label="clipboard">[CLIP]</button>
                 <button id="slider-toggle" title="show sliders" aria-label="show sliders" aria-expanded="false">[+]</button>
             </span>
         </div>
@@ -579,6 +580,9 @@ function usage() {
   printToTerminal("-ksynth # open k-synth tool");
   printToTerminal("-add # attach file to virtual filesystem");
   printToTerminal("-paste # paste clipboard into paste.sk");
+  printToTerminal("[code] /share # publish snippet to public clipboard");
+  printToTerminal("[id] /load # load and run snippet from clipboard");
+  printToTerminal("/load <code> # load and run snippet by code");
   printToTerminal("-load # select a wav file");
   printToTerminal("-zip # select and mount a zip asset bundle");
   printToTerminal("-unzip # unmount zip asset bundle");
@@ -1313,6 +1317,22 @@ function processCommand(cmd) {
     const arg = trimmed.split(/\s+/);
     const action = arg[0].toLowerCase();
 
+    const shareMatch = trimmed.match(/\[([^\]]+)\](?:\s*([a-zA-Z0-9]+))?\s*\/share/);
+    if (shareMatch) {
+        shareSnippetViaClipboard(shareMatch[1].trim(), shareMatch[2]);
+        return;
+    }
+    const loadMatch = trimmed.match(/\[([^\]]+)\]\s*\/load/);
+    if (loadMatch) {
+        loadSnippetFromClipboard(loadMatch[1].trim());
+        return;
+    }
+    const numLoadMatch = trimmed.match(/^([a-zA-Z0-9]{3,8})\s*\/load/);
+    if (numLoadMatch) {
+        loadSnippetFromClipboard(numLoadMatch[1].trim());
+        return;
+    }
+
     const rgMatch = cmd.match(/\[([^\]]+)\]\s*\/rg/);
     if (rgMatch) {
         lastRecordedFile = rgMatch[1].trim();
@@ -1404,6 +1424,26 @@ function processCommand(cmd) {
         case '-paste':
         case '.paste':
             pasteToVirtualFile(arg.length > 1 ? arg[1] : 'paste.sk');
+            break;
+        case 'share':
+        case '/share':
+            if (arg.length > 1) {
+                if (arg.length === 2 && /^[a-z0-9]{3,8}$/i.test(arg[1])) {
+                    shareSnippetViaClipboard(commandHistory[commandHistory.length - 1] || "", arg[1]);
+                } else {
+                    shareSnippetViaClipboard(arg.slice(1).join(' '));
+                }
+            } else {
+                shareSnippetViaClipboard(commandHistory[commandHistory.length - 1] || "");
+            }
+            break;
+        case 'load':
+        case '/load':
+            if (arg.length > 1) {
+                loadSnippetFromClipboard(arg[1]);
+            } else {
+                printToTerminal("Usage: /load <code>", "info");
+            }
             break;
         case '-load':
         case '.load':
@@ -1568,6 +1608,25 @@ sliderToggle.addEventListener('click', (e) => {
     }
 });
 
+const clipToggle = document.getElementById('clip-toggle');
+if (clipToggle) {
+    clipToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const curCode = cmdInput.value.trim() || (commandHistory.length > 0 ? commandHistory[commandHistory.length - 1] : "");
+        const action = prompt("Skode Public Clipboard:\n- Enter 4-character code (e.g. 7k2m) to LOAD\n- Or leave empty to SHARE current command line:", "");
+        if (action === null) return;
+        const val = action.trim();
+        if (!val) {
+            if (curCode) shareSnippetViaClipboard(curCode);
+            else printToTerminal("Nothing to share. Type some skode first!", "error");
+        } else if (val.length <= 8 && !val.includes(' ') && !val.includes('[') && !val.includes('=')) {
+            loadSnippetFromClipboard(val);
+        } else {
+            shareSnippetViaClipboard(val);
+        }
+    });
+}
+
 function handleFuncBtn(action) {
     unlockAudio();
     let pos = cmdInput.selectionStart;
@@ -1659,6 +1718,99 @@ async function pasteToVirtualFile(targetName = 'paste.sk') {
         printToTerminal(`Error writing ${targetName}: ${err.message || err}`, "error");
     }
 }
+
+function generateClipCode() {
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+    let code = "";
+    for (let i = 0; i < 4; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
+}
+
+async function shareSnippetViaClipboard(codeText, requestedCode) {
+    const text = (codeText || "").trim();
+    if (!text) {
+        printToTerminal("Error: nothing to share. Usage: [code] /share or /share <code>", "error");
+        return null;
+    }
+    const code = (requestedCode ? String(requestedCode).trim() : "") || generateClipCode();
+    try {
+        const resp = await fetch(`https://ntfy.sh/sk-${encodeURIComponent(code)}`, {
+            method: 'POST',
+            body: text
+        });
+        if (!resp.ok) {
+            printToTerminal(`Warning: clipboard server returned ${resp.status}`, "error");
+        }
+    } catch (e) {
+        console.warn("Share to ntfy failed:", e);
+    }
+
+    try {
+        if (typeof Module !== "undefined" && Module.ccall) {
+            Module.ccall('skred_command', null, ['string'], [`[${text}] ${code} /share`]);
+        }
+    } catch (e) {}
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?c=${code}`;
+    printToTerminal("====================================================", "system");
+    printToTerminal(`Published to public clipboard! Code: ${code}`, "system");
+    printToTerminal(`Load in CLI/GUI with: [${code}] /load`, "system");
+    printToTerminal(`Share URL: ${shareUrl}`, "system");
+    printToTerminal("====================================================", "system");
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            printToTerminal(`(Copied share URL to system clipboard)`, "info");
+        }).catch(() => {});
+    }
+    return code;
+}
+
+async function loadSnippetFromClipboard(code) {
+    const c = (code || "").trim();
+    if (!c) {
+        printToTerminal("Error: code missing. Usage: /load <code> or [<code>] /load", "error");
+        return null;
+    }
+    printToTerminal(`Fetching clipboard [${c}]...`, "system");
+    try {
+        const resp = await fetch(`https://ntfy.sh/sk-${encodeURIComponent(c)}/raw?poll=1`);
+        if (!resp.ok) {
+            printToTerminal(`Clipboard [${c}] not found or expired (${resp.status})`, "error");
+            return null;
+        }
+        let text = await resp.text();
+        text = text.replace(/[\r\n\s]+$/, '');
+        if (!text || text.startsWith("{\"code\":") || text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
+            printToTerminal(`Clipboard [${c}] is empty or unavailable.`, "error");
+            return null;
+        }
+        printToTerminal(`Loaded from clipboard [${c}]: ${text}`, "info");
+        ensureBooted();
+        sendSkredCommand(text);
+        return text;
+    } catch (err) {
+        printToTerminal(`Error loading clipboard [${c}]: ${err.message || err}`, "error");
+        return null;
+    }
+}
+
+function checkAutoLoadSnippet() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let code = urlParams.get('c');
+    if (!code && window.location.hash) {
+        const hMatch = window.location.hash.match(/[#&]c=([a-zA-Z0-9]+)/);
+        if (hMatch) code = hMatch[1];
+    }
+    if (code) {
+        setTimeout(() => {
+            loadSnippetFromClipboard(code);
+        }, 400);
+    }
+}
+checkAutoLoadSnippet();
 
 async function addFileViaDialog() {
     const input = document.createElement('input');
