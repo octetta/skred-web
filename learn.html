@@ -522,10 +522,16 @@ Here are some more to try out...
 <template data-type="code"> v0 w6 a0 f440 t0 2 0 0 l1</template>
 
 <template data-type="markdown">
-**`w7`** through **`w14`** map up to four stereo audio-input pairs, used
-for sample capture and quasi-live effects. `w7`/`w8` are pair 1,
-`w9`/`w10` are pair 2, `w11`/`w12` are pair 3, and `w13`/`w14` are pair 4.
-Input waves beyond the channels supplied by the selected device are silent.
+**`w7`** (Input Left / Stereo pass-through) and **`w8`** (Input Right) map the
+stereo audio-input stream for live sample capture and real-time processing.
+
+**`w9`** through **`w14`** provide procedural modular CV, timing, and utility sources:
+- `w9` (`silence`): DC 0.0 mute and zero reference
+- `w10` (`unity`): DC +1.0 constant (turns voice into an ADSR envelope generator / Eurorack CV source)
+- `w11` (`impulse`): Single-sample Dirac click at phase reset (filter pinging & physical modeling)
+- `w12` (`metro`): BPM clock pulse locked to sequencer tempo
+- `w13` (`delay-tap`): Delay line audio return tap for recursive filtering & dub feedback
+- `w14` (`control`): Live MIDI CC / control plane stream
 </template>
 
 <template data-type="markdown">

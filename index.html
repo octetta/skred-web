@@ -565,7 +565,7 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
 
         <div class="status-bar">
-            <span id="engine-left">skred-web <span class="app-hash">20fb320</span> (<span class="skred-version">1.5.0</span>)</span>
+            <span id="engine-left">skred-web <span class="app-hash">7b885a7</span> (<span class="skred-version">2.0.0</span>)</span>
             <span id="engine-center">log 0</span>
             <span id="engine-right">
                 <span id="engine-status">AUDIO OFF</span>
@@ -575,7 +575,7 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
     </div>
 
-    <script src="skred_api.js?v=1.5.0"></script>
+    <script src="skred_api.js?v=2.0.0"></script>
 
 <script>
 var bufsize = 256;
@@ -1053,8 +1053,8 @@ async function initAudioWorklet() {
             updateAudioStatus();
         });
 
-        await workletAudioContext.audioWorklet.addModule("skred_worklet_processor.js?v=1.5.0");
-        const resp = await fetch("skred_worklet_engine.wasm?v=1.5.0");
+        await workletAudioContext.audioWorklet.addModule("skred_worklet_processor.js?v=2.0.0");
+        const resp = await fetch("skred_worklet_engine.wasm?v=2.0.0");
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const wasmBinary = await resp.arrayBuffer();
 
@@ -1084,7 +1084,7 @@ async function initAudioWorklet() {
                 useWorklet = true;
                 running = 1;
                 updateAudioStatus();
-                setSkredVersion(data.version || "1.5.0");
+                setSkredVersion(data.version || "2.0.0");
                 workletNode.port.postMessage({ type: "features" });
             } else if (data.type === "log") {
                 if (data.text) printToTerminal(data.text, 'info');

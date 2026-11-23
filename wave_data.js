@@ -42,6 +42,54 @@ const waves = [
     "one_shot": false
   },
   {
+    "id": 7,
+    "name": "input-left",
+    "type": "Live Capture",
+    "one_shot": false
+  },
+  {
+    "id": 8,
+    "name": "input-right",
+    "type": "Live Capture",
+    "one_shot": false
+  },
+  {
+    "id": 9,
+    "name": "silence",
+    "type": "Utility",
+    "one_shot": false
+  },
+  {
+    "id": 10,
+    "name": "unity",
+    "type": "Utility",
+    "one_shot": false
+  },
+  {
+    "id": 11,
+    "name": "impulse",
+    "type": "Utility",
+    "one_shot": false
+  },
+  {
+    "id": 12,
+    "name": "metro",
+    "type": "Utility",
+    "one_shot": false
+  },
+  {
+    "id": 13,
+    "name": "delay-tap",
+    "type": "Utility",
+    "one_shot": false
+  },
+  {
+    "id": 14,
+    "name": "control",
+    "type": "Utility",
+    "one_shot": false
+  },
+  {
     "id": 15,
     "name": "dwg-strings",
     "type": "DW8000",
