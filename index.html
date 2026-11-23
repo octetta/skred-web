@@ -26,6 +26,9 @@
         })();
     </script>
     <title>skred-web shell</title>
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" href="osko.png">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
     <style>
@@ -413,6 +416,23 @@ body {
     font-weight: bold;
 }
 
+.logo-banner {
+    display: block;
+    margin: 8px 0;
+}
+
+.osko-mascot {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: auto;
+    height: auto;
+    max-height: 220px;
+    max-width: 100%;
+    display: inline-block;
+}
+
 .voice-graph-output {
     margin: 8px 0 14px;
     padding: 10px;
@@ -753,6 +773,19 @@ function printToTerminal(text, className = '') {
     }
 
     output.appendChild(line);
+    if (shouldFollow) output.scrollTop = output.scrollHeight;
+}
+
+function printLogoToTerminal() {
+    const shouldFollow = outputNearBottom();
+    const container = document.createElement('div');
+    container.className = 'logo-banner';
+    const img = document.createElement('img');
+    img.src = 'osko.png';
+    img.alt = 'Osko Mascot';
+    img.className = 'osko-mascot';
+    container.appendChild(img);
+    output.appendChild(container);
     if (shouldFollow) output.scrollTop = output.scrollHeight;
 }
 
@@ -1485,7 +1518,7 @@ function processCommand(cmd) {
         }
         case '-logo':
         case '.logo':
-            printToTerminal(logo, 'logo-art');
+            printLogoToTerminal();
             break;
         case '-learn':
         case '.learn':
@@ -1908,7 +1941,7 @@ function unmountZipBundle() {
     printToTerminal(`# vfs ${status}`, "system");
     centerSpan.innerText = "%zu";
 }
-    printToTerminal(logo, 'logo-art');
+    printLogoToTerminal();
 </script>
 </body>
 </html>
