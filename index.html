@@ -77,6 +77,27 @@
     --graph-root-stroke: #ffd700;
     --graph-node-text: #ffffff;
 
+    /* Editor & Split Colors - Dark (Atari) */
+    --editor-bg: #002db3;
+    --editor-text: #ffffff;
+    --editor-toolbar-bg: #002080;
+    --editor-toolbar-text: #ffd700;
+    --editor-border: rgba(144, 176, 255, 0.4);
+    --editor-btn-bg: #0036cc;
+    --editor-btn-border: rgba(144, 176, 255, 0.5);
+    --editor-btn-text: #ffffff;
+    --divider-bg: #002080;
+    --divider-border: rgba(144, 176, 255, 0.35);
+    --divider-handle: #ffd700;
+
+    /* Attached Files Tray Colors - Dark (Atari) */
+    --tray-bg: #002699;
+    --tray-border: #3b6eff;
+    --tray-item-bg: #0038d1;
+    --tray-item-border: rgba(144, 176, 255, 0.6);
+    --tray-item-text: #ffffff;
+    --tray-item-hover-bg: #004aff;
+
     /* Backward compatibility aliases */
     --atari-blue: var(--term-bg);
     --atari-dark: var(--input-bg);
@@ -124,6 +145,27 @@
     --graph-root-fill: #fef3c7;
     --graph-root-stroke: #d97706;
     --graph-node-text: #111827;
+
+    /* Editor & Split Colors - Light (Erasmus) */
+    --editor-bg: #ffffff;
+    --editor-text: #0f172a;
+    --editor-toolbar-bg: #f1f5f9;
+    --editor-toolbar-text: #0f172a;
+    --editor-border: #cbd5e1;
+    --editor-btn-bg: #ffffff;
+    --editor-btn-border: #cbd5e1;
+    --editor-btn-text: #1e293b;
+    --divider-bg: #e2e8f0;
+    --divider-border: #cbd5e1;
+    --divider-handle: #64748b;
+
+    /* Attached Files Tray Colors - Light (Erasmus) */
+    --tray-bg: #f8fafc;
+    --tray-border: #cbd5e1;
+    --tray-item-bg: #ffffff;
+    --tray-item-border: #94a3b8;
+    --tray-item-text: #0f172a;
+    --tray-item-hover-bg: #f1f5f9;
 
     --atari-blue: var(--term-bg);
     --atari-dark: var(--input-bg);
@@ -524,8 +566,8 @@ body {
 #editor-pane {
     display: flex;
     flex-direction: column;
-    background: var(--input-bg);
-    border-bottom: 1px solid var(--bar-border);
+    background: var(--editor-bg);
+    border-bottom: 1px solid var(--editor-border);
     flex-shrink: 0;
     min-height: 70px;
     height: 220px;
@@ -541,12 +583,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--bar-bg);
-    border-bottom: 1px solid var(--bar-border);
-    padding: 6px 14px;
+    background: var(--editor-toolbar-bg);
+    border-bottom: 1px solid var(--editor-border);
+    padding: 7px 14px;
     font-family: var(--main-font, 'Press Start 2P', monospace);
     font-size: 10px;
-    color: var(--bar-btn-text, var(--term-text));
+    color: var(--editor-toolbar-text);
     flex-shrink: 0;
     gap: 8px;
     user-select: none;
@@ -554,13 +596,14 @@ body {
 
 .editor-title {
     font-weight: bold;
-    color: var(--status-center, var(--color-system));
+    color: var(--color-system);
     white-space: nowrap;
 }
 
 .editor-hint {
     font-size: 8px;
-    opacity: 0.65;
+    opacity: 0.85;
+    color: var(--term-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -573,13 +616,13 @@ body {
 }
 
 .editor-btn {
-    background: var(--input-bg);
-    border: 1px solid var(--bar-border);
-    color: var(--term-text);
+    background: var(--editor-btn-bg);
+    border: 1px solid var(--editor-btn-border);
+    color: var(--editor-btn-text);
     cursor: pointer;
     font-family: var(--main-font, 'Press Start 2P', monospace);
     font-size: 9px;
-    padding: 3px 6px;
+    padding: 4px 7px;
     border-radius: 2px;
     transition: background 0.1s, color 0.1s;
 }
@@ -591,12 +634,12 @@ body {
 
 #editor-textarea {
     flex: 1;
-    background: var(--input-bg);
-    color: var(--term-text);
+    background: var(--editor-bg);
+    color: var(--editor-text);
     font-family: var(--main-font, 'Press Start 2P', monospace);
     font-size: 13px;
     line-height: 1.5;
-    padding: 10px 14px;
+    padding: 12px 14px;
     border: none;
     outline: none;
     resize: none;
@@ -604,12 +647,19 @@ body {
     overflow-x: auto;
     overflow-y: auto;
     tab-size: 2;
-    caret-color: var(--slider-thumb);
+    caret-color: var(--color-system);
+}
+
+#editor-textarea::placeholder {
+    color: var(--editor-text);
+    opacity: 0.45;
 }
 
 #split-divider {
     height: 8px;
-    background: var(--status-border);
+    background: var(--divider-bg);
+    border-top: 1px solid var(--divider-border);
+    border-bottom: 1px solid var(--divider-border);
     cursor: row-resize;
     flex-shrink: 0;
     display: flex;
@@ -625,27 +675,27 @@ body {
 }
 
 #split-divider:hover, #split-divider:active {
-    background: var(--slider-thumb);
+    background: var(--color-system);
 }
 
 .divider-handle {
     width: 44px;
     height: 2px;
-    background: var(--term-text);
-    opacity: 0.5;
+    background: var(--divider-handle);
+    opacity: 0.8;
     border-radius: 2px;
 }
 
 /* Attached Files Tray */
 #attached-files-tray {
     display: none;
-    background: var(--input-bg);
-    border-top: 1px solid var(--bar-border);
-    border-bottom: 1px solid var(--status-border);
-    padding: 8px 14px;
+    background: var(--tray-bg);
+    border-top: 2px solid var(--tray-border);
+    border-bottom: 1px solid var(--tray-border);
+    padding: 10px 14px;
     font-family: var(--main-font, 'Press Start 2P', monospace);
     font-size: 10px;
-    max-height: 120px;
+    max-height: 130px;
     overflow-y: auto;
     flex-shrink: 0;
 }
@@ -658,7 +708,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     font-size: 9px;
     color: var(--color-system);
 }
@@ -666,32 +716,35 @@ body {
 .attached-files-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
 }
 
 .attached-file-item {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    background: var(--bar-bg);
-    border: 1px solid var(--bar-border);
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--tray-item-bg);
+    border: 1px solid var(--tray-item-border);
     border-radius: 3px;
-    color: var(--term-text);
+    color: var(--tray-item-text);
     cursor: pointer;
     user-select: none;
-    transition: background 0.1s, border-color 0.1s;
+    transition: background 0.1s, border-color 0.1s, transform 0.05s;
     font-size: 9px;
 }
 
 .attached-file-item:hover {
-    border-color: var(--slider-toggle);
-    background: var(--status-bg);
+    border-color: var(--color-system);
+    background: var(--tray-item-hover-bg);
+    transform: translateY(-1px);
 }
 
 .attached-file-item.copied {
     background: var(--color-info);
-    color: #ffffff;
+    color: #001a66;
+    border-color: var(--color-info);
+    font-weight: bold;
 }
     </style>
 
