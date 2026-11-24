@@ -2087,7 +2087,8 @@ y2 %4 [kick] yt
       onAbort: reason => window.SkredStage.setState("wasm abort", "error")
     };
   </script>
-  <script src="skred_api.js?v=0.77.0"></script>
+  <script src="skode_commands.js?v=2.1.0"></script>
+  <script src="skred_api.js?v=2.1.0"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.min.js"></script>
@@ -2167,6 +2168,38 @@ y2 %4 [kick] yt
       } else if (event.key === "ArrowDown") {
         event.preventDefault();
         window.SkredStage.recallRepl(1, input);
+      } else if (event.key === "Tab") {
+        event.preventDefault();
+        const cursor = input.selectionStart;
+        const text = input.value;
+        const textBefore = text.slice(0, cursor);
+        const textAfter = text.slice(cursor);
+
+        const match = textBefore.match(/([^\s]+)$/);
+        if (!match) return;
+
+        const prefix = match[1];
+        const tokenStart = match.index;
+
+        const matches = typeof skodeComplete === "function" ? skodeComplete(prefix) : [];
+        if (matches.length === 0) return;
+
+        if (matches.length === 1) {
+          const completed = matches[0] + " ";
+          input.value = textBefore.slice(0, tokenStart) + completed + textAfter;
+          const newCursor = tokenStart + completed.length;
+          input.setSelectionRange(newCursor, newCursor);
+          return;
+        }
+
+        const common = typeof skodeCommonPrefix === "function" ? skodeCommonPrefix(matches) : prefix;
+        if (common.length > prefix.length) {
+          input.value = textBefore.slice(0, tokenStart) + common + textAfter;
+          const newCursor = tokenStart + common.length;
+          input.setSelectionRange(newCursor, newCursor);
+        } else {
+          console.log("[Skode Tab Completion]", matches);
+        }
       }
     });
   </script>

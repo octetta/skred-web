@@ -496,7 +496,8 @@ Type <span class="system">'-help'</span> for basic things.
         </div>
     </div>
 
-    <script src="skred_api.js?v=1.3.16.2"></script>
+    <script src="skode_commands.js?v=2.1.0"></script>
+    <script src="skred_api.js?v=2.1.0"></script>
 
 <script>
 var bufsize = 256;
@@ -951,6 +952,64 @@ cmdInput.addEventListener('keydown', (e) => {
             }
         }
         e.preventDefault();
+    }
+    else if (e.key === 'Tab') {
+        e.preventDefault();
+        const cursor = cmdInput.selectionStart;
+        const text = cmdInput.value;
+        const textBefore = text.slice(0, cursor);
+        const textAfter = text.slice(cursor);
+
+        const match = textBefore.match(/([^\s]+)$/);
+        if (!match) {
+            printToTerminal("Type a command prefix (e.g. pw, f, w, v, -restart) and press Tab", "dim");
+            return;
+        }
+
+        const prefix = match[1];
+        const tokenStart = match.index;
+
+        const matches = typeof skodeComplete === "function" ? skodeComplete(prefix) : [];
+        if (matches.length === 0) {
+            return;
+        }
+
+        if (matches.length === 1) {
+            const completed = matches[0] + " ";
+            cmdInput.value = textBefore.slice(0, tokenStart) + completed + textAfter;
+            const newCursor = tokenStart + completed.length;
+            cmdInput.setSelectionRange(newCursor, newCursor);
+            return;
+        }
+
+        const common = typeof skodeCommonPrefix === "function" ? skodeCommonPrefix(matches) : prefix;
+        if (common.length > prefix.length) {
+            cmdInput.value = textBefore.slice(0, tokenStart) + common + textAfter;
+            const newCursor = tokenStart + common.length;
+            cmdInput.setSelectionRange(newCursor, newCursor);
+        } else {
+            if (matches.length <= 12) {
+                printToTerminal(`Matching commands (${matches.length}):`, 'dim');
+                for (let i = 0; i < matches.length; i++) {
+                    const info = typeof skodeGetInfo === "function" ? skodeGetInfo(matches[i]) : null;
+                    const altStr = (info && info.alt) ? `[${info.alt}]` : "";
+                    const descStr = (info && info.summary) ? ` - ${info.summary}` : "";
+                    const padCmd = matches[i].padEnd(10, ' ');
+                    const padAlt = altStr ? altStr.padEnd(24, ' ') : "".padEnd(24, ' ');
+                    printToTerminal(`  ${padCmd} ${padAlt}${descStr}`, 'system');
+                }
+            } else {
+                printToTerminal(`Matching commands (${matches.length}):`, 'dim');
+                let line = " ";
+                for (let i = 0; i < matches.length; i++) {
+                    line += " " + matches[i].padEnd(12, ' ');
+                    if ((i + 1) % 4 === 0 || i === matches.length - 1) {
+                        printToTerminal(line, 'system');
+                        line = " ";
+                    }
+                }
+            }
+        }
     }
 });
 

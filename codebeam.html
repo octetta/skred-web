@@ -405,7 +405,8 @@ Step 2 (Advance): Built-in Waveforms — Point to waveforms.html QR code: visual
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
-    <script src="skred_api.js?v=0.77.0"></script>
+    <script src="skode_commands.js?v=2.1.0"></script>
+    <script src="skred_api.js?v=2.1.0"></script>
     <script>
         Reveal.initialize({
             hash: true,
@@ -864,6 +865,40 @@ Step 2 (Advance): Built-in Waveforms — Point to waveforms.html QR code: visual
                         e.target.value = cmdHistory[historyIndex];
                     }
                     e.preventDefault();
+                }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                const input = e.target;
+                const cursor = input.selectionStart;
+                const text = input.value;
+                const textBefore = text.slice(0, cursor);
+                const textAfter = text.slice(cursor);
+
+                const match = textBefore.match(/([^\s]+)$/);
+                if (!match) return;
+
+                const prefix = match[1];
+                const tokenStart = match.index;
+
+                const matches = typeof skodeComplete === "function" ? skodeComplete(prefix) : [];
+                if (matches.length === 0) return;
+
+                if (matches.length === 1) {
+                    const completed = matches[0] + " ";
+                    input.value = textBefore.slice(0, tokenStart) + completed + textAfter;
+                    const newCursor = tokenStart + completed.length;
+                    input.setSelectionRange(newCursor, newCursor);
+                    return;
+                }
+
+                const common = typeof skodeCommonPrefix === "function" ? skodeCommonPrefix(matches) : prefix;
+                if (common.length > prefix.length) {
+                    input.value = textBefore.slice(0, tokenStart) + common + textAfter;
+                    const newCursor = tokenStart + common.length;
+                    input.setSelectionRange(newCursor, newCursor);
+                } else {
+                    const matchText = matches.slice(0, 16).join('  ') + (matches.length > 16 ? ` ... (${matches.length} total)` : '');
+                    printLog(`Matches (${matches.length}): ${matchText}`);
                 }
             }
         });
