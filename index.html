@@ -327,16 +327,29 @@ body {
     white-space: nowrap;
 }
 
-#slider-toggle, #clip-toggle {
+#slider-toggle, #clip-toggle, #split-toggle, #files-toggle {
     background: transparent;
     border: none;
     color: var(--slider-toggle);
     cursor: pointer;
     font-family: var(--main-font, 'Press Start 2P', monospace);
     font-weight: var(--main-font-weight, normal);
-    font-size: 14px;
+    font-size: 11px;
     line-height: 1;
-    padding: 0;
+    padding: 0 2px;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
+
+#slider-toggle:hover, #clip-toggle:hover, #split-toggle:hover, #files-toggle:hover {
+    filter: brightness(1.2);
+}
+
+#slider-toggle.active, #clip-toggle.active, #split-toggle.active, #files-toggle.active {
+    color: var(--color-system);
 }
 
 /* ---------- Mobile improvements ---------- */
@@ -426,8 +439,8 @@ body {
     image-rendering: -moz-crisp-edges;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    width: 192px;
-    height: 192px;
+    width: 96px;
+    height: 96px;
     max-width: 100%;
     aspect-ratio: 1 / 1;
     display: inline-block;
@@ -498,84 +511,296 @@ body {
     text-anchor: middle;
     dominant-baseline: central;
 }
+
+/* App Split Screen Layout */
+#app-split-container {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+}
+
+#editor-pane {
+    display: flex;
+    flex-direction: column;
+    background: var(--input-bg);
+    border-bottom: 1px solid var(--bar-border);
+    flex-shrink: 0;
+    min-height: 70px;
+    height: 220px;
+    max-height: calc(100dvh - 160px);
+    overflow: hidden;
+}
+
+#editor-pane.editor-hidden {
+    display: none !important;
+}
+
+#editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bar-bg);
+    border-bottom: 1px solid var(--bar-border);
+    padding: 6px 14px;
+    font-family: var(--main-font, 'Press Start 2P', monospace);
+    font-size: 10px;
+    color: var(--bar-btn-text, var(--term-text));
+    flex-shrink: 0;
+    gap: 8px;
+    user-select: none;
+}
+
+.editor-title {
+    font-weight: bold;
+    color: var(--status-center, var(--color-system));
+    white-space: nowrap;
+}
+
+.editor-hint {
+    font-size: 8px;
+    opacity: 0.65;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.editor-btn {
+    background: var(--input-bg);
+    border: 1px solid var(--bar-border);
+    color: var(--term-text);
+    cursor: pointer;
+    font-family: var(--main-font, 'Press Start 2P', monospace);
+    font-size: 9px;
+    padding: 3px 6px;
+    border-radius: 2px;
+    transition: background 0.1s, color 0.1s;
+}
+
+.editor-btn:hover {
+    background: var(--slider-thumb);
+    color: #ffffff;
+}
+
+#editor-textarea {
+    flex: 1;
+    background: var(--input-bg);
+    color: var(--term-text);
+    font-family: var(--main-font, 'Press Start 2P', monospace);
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 10px 14px;
+    border: none;
+    outline: none;
+    resize: none;
+    white-space: pre;
+    overflow-x: auto;
+    overflow-y: auto;
+    tab-size: 2;
+    caret-color: var(--slider-thumb);
+}
+
+#split-divider {
+    height: 8px;
+    background: var(--status-border);
+    cursor: row-resize;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: none;
+    transition: background 0.15s;
+}
+
+#split-divider.divider-hidden {
+    display: none !important;
+}
+
+#split-divider:hover, #split-divider:active {
+    background: var(--slider-thumb);
+}
+
+.divider-handle {
+    width: 44px;
+    height: 2px;
+    background: var(--term-text);
+    opacity: 0.5;
+    border-radius: 2px;
+}
+
+/* Attached Files Tray */
+#attached-files-tray {
+    display: none;
+    background: var(--input-bg);
+    border-top: 1px solid var(--bar-border);
+    border-bottom: 1px solid var(--status-border);
+    padding: 8px 14px;
+    font-family: var(--main-font, 'Press Start 2P', monospace);
+    font-size: 10px;
+    max-height: 120px;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+#attached-files-tray.tray-open {
+    display: block;
+}
+
+.tray-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 9px;
+    color: var(--color-system);
+}
+
+.attached-files-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.attached-file-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--bar-bg);
+    border: 1px solid var(--bar-border);
+    border-radius: 3px;
+    color: var(--term-text);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.1s, border-color 0.1s;
+    font-size: 9px;
+}
+
+.attached-file-item:hover {
+    border-color: var(--slider-toggle);
+    background: var(--status-bg);
+}
+
+.attached-file-item.copied {
+    background: var(--color-info);
+    color: #ffffff;
+}
     </style>
 
 </head>
 <body>
 
-    <div id="terminal-container">
-        <div id="output">
-          <div class="terminal-spacer"></div>
+    <div id="app-split-container">
+        <div id="editor-pane">
+            <div id="editor-toolbar">
+                <span class="editor-title">EDIT / SCRATCHPAD</span>
+                <span class="editor-hint">Ctrl+E switch &middot; Ctrl+Enter run</span>
+                <div class="editor-actions">
+                    <button id="editor-run-btn" class="editor-btn" title="Run code in skred (Ctrl+Enter)">RUN</button>
+                    <button id="editor-copy-btn" class="editor-btn" title="Copy editor content">COPY</button>
+                    <button id="editor-clear-btn" class="editor-btn" title="Clear editor content">CLEAR</button>
+                    <button id="editor-close-btn" class="editor-btn" title="Close editor split">&times;</button>
+                </div>
+            </div>
+            <textarea id="editor-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" placeholder="# Skode Scratchpad&#10;# Write multiple commands here...&#10;# Press Ctrl+Enter to execute line or selection&#10;# Content persists automatically"></textarea>
+        </div>
+
+        <div id="split-divider" title="Drag to resize split (Double-click to reset)">
+            <div class="divider-handle"></div>
+        </div>
+
+        <div id="terminal-container">
+            <div id="output">
+              <div class="terminal-spacer"></div>
 Welcome to the skred shell
 Type <span class="system">'-restart'</span> to initialize audio engine.
 Type <span class="system">'-help'</span> for basic things.
-        </div>
-
-        <div class="input-line">
-            <span class="prompt">#&nbsp;</span>
-            <input type="text" id="cmdInput" autofocus spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="text">
-        </div>
-
-        <div id="function-bar">
-            <button id="btnLeft">&lt;</button>
-            <button id="histUp">UP</button>
-            <button id="histDown">DN</button>
-            <button id="btnRight">&gt;</button>
-            <button class="funcNum" data-val="0">0</button>
-            <button class="funcNum" data-val="1">1</button>
-            <button class="funcNum" data-val="2">2</button>
-            <button class="funcNum" data-val="3">3</button>
-            <button class="funcNum" data-val="4">4</button>
-            <button class="funcNum" data-val="5">5</button>
-            <button class="funcNum" data-val="6">6</button>
-            <button class="funcNum" data-val="7">7</button>
-            <button class="funcNum" data-val="8">8</button>
-            <button class="funcNum" data-val="9">9</button>
-        </div>
-
-        <div id="slider-bar" class="slider-hidden">
-            <div class="slider-row">
-                <input type="text" class="slider-cmd" value="v0 f {}" placeholder="cmd" title="cmd" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" inputmode="text" aria-autocomplete="none" aria-label="slider command 1">
-                <input type="number" class="slider-min" value="55" placeholder="min" title="min" aria-label="slider minimum 1">
-                <input type="number" class="slider-max" value="880" placeholder="max" title="max" aria-label="slider maximum 1">
-                <input type="number" class="slider-step" value=".0001" placeholder="step" title="step" aria-label="slider step 1">
-                <input type="range" class="cmd-slider" min="55" max="880" step=".0001" value="440" aria-label="command slider 1">
             </div>
-            <div class="slider-row">
-                <input type="text" class="slider-cmd" value="v0 a {}" placeholder="cmd" title="cmd" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" inputmode="text" aria-autocomplete="none" aria-label="slider command 2">
-                <input type="number" class="slider-min" value="-20" placeholder="min" title="min" aria-label="slider minimum 2">
-                <input type="number" class="slider-max" value="30" placeholder="max" title="max" aria-label="slider maximum 2">
-                <input type="number" class="slider-step" value=".0001" placeholder="step" title="step" aria-label="slider step 2">
-                <input type="range" class="cmd-slider" min="-20" max="30" step=".0001" value="0" aria-label="command slider 2">
-            </div>
-            <div class="slider-row">
-                <input type="text" class="slider-cmd" value="v0 p {}" placeholder="cmd" title="cmd" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" inputmode="text" aria-autocomplete="none" aria-label="slider command 3">
-                <input type="number" class="slider-min" value="-1" placeholder="min" title="min" aria-label="slider minimum 3">
-                <input type="number" class="slider-max" value="1" placeholder="max" title="max" aria-label="slider maximum 3">
-                <input type="number" class="slider-step" value=".0001" placeholder="step" title="step" aria-label="slider step 3">
-                <input type="range" class="cmd-slider" min="-1" max="1" step=".0001" value="0" aria-label="command slider 3">
-            </div>
-            <div class="slider-row">
-                <input type="text" class="slider-cmd" value="v1 f {}" placeholder="cmd" title="cmd" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" inputmode="text" aria-autocomplete="none" aria-label="slider command 4">
-                <input type="number" class="slider-min" value="55" placeholder="min" title="min" aria-label="slider minimum 4">
-                <input type="number" class="slider-max" value="880" placeholder="max" title="max" aria-label="slider maximum 4">
-                <input type="number" class="slider-step" value=".0001" placeholder="step" title="step" aria-label="slider step 4">
-                <input type="range" class="cmd-slider" min="55" max="880" step=".0001" value="440" aria-label="command slider 4">
-            </div>
-        </div>
 
-        <div class="status-bar">
-            <span id="engine-left">skred-web <span class="app-hash">7b885a7</span> (<span class="skred-version">2.0.0</span>)</span>
-            <span id="engine-center">log 0</span>
-            <span id="engine-right">
-                <span id="engine-status">AUDIO OFF</span>
-                <button id="clip-toggle" title="share/load code" aria-label="clipboard">[CLIP]</button>
-                <button id="slider-toggle" title="show sliders" aria-label="show sliders" aria-expanded="false">[+]</button>
-            </span>
+            <div class="input-line">
+                <span class="prompt">#&nbsp;</span>
+                <input type="text" id="cmdInput" autofocus spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="text">
+            </div>
+
+            <div id="function-bar">
+                <button id="btnLeft">&lt;</button>
+                <button id="histUp">UP</button>
+                <button id="histDown">DN</button>
+                <button id="btnRight">&gt;</button>
+                <button class="funcNum" data-val="0">0</button>
+                <button class="funcNum" data-val="1">1</button>
+                <button class="funcNum" data-val="2">2</button>
+                <button class="funcNum" data-val="3">3</button>
+                <button class="funcNum" data-val="4">4</button>
+                <button class="funcNum" data-val="5">5</button>
+                <button class="funcNum" data-val="6">6</button>
+                <button class="funcNum" data-val="7">7</button>
+                <button class="funcNum" data-val="8">8</button>
+                <button class="funcNum" data-val="9">9</button>
+            </div>
+
+            <div id="slider-bar" class="slider-hidden">
+                <div class="slider-row">
+                    <input type="text" class="slider-cmd" value="v0 f {}" placeholder="cmd" title="cmd" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" inputmode="text" aria-autocomplete="none" aria-label="slider command 1">
+                    <input type="number" class="slider-min" value="55" placeholder="min" title="min" aria-label="slider minimum 1">
+                    <input type="number" class="slider-max" value="880" placeholder="max" title="max" aria-label="slider maximum 1">
+                    <input type="number" class="slider-step" value=".0001" placeholder="step" title="step" aria-label="slider step 1">
+                    <input type="range" class="cmd-slider" min="55" max="880" step=".0001" value="440" aria-label="command slider 1">
+                </div>
+                <div class="slider-row">
+                    <input type="text" class="slider-cmd" value="v0 a {}" placeholder="cmd" title="cmd" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" inputmode="text" aria-autocomplete="none" aria-label="slider command 2">
+                    <input type="number" class="slider-min" value="-20" placeholder="min" title="min" aria-label="slider minimum 2">
+                    <input type="number" class="slider-max" value="30" placeholder="max" title="max" aria-label="slider maximum 2">
+                    <input type="number" class="slider-step" value=".0001" placeholder="step" title="step" aria-label="slider step 2">
+                    <input type="range" class="cmd-slider" min="-20" max="30" step=".0001" value="0" aria-label="command slider 2">
+                </div>
+                <div class="slider-row">
+                    <input type="text" class="slider-cmd" value="v0 p {}" placeholder="cmd" title="cmd" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" inputmode="text" aria-autocomplete="none" aria-label="slider command 3">
+                    <input type="number" class="slider-min" value="-1" placeholder="min" title="min" aria-label="slider minimum 3">
+                    <input type="number" class="slider-max" value="1" placeholder="max" title="max" aria-label="slider maximum 3">
+                    <input type="number" class="slider-step" value=".0001" placeholder="step" title="step" aria-label="slider step 3">
+                    <input type="range" class="cmd-slider" min="-1" max="1" step=".0001" value="0" aria-label="command slider 3">
+                </div>
+                <div class="slider-row">
+                    <input type="text" class="slider-cmd" value="v1 f {}" placeholder="cmd" title="cmd" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" inputmode="text" aria-autocomplete="none" aria-label="slider command 4">
+                    <input type="number" class="slider-min" value="55" placeholder="min" title="min" aria-label="slider minimum 4">
+                    <input type="number" class="slider-max" value="880" placeholder="max" title="max" aria-label="slider maximum 4">
+                    <input type="number" class="slider-step" value=".0001" placeholder="step" title="step" aria-label="slider step 4">
+                    <input type="range" class="cmd-slider" min="55" max="880" step=".0001" value="440" aria-label="command slider 4">
+                </div>
+            </div>
+
+            <div id="attached-files-tray">
+                <div class="tray-header">
+                    <span>ATTACHED FILES (Click to copy name)</span>
+                    <button id="tray-close-btn" class="editor-btn" title="Close files list">&times;</button>
+                </div>
+                <div id="attached-files-list" class="attached-files-container"></div>
+            </div>
+
+            <div class="status-bar">
+                <span id="engine-left">skred-web <span class="app-hash">2826d41</span> (<span class="skred-version">2.0.1</span>)</span>
+                <span id="engine-center">log 0</span>
+                <span id="engine-right">
+                    <span id="engine-status">AUDIO OFF</span>
+                    <button id="files-toggle" title="attached files" aria-label="attached files" style="display: none;">[FILES:0]</button>
+                    <button id="split-toggle" title="toggle editor split (Ctrl+E)" aria-label="toggle editor split">[E]</button>
+                    <button id="clip-toggle" title="share/load code [CLIP]" aria-label="clipboard">[C]</button>
+                    <button id="slider-toggle" title="show sliders" aria-label="show sliders" aria-expanded="false">[+]</button>
+                </span>
+            </div>
         </div>
     </div>
 
-    <script src="skred_api.js?v=2.0.0"></script>
+    <script src="skred_api.js?v=2.0.1"></script>
 
 <script>
 var bufsize = 256;
@@ -598,6 +823,9 @@ function usage() {
   printToTerminal("-clear # clear terminal output");
   printToTerminal("-learn # open skode tutorial");
   printToTerminal("-ksynth # open k-synth tool");
+  printToTerminal("-edit # toggle editor scratchpad split (Ctrl+E)");
+  printToTerminal("-files # toggle attached files tray");
+  printToTerminal("-reset # reset engine (scratchpad preserved)");
   printToTerminal("-add # attach file to virtual filesystem");
   printToTerminal("-paste # paste clipboard into paste.sk");
   printToTerminal("[code] /share # publish snippet to public clipboard");
@@ -1053,8 +1281,8 @@ async function initAudioWorklet() {
             updateAudioStatus();
         });
 
-        await workletAudioContext.audioWorklet.addModule("skred_worklet_processor.js?v=2.0.0");
-        const resp = await fetch("skred_worklet_engine.wasm?v=2.0.0");
+        await workletAudioContext.audioWorklet.addModule("skred_worklet_processor.js?v=2.0.1");
+        const resp = await fetch("skred_worklet_engine.wasm?v=2.0.1");
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const wasmBinary = await resp.arrayBuffer();
 
@@ -1084,7 +1312,7 @@ async function initAudioWorklet() {
                 useWorklet = true;
                 running = 1;
                 updateAudioStatus();
-                setSkredVersion(data.version || "2.0.0");
+                setSkredVersion(data.version || "2.0.1");
                 workletNode.port.postMessage({ type: "features" });
             } else if (data.type === "log") {
                 if (data.text) printToTerminal(data.text, 'info');
@@ -1520,6 +1748,24 @@ function processCommand(cmd) {
         case '.logo':
             printLogoToTerminal();
             break;
+        case '-edit':
+        case '.edit':
+        case '-split':
+        case '.split':
+            toggleEditorSplit();
+            break;
+        case '-files':
+        case '.files':
+            toggleFilesTray();
+            break;
+        case '-reset':
+        case '.reset':
+        case 'reset':
+            if (ensureBooted()) {
+                sendSkredCommand('reset');
+            }
+            printToTerminal("System: Reset complete (editor preserved).", "system");
+            break;
         case '-learn':
         case '.learn':
           window.open('https://octetta.github.io/skred-web/learn.html', "_blank");
@@ -1700,6 +1946,12 @@ document.querySelectorAll('.funcNum').forEach(btn => {
 document.addEventListener('click', (e) => {
     if (e.target.closest('#slider-bar')) return;
     if (e.target.closest('#output')) return;
+    if (e.target.closest('#editor-pane')) return;
+    if (e.target.closest('#split-divider')) return;
+    if (e.target.closest('#attached-files-tray')) return;
+    if (e.target.closest('button')) return;
+    if (e.target.closest('input')) return;
+    if (e.target.closest('textarea')) return;
     cmdInput.focus();
 });
 
@@ -1710,6 +1962,10 @@ function writeVirtualFile(name, bytes) {
     }
     if ((useWorklet || workletReady || (!workletFailed && workletNode)) && workletNode) {
         workletNode.port.postMessage({ type: "file", path: name, data: bytes });
+    }
+    if (typeof recordAttachedFile === "function") {
+        const type = name.endsWith('.wav') || name.endsWith('.mp3') ? 'wav' : (name.endsWith('.zip') ? 'zip' : 'file');
+        recordAttachedFile(name, bytes ? bytes.length : 0, type);
     }
 }
 
@@ -1865,6 +2121,9 @@ async function addFileViaDialog() {
                 printToTerminal(`Error adding ${file.name}: ${err.message || err}`, 'error');
             }
         }
+        if (typeof toggleFilesTray === "function") {
+            toggleFilesTray(true);
+        }
         cmdInput.focus();
     };
     input.click();
@@ -1941,7 +2200,379 @@ function unmountZipBundle() {
     printToTerminal(`# vfs ${status}`, "system");
     centerSpan.innerText = "%zu";
 }
-    printLogoToTerminal();
+
+// ==========================================
+// Attached Files Tray & Management
+// ==========================================
+const attachedFiles = [];
+
+function formatFileSize(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function fallbackCopyText(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+}
+
+function copyFileNameToClipboard(name, elem) {
+    const textToCopy = `[${name}]`;
+    const finish = () => {
+        if (elem) {
+            elem.classList.add('copied');
+            const origHtml = elem.innerHTML;
+            elem.innerHTML = `✓ ${escapeHtml(textToCopy)} Copied!`;
+            setTimeout(() => {
+                elem.classList.remove('copied');
+                elem.innerHTML = origHtml;
+            }, 1200);
+        }
+        printToTerminal(`Copied ${textToCopy} to clipboard`, 'system');
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(finish).catch(() => {
+            fallbackCopyText(textToCopy);
+            finish();
+        });
+    } else {
+        fallbackCopyText(textToCopy);
+        finish();
+    }
+}
+
+function recordAttachedFile(name, size, type = 'file') {
+    if (!name) return;
+    const existing = attachedFiles.find(f => f.name === name);
+    if (existing) {
+        existing.size = size;
+        existing.type = type;
+        existing.time = Date.now();
+    } else {
+        attachedFiles.push({ name, size, type, time: Date.now() });
+    }
+    updateAttachedFilesUI();
+}
+
+function updateAttachedFilesUI() {
+    const filesToggle = document.getElementById('files-toggle');
+    const tray = document.getElementById('attached-files-tray');
+    const list = document.getElementById('attached-files-list');
+    if (!filesToggle || !tray || !list) return;
+
+    if (attachedFiles.length === 0) {
+        filesToggle.style.display = 'none';
+        tray.classList.remove('tray-open');
+        return;
+    }
+
+    filesToggle.style.display = 'inline-flex';
+    filesToggle.textContent = `[FILES:${attachedFiles.length}]`;
+    filesToggle.title = `${attachedFiles.length} attached file(s) - click to show/hide`;
+
+    list.innerHTML = '';
+    attachedFiles.forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'attached-file-item';
+        item.title = `Click to copy [${file.name}] to clipboard`;
+        const icon = file.type === 'wav' ? '🔊' : (file.type === 'zip' ? '📦' : '📄');
+        item.innerHTML = `<span class="file-chip-icon">${icon}</span> <span class="file-chip-name">[${escapeHtml(file.name)}]</span> <span class="file-chip-size">(${formatFileSize(file.size)})</span>`;
+
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            copyFileNameToClipboard(file.name, item);
+        });
+
+        list.appendChild(item);
+    });
+}
+
+function toggleFilesTray(forceState) {
+    const tray = document.getElementById('attached-files-tray');
+    const filesToggle = document.getElementById('files-toggle');
+    if (!tray) return;
+    const isOpen = typeof forceState === 'boolean' ? forceState : !tray.classList.contains('tray-open');
+    if (isOpen) {
+        tray.classList.add('tray-open');
+        if (filesToggle) filesToggle.classList.add('active');
+    } else {
+        tray.classList.remove('tray-open');
+        if (filesToggle) filesToggle.classList.remove('active');
+    }
+}
+
+const filesToggle = document.getElementById('files-toggle');
+if (filesToggle) {
+    filesToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFilesTray();
+    });
+}
+
+const trayCloseBtn = document.getElementById('tray-close-btn');
+if (trayCloseBtn) {
+    trayCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFilesTray(false);
+    });
+}
+
+// Window Drag and Drop file handler
+window.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+});
+
+window.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    if (!e.dataTransfer.files || !e.dataTransfer.files.length) return;
+    for (const file of e.dataTransfer.files) {
+        try {
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            writeVirtualFile(file.name, bytes);
+            printToTerminal(`Attached [${file.name}] (${bytes.length} bytes)`, 'system');
+            if (file.name.endsWith('.zip')) {
+                sendSkredCommand(`[${file.name}] %z`);
+                centerSpan.innerText = `[${file.name}] %z`;
+            } else {
+                centerSpan.innerText = `[${file.name}]`;
+            }
+        } catch (err) {
+            console.error(`Drop failed for ${file.name}:`, err);
+            printToTerminal(`Error attaching ${file.name}: ${err.message || err}`, 'error');
+        }
+    }
+    toggleFilesTray(true);
+    cmdInput.focus();
+});
+
+// ==========================================
+// Editor Split Screen & Persistent Scratchpad
+// ==========================================
+const editorPane = document.getElementById('editor-pane');
+const splitDivider = document.getElementById('split-divider');
+const editorTextarea = document.getElementById('editor-textarea');
+const splitToggle = document.getElementById('split-toggle');
+const editorRunBtn = document.getElementById('editor-run-btn');
+const editorCopyBtn = document.getElementById('editor-copy-btn');
+const editorClearBtn = document.getElementById('editor-clear-btn');
+const editorCloseBtn = document.getElementById('editor-close-btn');
+
+function initEditorSplit() {
+    // 1. Restore persistent content
+    const savedContent = localStorage.getItem('skred_editor_content');
+    if (savedContent !== null && editorTextarea) {
+        editorTextarea.value = savedContent;
+    }
+
+    // 2. Restore persistent height
+    const savedHeight = parseInt(localStorage.getItem('skred_editor_height'), 10);
+    if (savedHeight && savedHeight >= 60 && editorPane) {
+        editorPane.style.height = `${savedHeight}px`;
+    }
+
+    // 3. Restore open/close state
+    // Default open on desktop unless user explicitly closed it
+    const savedOpen = localStorage.getItem('skred_editor_open');
+    const shouldOpen = savedOpen === '1' || (savedOpen === null && window.innerWidth >= 600);
+    toggleEditorSplit(shouldOpen);
+
+    // Save content on edit
+    if (editorTextarea) {
+        editorTextarea.addEventListener('input', () => {
+            localStorage.setItem('skred_editor_content', editorTextarea.value);
+        });
+
+        // Tab key inserts 2 spaces; Ctrl/Cmd+Enter executes
+        editorTextarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                executeEditorCode();
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editorTextarea.selectionStart;
+                const end = editorTextarea.selectionEnd;
+                const val = editorTextarea.value;
+                editorTextarea.value = val.substring(0, start) + "  " + val.substring(end);
+                editorTextarea.selectionStart = editorTextarea.selectionEnd = start + 2;
+                localStorage.setItem('skred_editor_content', editorTextarea.value);
+            }
+        });
+    }
+
+    // Toolbar buttons
+    if (editorRunBtn) {
+        editorRunBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            executeEditorCode();
+        });
+    }
+
+    if (editorCopyBtn) {
+        editorCopyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const text = editorTextarea.value;
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text);
+            } else {
+                fallbackCopyText(text);
+            }
+            editorCopyBtn.textContent = 'COPIED!';
+            setTimeout(() => { editorCopyBtn.textContent = 'COPY'; }, 1000);
+            printToTerminal("Copied scratchpad contents to clipboard", "system");
+        });
+    }
+
+    if (editorClearBtn) {
+        editorClearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!editorTextarea.value.trim() || confirm("Clear editor scratchpad?")) {
+                editorTextarea.value = "";
+                localStorage.setItem('skred_editor_content', "");
+                editorTextarea.focus();
+            }
+        });
+    }
+
+    if (editorCloseBtn) {
+        editorCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleEditorSplit(false);
+        });
+    }
+
+    if (splitToggle) {
+        splitToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleEditorSplit();
+        });
+    }
+
+    // Movable Divider Dragging
+    if (splitDivider) {
+        let isDragging = false;
+        let startY = 0;
+        let startHeight = 0;
+
+        splitDivider.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            startY = e.clientY;
+            startHeight = editorPane.offsetHeight;
+            splitDivider.setPointerCapture(e.pointerId);
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        splitDivider.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const deltaY = e.clientY - startY;
+            const minHeight = 60;
+            const maxHeight = Math.max(100, window.innerHeight - 150);
+            const targetHeight = Math.min(Math.max(startHeight + deltaY, minHeight), maxHeight);
+            editorPane.style.height = `${targetHeight}px`;
+        });
+
+        const endDrag = (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            try { splitDivider.releasePointerCapture(e.pointerId); } catch (err) {}
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            localStorage.setItem('skred_editor_height', editorPane.offsetHeight);
+        };
+
+        splitDivider.addEventListener('pointerup', endDrag);
+        splitDivider.addEventListener('pointercancel', endDrag);
+
+        splitDivider.addEventListener('dblclick', () => {
+            editorPane.style.height = '220px';
+            localStorage.setItem('skred_editor_height', '220');
+        });
+    }
+
+    // Global keyboard shortcuts (Ctrl+E or Cmd+E to toggle focus, Escape to return to cmdInput)
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'e' || e.key === 'E')) {
+            e.preventDefault();
+            if (document.activeElement === editorTextarea) {
+                cmdInput.focus();
+            } else {
+                if (editorPane.classList.contains('editor-hidden')) {
+                    toggleEditorSplit(true);
+                }
+                editorTextarea.focus();
+            }
+        } else if (e.key === 'Escape' && document.activeElement === editorTextarea) {
+            e.preventDefault();
+            cmdInput.focus();
+        }
+    });
+}
+
+function toggleEditorSplit(forceOpen) {
+    if (!editorPane || !splitDivider) return;
+    const isCurrentlyHidden = editorPane.classList.contains('editor-hidden');
+    const open = typeof forceOpen === 'boolean' ? forceOpen : isCurrentlyHidden;
+
+    if (open) {
+        editorPane.classList.remove('editor-hidden');
+        splitDivider.classList.remove('divider-hidden');
+        if (splitToggle) splitToggle.classList.add('active');
+        localStorage.setItem('skred_editor_open', '1');
+    } else {
+        editorPane.classList.add('editor-hidden');
+        splitDivider.classList.add('divider-hidden');
+        if (splitToggle) splitToggle.classList.remove('active');
+        localStorage.setItem('skred_editor_open', '0');
+        cmdInput.focus();
+    }
+}
+
+function executeEditorCode() {
+    if (!ensureBooted()) return;
+    let text = "";
+    if (editorTextarea.selectionStart !== editorTextarea.selectionEnd) {
+        text = editorTextarea.value.substring(editorTextarea.selectionStart, editorTextarea.selectionEnd);
+    } else {
+        // Run current line if cursor on non-empty line, else entire text
+        const cursor = editorTextarea.selectionStart;
+        const val = editorTextarea.value;
+        const lineStart = val.lastIndexOf('\n', cursor - 1) + 1;
+        let lineEnd = val.indexOf('\n', cursor);
+        if (lineEnd === -1) lineEnd = val.length;
+        const currentLine = val.substring(lineStart, lineEnd).trim();
+        if (currentLine && !currentLine.startsWith('#') && !currentLine.startsWith('//')) {
+            text = currentLine;
+        } else {
+            text = val;
+        }
+    }
+
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('#') && !l.startsWith('//'));
+    if (!lines.length) return;
+
+    lines.forEach(line => {
+        printToTerminal(line, 'dim');
+        processCommand(line);
+    });
+}
+
+initEditorSplit();
+printLogoToTerminal();
 </script>
 </body>
 </html>
