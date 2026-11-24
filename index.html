@@ -746,6 +746,85 @@ body {
     border-color: var(--color-info);
     font-weight: bold;
 }
+
+.tray-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.tray-add-btn {
+    background: var(--tray-item-bg);
+    border: 1px solid var(--color-system);
+    color: var(--color-system);
+    font-size: 8px;
+    padding: 3px 6px;
+    cursor: pointer;
+}
+
+.tray-add-btn:hover {
+    background: var(--color-system);
+    color: #000000;
+}
+
+.file-remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--tray-item-text);
+    opacity: 0.6;
+    cursor: pointer;
+    font-family: var(--main-font, 'Press Start 2P', monospace);
+    font-size: 11px;
+    line-height: 1;
+    padding: 0 0 0 5px;
+    margin-left: 4px;
+    border-left: 1px solid rgba(255, 255, 255, 0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.1s, color 0.1s;
+}
+
+.file-remove-btn:hover {
+    opacity: 1;
+    color: var(--color-error);
+}
+
+.attached-file-add-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    background: transparent;
+    border: 1px dashed var(--color-system);
+    border-radius: 3px;
+    color: var(--color-system);
+    cursor: pointer;
+    user-select: none;
+    font-family: var(--main-font, 'Press Start 2P', monospace);
+    font-size: 9px;
+    transition: background 0.1s, color 0.1s;
+}
+
+.attached-file-add-chip:hover {
+    background: var(--color-system);
+    color: #000000;
+}
+
+.attached-files-empty {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    color: var(--term-text);
+    font-size: 9px;
+    flex-wrap: wrap;
+}
+
+.drag-hint {
+    opacity: 0.7;
+    font-size: 8px;
+}
     </style>
 
 </head>
@@ -833,8 +912,11 @@ Type <span class="system">'-help'</span> for basic things.
 
             <div id="attached-files-tray">
                 <div class="tray-header">
-                    <span>ATTACHED FILES (Click to copy name)</span>
-                    <button id="tray-close-btn" class="editor-btn" title="Close files list">&times;</button>
+                    <span>ATTACHED FILES (Click chip to copy)</span>
+                    <div class="tray-actions">
+                        <button id="tray-add-btn" class="editor-btn tray-add-btn" title="Add / attach file">+ ADD FILE</button>
+                        <button id="tray-close-btn" class="editor-btn" title="Close files list">&times;</button>
+                    </div>
                 </div>
                 <div id="attached-files-list" class="attached-files-container"></div>
             </div>
@@ -844,7 +926,7 @@ Type <span class="system">'-help'</span> for basic things.
                 <span id="engine-center">log 0</span>
                 <span id="engine-right">
                     <span id="engine-status">AUDIO OFF</span>
-                    <button id="files-toggle" title="attached files" aria-label="attached files" style="display: none;">[FILES:0]</button>
+                    <button id="files-toggle" title="attached files (click to toggle)" aria-label="attached files">[FILES:0]</button>
                     <button id="split-toggle" title="toggle editor split (Ctrl+E)" aria-label="toggle editor split">[E]</button>
                     <button id="clip-toggle" title="share/load code [CLIP]" aria-label="clipboard">[C]</button>
                     <button id="slider-toggle" title="show sliders" aria-label="show sliders" aria-expanded="false">[+]</button>
@@ -880,6 +962,7 @@ function usage() {
   printToTerminal("-files # toggle attached files tray");
   printToTerminal("-reset # reset engine (scratchpad preserved)");
   printToTerminal("-add # attach file to virtual filesystem");
+  printToTerminal("-rm [file] # remove file from virtual filesystem");
   printToTerminal("-paste # paste clipboard into paste.sk");
   printToTerminal("[code] /share # publish snippet to public clipboard");
   printToTerminal("[id] /load # load and run snippet from clipboard");
@@ -1734,6 +1817,20 @@ function processCommand(cmd) {
             if (!ensureBooted()) return;
             addFileViaDialog();
             break;
+        case '-rm':
+        case '.rm':
+        case '-remove':
+        case '.remove':
+        case '-del':
+        case '.del': {
+            if (arg.length > 1) {
+                const target = arg[1].replace(/^[\[{]/, '').replace(/[\]}]$/, '').trim();
+                removeAttachedFile(target);
+            } else {
+                printToTerminal("Usage: -rm <filename> or -rm [filename]", "error");
+            }
+            break;
+        }
         case 'paste':
         case '-paste':
         case '.paste':
@@ -2320,37 +2417,102 @@ function recordAttachedFile(name, size, type = 'file') {
     updateAttachedFilesUI();
 }
 
+function removeVirtualFile(name) {
+    if (!name) return;
+    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
+    if (fs && fs.unlink) {
+        try { fs.unlink(name); } catch (e) {}
+        try { fs.unlink("/" + name); } catch (e) {}
+    }
+    if ((useWorklet || workletReady || (!workletFailed && workletNode)) && workletNode) {
+        workletNode.port.postMessage({ type: "unlink", path: name });
+    }
+}
+
+function removeAttachedFile(name) {
+    if (!name) return;
+    const cleanName = name.trim();
+    const idx = attachedFiles.findIndex(f => f.name === cleanName);
+    if (idx !== -1) {
+        attachedFiles.splice(idx, 1);
+        removeVirtualFile(cleanName);
+        updateAttachedFilesUI();
+        printToTerminal(`Removed [${cleanName}] from virtual filesystem`, 'system');
+        if (typeof centerSpan !== "undefined" && centerSpan && centerSpan.innerText.includes(cleanName)) {
+            centerSpan.innerText = "";
+        }
+    } else {
+        printToTerminal(`File not found: [${cleanName}]`, 'error');
+    }
+}
+
 function updateAttachedFilesUI() {
     const filesToggle = document.getElementById('files-toggle');
     const tray = document.getElementById('attached-files-tray');
     const list = document.getElementById('attached-files-list');
     if (!filesToggle || !tray || !list) return;
 
-    if (attachedFiles.length === 0) {
-        filesToggle.style.display = 'none';
-        tray.classList.remove('tray-open');
-        return;
-    }
-
     filesToggle.style.display = 'inline-flex';
     filesToggle.textContent = `[FILES:${attachedFiles.length}]`;
     filesToggle.title = `${attachedFiles.length} attached file(s) - click to show/hide`;
 
     list.innerHTML = '';
+    if (attachedFiles.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'attached-files-empty';
+        emptyDiv.innerHTML = `
+            <span>No attached files yet.</span>
+            <button class="editor-btn tray-add-btn" id="empty-add-btn">+ CHOOSE FILE</button>
+            <span class="drag-hint">or drag & drop files here</span>
+        `;
+        list.appendChild(emptyDiv);
+        const emptyBtn = emptyDiv.querySelector('#empty-add-btn');
+        if (emptyBtn) {
+            emptyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                addFileViaDialog();
+            });
+        }
+        return;
+    }
+
     attachedFiles.forEach(file => {
         const item = document.createElement('div');
         item.className = 'attached-file-item';
         item.title = `Click to copy [${file.name}] to clipboard`;
         const icon = file.type === 'wav' ? '🔊' : (file.type === 'zip' ? '📦' : '📄');
-        item.innerHTML = `<span class="file-chip-icon">${icon}</span> <span class="file-chip-name">[${escapeHtml(file.name)}]</span> <span class="file-chip-size">(${formatFileSize(file.size)})</span>`;
+        item.innerHTML = `
+            <span class="file-chip-icon">${icon}</span>
+            <span class="file-chip-name">[${escapeHtml(file.name)}]</span>
+            <span class="file-chip-size">(${formatFileSize(file.size)})</span>
+            <button class="file-remove-btn" title="Remove ${escapeHtml(file.name)}">&times;</button>
+        `;
 
         item.addEventListener('click', (e) => {
             e.stopPropagation();
             copyFileNameToClipboard(file.name, item);
         });
 
+        const removeBtn = item.querySelector('.file-remove-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeAttachedFile(file.name);
+            });
+        }
+
         list.appendChild(item);
     });
+
+    const addChip = document.createElement('button');
+    addChip.className = 'attached-file-add-chip';
+    addChip.title = 'Add another file to virtual filesystem';
+    addChip.textContent = '+ ADD FILE';
+    addChip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addFileViaDialog();
+    });
+    list.appendChild(addChip);
 }
 
 function toggleFilesTray(forceState) {
@@ -2372,6 +2534,14 @@ if (filesToggle) {
     filesToggle.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleFilesTray();
+    });
+}
+
+const trayAddBtn = document.getElementById('tray-add-btn');
+if (trayAddBtn) {
+    trayAddBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addFileViaDialog();
     });
 }
 
