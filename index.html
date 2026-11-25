@@ -956,10 +956,12 @@ function usage() {
   printToTerminal("-min <idx|off>             # open or close MIDI input port");
   printToTerminal("-mout <idx|off>            # open or close MIDI output port");
   printToTerminal("-mstatus                   # show active MIDI connections");
-  printToTerminal("-add                       # attach file to virtual filesystem");
-  printToTerminal("-del <name|idx>            # remove attached file by name or 0-based index");
-  printToTerminal("-ls [idx [cmd]]            # list files or select by 0-based index");
-  printToTerminal("-pick <idx> [cmd]          # load file at 0-based index into string buffer");
+  printToTerminal("-ls [filter]              # browse virtual disk (e.g. -ls audio, -ls wav, -ls ks)");
+  printToTerminal("-tray                      # view session staging tray (aliased: -crate, -files)");
+  printToTerminal("-add [idx...|all]          # stage file(s) into tray or open file dialog");
+  printToTerminal("-del <name|idx|all>        # remove attached file by name or 0-based index");
+  printToTerminal("-pick <idx|?|rand> [flt] [c] # load file into string buffer & run cmd");
+  printToTerminal("-zip [archive.zip]         # pack staging tray into zip or mount zip");
   printToTerminal("-cd [dir]                  # change virtual filesystem directory");
   printToTerminal("-pwd                       # print current directory");
   printToTerminal("-clear                     # clear terminal output");
@@ -2196,10 +2198,58 @@ function processCommand(cmd) {
         case '-help':
         case '.help': usage(); break;
         case '-add':
-        case '.add':
-            if (!ensureBooted()) return;
-            addFileViaDialog();
+        case '.add': {
+            if (arg.length > 1) {
+                const rest = trimmed.replace(/^[.\-]add\s*/i, '').trim();
+                if (rest.toLowerCase() === 'all') {
+                    if (cachedDirFiles.length === 0) listVirtualFiles('');
+                    let count = 0;
+                    for (const f of cachedDirFiles) {
+                        recordAttachedFile(f.name, f.size, f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.name.endsWith('.flac') ? 'wav' : 'file');
+                        count++;
+                    }
+                    printToTerminal(`Added ${count} file(s) to staging tray.`, 'system');
+                } else if (/^[\d\s.\-]+$/.test(rest)) {
+                    if (cachedDirFiles.length === 0) listVirtualFiles('');
+                    const tokens = rest.split(/\s+/);
+                    let count = 0;
+                    for (const tok of tokens) {
+                        if (!tok) continue;
+                        let start = 0, end = 0;
+                        if (tok.includes('..')) {
+                            const p = tok.split('..');
+                            start = parseInt(p[0], 10);
+                            end = parseInt(p[1], 10);
+                        } else if (tok.includes('-')) {
+                            const p = tok.split('-');
+                            start = parseInt(p[0], 10);
+                            end = parseInt(p[1], 10);
+                        } else {
+                            start = end = parseInt(tok, 10);
+                        }
+                        if (start > end) { const tmp = start; start = end; end = tmp; }
+                        for (let i = start; i <= end; i++) {
+                            if (i >= 0 && i < cachedDirFiles.length) {
+                                const f = cachedDirFiles[i];
+                                recordAttachedFile(f.name, f.size, f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.name.endsWith('.flac') ? 'wav' : 'file');
+                                printToTerminal(`Attached [${f.name}] to staging tray`, 'system');
+                                count++;
+                            } else {
+                                printToTerminal(`Error: Index ${i} out of range (0..${cachedDirFiles.length - 1}).`, 'error');
+                            }
+                        }
+                    }
+                } else {
+                    const cleanName = rest.replace(/^['"\[{]/, '').replace(/['"\]}]$/, '').trim();
+                    recordAttachedFile(cleanName, 0, cleanName.endsWith('.wav') || cleanName.endsWith('.mp3') || cleanName.endsWith('.flac') ? 'wav' : 'file');
+                    printToTerminal(`Attached [${cleanName}] to staging area (available for /ws, /ls, /ks, etc.)`, 'system');
+                }
+            } else {
+                if (!ensureBooted()) return;
+                addFileViaDialog();
+            }
             break;
+        }
         case '-rm':
         case '.rm':
         case '-remove':
@@ -2208,19 +2258,26 @@ function processCommand(cmd) {
         case '.del': {
             const rest = trimmed.replace(/^[.\-](?:rm|del|remove)\s*/i, '').trim();
             if (rest.length > 0) {
+                if (rest.toLowerCase() === 'all') {
+                    while (attachedFiles.length > 0) {
+                        removeAttachedFile(attachedFiles[0].name);
+                    }
+                    printToTerminal("Cleared all files from staging tray.", "system");
+                    break;
+                }
                 const target = rest.replace(/^['"\[{]/, '').replace(/['"\]}]$/, '').trim();
                 if (/^\d+$/.test(target)) {
                     const idx = Number(target);
                     if (idx >= 0 && idx < attachedFiles.length) {
                         removeAttachedFile(attachedFiles[idx].name);
                     } else {
-                        printToTerminal(`Error: Index ${idx} out of range (0..${attachedFiles.length > 0 ? attachedFiles.length - 1 : 0}). Run -ls to view files.`, "error");
+                        printToTerminal(`Error: Index ${idx} out of range (0..${attachedFiles.length > 0 ? attachedFiles.length - 1 : 0}). Run -tray to view files.`, "error");
                     }
                 } else {
                     removeAttachedFile(target);
                 }
             } else {
-                printToTerminal("Usage: -del <filename|index>", "error");
+                printToTerminal("Usage: -del <filename|index|all>", "error");
             }
             break;
         }
@@ -2232,53 +2289,78 @@ function processCommand(cmd) {
         case '.use':
         case '-file':
         case '.file': {
-            if (arg.length < 2 || !/^\d+$/.test(arg[1])) {
-                printToTerminal("Usage: -pick <index> [command] (e.g. -pick 0 or -pick 0 /ws 900)", "error");
-                break;
-            }
-            const idx = Number(arg[1]);
-            if (idx < 0 || idx >= attachedFiles.length) {
-                printToTerminal(`Error: Index ${idx} out of range (0..${attachedFiles.length > 0 ? attachedFiles.length - 1 : 0}). Run -ls to view files.`, "error");
-                break;
-            }
-            const file = attachedFiles[idx];
-            centerSpan.innerText = `[${file.name}]`;
-            
-            const tail = trimmed.replace(/^[.\-](?:pick|get|use|file)\s+\d+\s*/i, '').trim();
-            if (tail.length > 0) {
-                printToTerminal(`String buffer: [${file.name}] -> executing '${tail}'`, "system");
-                sendSkredCommand(`[${file.name}] ${tail}`);
-            } else {
-                sendSkredCommand(`[${file.name}]`);
-                printToTerminal(`String buffer: [${file.name}] (ready for /w, ks, /ls, etc.)`, "system");
-            }
-            break;
-        }
-        case '-ls':
-        case '.ls':
-        case '-staged':
-        case '.staged': {
-            if (arg.length > 1 && /^\d+$/.test(arg[1])) {
-                const idx = Number(arg[1]);
-                if (idx >= 0 && idx < attachedFiles.length) {
-                    const file = attachedFiles[idx];
-                    centerSpan.innerText = `[${file.name}]`;
-                    const tail = trimmed.replace(/^[.\-](?:ls|staged|files)\s+\d+\s*/i, '').trim();
-                    if (tail.length > 0) {
-                        printToTerminal(`String buffer: [${file.name}] -> executing '${tail}'`, "system");
-                        sendSkredCommand(`[${file.name}] ${tail}`);
+            const isRand = (arg.length > 1 && (arg[1] === '?' || arg[1].toLowerCase() === 'rand' || arg[1].toLowerCase() === 'random'));
+            if (isRand) {
+                let filter = null;
+                let tail = '';
+                const afterRand = trimmed.replace(/^[.\-](?:pick|get|use|file)\s+(?:\?|rand|random)\s*/i, '').trim();
+                if (afterRand.length > 0) {
+                    if (afterRand.startsWith('/') || afterRand.startsWith('-') || afterRand.startsWith('.')) {
+                        tail = afterRand;
                     } else {
-                        sendSkredCommand(`[${file.name}]`);
-                        printToTerminal(`String buffer: [${file.name}] (ready for /w, ks, /ls, etc.)`, "system");
+                        const parts = afterRand.split(/\s+/);
+                        filter = parts[0];
+                        tail = parts.slice(1).join(' ').trim();
                     }
+                }
+                let candidates = attachedFiles.filter(f => matchFilter(f.name, filter));
+                if (candidates.length === 0) {
+                    const { results } = listVirtualFiles(filter);
+                    candidates = results;
+                }
+                if (candidates.length === 0) {
+                    printToTerminal(`Error: No files found matching filter '${filter || '*'}'`, "error");
+                    break;
+                }
+                const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                centerSpan.innerText = `[${chosen.name}]`;
+                if (tail.length > 0) {
+                    printToTerminal(`String buffer: [${chosen.name}] -> executing '${tail}'`, "system");
+                    sendSkredCommand(`[${chosen.name}] ${tail}`);
                 } else {
-                    printToTerminal(`Error: Index ${idx} out of range (0..${attachedFiles.length > 0 ? attachedFiles.length - 1 : 0}). Run -ls to view files.`, "error");
+                    sendSkredCommand(`[${chosen.name}]`);
+                    printToTerminal(`String buffer: [${chosen.name}] (ready for /ws, /ls, /ks, etc.)`, "system");
                 }
                 break;
             }
-            printToTerminal("# attached files in virtual filesystem:", "info");
+
+            if (arg.length < 2 || !/^\d+$/.test(arg[1])) {
+                printToTerminal("Usage: -pick <index|?|rand> [filter] [command] (e.g. -pick 0 /ws 0 or -pick ? audio /ws 0)", "error");
+                break;
+            }
+            const idx = Number(arg[1]);
+            let chosen = null;
+            if (idx >= 0 && idx < attachedFiles.length) {
+                chosen = attachedFiles[idx];
+            } else if (idx >= 0 && idx < cachedDirFiles.length) {
+                chosen = cachedDirFiles[idx];
+            } else {
+                printToTerminal(`Error: Index ${idx} out of range (0..${Math.max(attachedFiles.length, cachedDirFiles.length) - 1}). Run -tray or -ls to view files.`, "error");
+                break;
+            }
+            centerSpan.innerText = `[${chosen.name}]`;
+            
+            const tail = trimmed.replace(/^[.\-](?:pick|get|use|file)\s+\d+\s*/i, '').trim();
+            if (tail.length > 0) {
+                printToTerminal(`String buffer: [${chosen.name}] -> executing '${tail}'`, "system");
+                sendSkredCommand(`[${chosen.name}] ${tail}`);
+            } else {
+                sendSkredCommand(`[${chosen.name}]`);
+                printToTerminal(`String buffer: [${chosen.name}] (ready for /ws, /ls, /ks, etc.)`, "system");
+            }
+            break;
+        }
+        case '-tray':
+        case '.tray':
+        case '-crate':
+        case '.crate':
+        case '-staged':
+        case '.staged':
+        case '-files':
+        case '.files': {
+            printToTerminal(`# [tray: virtual memory] (${attachedFiles.length} files)`, "info");
             if (attachedFiles.length === 0) {
-                printToTerminal("  (no attached files in virtual filesystem)", "system");
+                printToTerminal("  (staging tray is empty; use -add to stage files)", "system");
             } else {
                 attachedFiles.forEach((file, idx) => {
                     printToTerminal(`  ${idx}. [${file.name}] (${formatFileSize(file.size)})`, "system");
@@ -2286,6 +2368,34 @@ function processCommand(cmd) {
             }
             const vfsStatus = (typeof Module !== "undefined" && Module._skred_vfs_status) ? Module.UTF8ToString(Module._skred_vfs_status()) : "disk::/";
             printToTerminal(`# vfs status: ${vfsStatus}`, "system");
+            break;
+        }
+        case '-ls':
+        case '.ls': {
+            if (arg.length > 1 && /^\d+$/.test(arg[1]) && cachedDirFiles.length > 0 && Number(arg[1]) < cachedDirFiles.length) {
+                const idx = Number(arg[1]);
+                const file = cachedDirFiles[idx];
+                centerSpan.innerText = `[${file.name}]`;
+                const tail = trimmed.replace(/^[.\-]ls\s+\d+\s*/i, '').trim();
+                if (tail.length > 0) {
+                    printToTerminal(`String buffer: [${file.name}] -> executing '${tail}'`, "system");
+                    sendSkredCommand(`[${file.name}] ${tail}`);
+                } else {
+                    sendSkredCommand(`[${file.name}]`);
+                    printToTerminal(`String buffer: [${file.name}] (ready for /ws, /ls, /ks, etc.)`, "system");
+                }
+                break;
+            }
+            const filter = arg.length > 1 ? arg[1] : null;
+            const { cwd, results } = listVirtualFiles(filter);
+            printToTerminal(`# [disk: ${cwd}] ${filter ? `(filter: ${filter}, ${results.length} files)` : `(${results.length} files)`}`, "info");
+            if (results.length === 0) {
+                printToTerminal("  (no matching files in working directory)", "system");
+            } else {
+                results.forEach((file, idx) => {
+                    printToTerminal(`  ${idx}. [${file.name}] (${formatFileSize(file.size)})`, "system");
+                });
+            }
             break;
         }
         case '-cd':
@@ -2352,7 +2462,22 @@ function processCommand(cmd) {
             break;
         case '-zip':
         case '.zip':
-            mountZipViaDialog();
+        case '-pack':
+        case '.pack':
+            if (arg.length > 1) {
+                const zipTarget = arg.slice(1).join(' ').trim();
+                if (attachedFiles.length === 0) {
+                    printToTerminal("Error: Staging tray is empty. Use -add or file dialog to attach files before zipping.", "error");
+                } else {
+                    const items = attachedFiles.map(f => ({ name: f.name, data: getVirtualFileBytes(f.name) }));
+                    const blob = createZipBlob(items);
+                    const outName = zipTarget.endsWith('.zip') ? zipTarget : (zipTarget + '.zip');
+                    downloadZipArchive(outName, blob);
+                    printToTerminal(`Packed ${items.length} file(s) from staging tray into [${outName}].`, "system");
+                }
+            } else {
+                mountZipViaDialog();
+            }
             break;
         case '-unzip':
         case '.unzip':
@@ -2838,6 +2963,186 @@ function unmountZipBundle() {
     const status = statusPtr ? Module.UTF8ToString(statusPtr) : "disk";
     printToTerminal(`# vfs ${status}`, "system");
     centerSpan.innerText = "%zu";
+}
+
+// ==========================================
+// Virtual Disk & Staging Crate Management
+// ==========================================
+let cachedDirFiles = [];
+
+function matchFilter(name, filter) {
+    if (!name) return false;
+    if (!filter) return true;
+    const dot = name.lastIndexOf('.');
+    const ext = dot !== -1 ? name.slice(dot + 1).toLowerCase() : '';
+    const f = filter.startsWith('.') ? filter.slice(1).toLowerCase() : filter.toLowerCase();
+
+    if (f === 'audio' || f === 'wav' || f === 'wave' || f === 'sound' || f === 'sounds') {
+        return ext === 'wav' || ext === 'mp3' || ext === 'flac';
+    }
+    if (f === 'sk' || f === 'skode') {
+        return ext === 'sk' || ext === 'skode';
+    }
+    if (f === 'ks' || f === 'ksynth') {
+        return ext === 'ks' || ext === 'ksynth';
+    }
+    if (f === 'zip') {
+        return ext === 'zip';
+    }
+    if (ext === f) return true;
+    return name.toLowerCase().includes(f);
+}
+
+function listVirtualFiles(filter) {
+    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
+    const cwdPtr = (typeof Module !== "undefined" && Module._skred_getcwd) ? Module._skred_getcwd() : 0;
+    const cwd = cwdPtr ? Module.UTF8ToString(cwdPtr) : "/";
+    const results = [];
+    if (fs && fs.readdir) {
+        try {
+            const entries = fs.readdir(cwd);
+            for (const entry of entries) {
+                if (entry === '.' || entry === '..') continue;
+                try {
+                    const fullPath = cwd.endsWith('/') ? cwd + entry : cwd + '/' + entry;
+                    const stat = fs.stat(fullPath);
+                    if (fs.isDir(stat.mode)) continue;
+                    if (matchFilter(entry, filter)) {
+                        results.push({ name: entry, size: stat.size });
+                    }
+                } catch (e) {
+                    if (matchFilter(entry, filter)) {
+                        results.push({ name: entry, size: 0 });
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+    if (results.length === 0 && attachedFiles.length > 0) {
+        for (const f of attachedFiles) {
+            if (matchFilter(f.name, filter)) {
+                results.push({ name: f.name, size: f.size });
+            }
+        }
+    }
+    results.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    cachedDirFiles = results;
+    return { cwd, results };
+}
+
+function getVirtualFileBytes(name) {
+    const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
+    if (fs && fs.readFile) {
+        try {
+            return fs.readFile(name);
+        } catch (e) {
+            try {
+                return fs.readFile("/" + name);
+            } catch (e2) {}
+        }
+    }
+    return new Uint8Array(0);
+}
+
+function createZipBlob(fileList) {
+    const crcTable = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let k = 0; k < 8; k++) {
+            c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        crcTable[i] = c;
+    }
+    function calcCrc32(bytes) {
+        let crc = 0xFFFFFFFF;
+        for (let i = 0; i < bytes.length; i++) {
+            crc = (crc >>> 8) ^ crcTable[(crc ^ bytes[i]) & 0xFF];
+        }
+        return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    const encoder = new TextEncoder();
+    const parts = [];
+    const centralEntries = [];
+    let offset = 0;
+
+    for (const file of fileList) {
+        const nameBytes = encoder.encode(file.name);
+        const dataBytes = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data || 0);
+        const crc = calcCrc32(dataBytes);
+        const size = dataBytes.length;
+
+        const localHdr = new Uint8Array(30);
+        const viewL = new DataView(localHdr.buffer);
+        viewL.setUint32(0, 0x04034b50, true);
+        viewL.setUint16(4, 20, true);
+        viewL.setUint16(6, 0, true);
+        viewL.setUint16(8, 0, true);
+        viewL.setUint16(10, 0, true);
+        viewL.setUint16(12, 0, true);
+        viewL.setUint32(14, crc, true);
+        viewL.setUint32(18, size, true);
+        viewL.setUint32(22, size, true);
+        viewL.setUint16(26, nameBytes.length, true);
+        viewL.setUint16(28, 0, true);
+
+        parts.push(localHdr, nameBytes, dataBytes);
+
+        const cdEntry = new Uint8Array(46);
+        const viewC = new DataView(cdEntry.buffer);
+        viewC.setUint32(0, 0x02014b50, true);
+        viewC.setUint16(4, 20, true);
+        viewC.setUint16(6, 20, true);
+        viewC.setUint16(8, 0, true);
+        viewC.setUint16(10, 0, true);
+        viewC.setUint16(12, 0, true);
+        viewC.setUint16(14, 0, true);
+        viewC.setUint32(16, crc, true);
+        viewC.setUint32(20, size, true);
+        viewC.setUint32(24, size, true);
+        viewC.setUint16(28, nameBytes.length, true);
+        viewC.setUint16(30, 0, true);
+        viewC.setUint16(32, 0, true);
+        viewC.setUint16(34, 0, true);
+        viewC.setUint16(36, 0, true);
+        viewC.setUint32(38, 0, true);
+        viewC.setUint32(42, offset, true);
+
+        centralEntries.push(cdEntry, nameBytes);
+        offset += localHdr.length + nameBytes.length + dataBytes.length;
+    }
+
+    const cdOffset = offset;
+    let cdSize = 0;
+    for (const c of centralEntries) {
+        cdSize += c.length;
+        parts.push(c);
+    }
+
+    const eocd = new Uint8Array(22);
+    const viewE = new DataView(eocd.buffer);
+    viewE.setUint32(0, 0x06054b50, true);
+    viewE.setUint16(4, 0, true);
+    viewE.setUint16(6, 0, true);
+    viewE.setUint16(8, fileList.length, true);
+    viewE.setUint16(10, fileList.length, true);
+    viewE.setUint32(12, cdSize, true);
+    viewE.setUint32(16, cdOffset, true);
+    viewE.setUint16(20, 0, true);
+    parts.push(eocd);
+
+    return new Blob(parts, { type: "application/zip" });
+}
+
+function downloadZipArchive(zipName, blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = zipName.endsWith('.zip') ? zipName : (zipName + '.zip');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ==========================================
