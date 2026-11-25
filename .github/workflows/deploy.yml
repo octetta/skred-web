@@ -35,6 +35,10 @@ jobs:
              echo "Failed to extract wasm file"
              exit 1
           fi
+          SHORT_HASH=$(git rev-parse --short HEAD)
+          VERSION=$(cat WASM_VERSION.txt)
+          sed -i "s/<span class=\"app-hash\">[^<]*<\/span>/<span class=\"app-hash\">${SHORT_HASH}<\/span>/g" index.html safe.html || true
+          sed -i "s/<span class=\"skred-version\">[^<]*<\/span>/<span class=\"skred-version\">${VERSION}<\/span>/g" index.html safe.html || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
