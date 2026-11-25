@@ -990,6 +990,15 @@ function usage() {
   printToTerminal("p(-1..1)      # pan in stereo");
   printToTerminal("[v0l1]e>0     # store [string] to macro-0");
   printToTerminal("(played when '0' button pressed)");
+  printToTerminal("MIDI & VMPK KEYBOARD SETUP", 'info');
+  printToTerminal("-mls                       # list MIDI input ports");
+  printToTerminal("-min <idx>                 # connect to MIDI port (e.g. VMPK / Midi Through)");
+  printToTerminal("/mv <ch> <voice> [bend]    # route MIDI channel (. = any) to voice");
+  printToTerminal("/mvd <ch> <voice>          # unroute MIDI voice");
+  printToTerminal("/mR                        # display active MIDI routes (/mC to clear)");
+  printToTerminal("Example: VMPK note-on/off with ADSR envelope on voice 0:", 'system');
+  printToTerminal("  v0 w1 a-6 t 0.02 0.2 0.7 0.3", 'dim');
+  printToTerminal("  /mv . 0", 'dim');
 }
 
 const B = '\u2588';
