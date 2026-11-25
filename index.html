@@ -944,34 +944,30 @@ var nvoices = 256;
 var running = 0;
 
 function usage() {
-  printToTerminal("QUICK REF", 'info');
-  printToTerminal("-restart (voice-count) (frame-count)");
-  printToTerminal("/als # refresh and list audio devices");
-  printToTerminal("/aout 2 # select output device");
-  printToTerminal("/ain 1 # select input device");
-  printToTerminal("/ain off # disable input");
-  printToTerminal("/a? # show audio status");
-  printToTerminal("-graph (voice) (depth) # draw voice dependencies");
-  printToTerminal("-logo # display pixel art logo");
-  printToTerminal("-font [2p|mono] # toggle terminal font & line spacing");
-  printToTerminal("-dark # switch to dark Atari theme");
-  printToTerminal("-light # switch to light Erasmus theme");
-  printToTerminal("-clear # clear terminal output");
-  printToTerminal("-learn # open skode tutorial");
-  printToTerminal("-ksynth # open k-synth tool");
-  printToTerminal("-edit # toggle editor scratchpad split (Ctrl+E)");
-  printToTerminal("-files # toggle attached files tray");
-  printToTerminal("-reset # reset engine (scratchpad preserved)");
-  printToTerminal("-add # attach file to virtual filesystem");
-  printToTerminal("-rm [file] # remove file from virtual filesystem");
-  printToTerminal("-paste # paste clipboard into paste.sk");
-  printToTerminal("[code] /share # publish snippet to public clipboard");
-  printToTerminal("[id] /load # load and run snippet from clipboard");
-  printToTerminal("/load <code> # load and run snippet by code");
-  printToTerminal("-load # select a wav file");
-  printToTerminal("-zip # select and mount a zip asset bundle");
-  printToTerminal("-unzip # unmount zip asset bundle");
-  printToTerminal("-save [filename] # download recorded wav file");
+  printToTerminal("HOST COMMANDS", 'info');
+  printToTerminal("-restart [voices] [frames] # restart engine");
+  printToTerminal("-stop / -start             # halt or resume audio output");
+  printToTerminal("-panic                     # silence all voices");
+  printToTerminal("-status                    # engine & audio telemetry");
+  printToTerminal("-als                       # list audio output and input devices");
+  printToTerminal("-aout <idx>                # select audio output device");
+  printToTerminal("-ain <idx|off>             # select/disable audio input device");
+  printToTerminal("-mls                       # list MIDI input and output ports");
+  printToTerminal("-min <idx|off>             # open or close MIDI input port");
+  printToTerminal("-mout <idx|off>            # open or close MIDI output port");
+  printToTerminal("-mstatus                   # show active MIDI connections");
+  printToTerminal("-add                       # attach file to virtual filesystem");
+  printToTerminal("-rm [file]                 # remove file from virtual filesystem");
+  printToTerminal("-clear                     # clear terminal output");
+  printToTerminal("-font [2p|mono]            # toggle font");
+  printToTerminal("-dark / -light             # theme switch");
+  printToTerminal("-edit                      # toggle editor scratchpad split (Ctrl+E)");
+  printToTerminal("-files                     # toggle attached files tray");
+  printToTerminal("-reset                     # reset engine (scratchpad preserved)");
+  printToTerminal("-graph (voice) (depth)     # draw voice dependencies");
+  printToTerminal("-logo                      # display pixel art logo");
+  printToTerminal("-help                      # show this command reference");
+  printToTerminal("SYNTH QUICK REF", 'info');
   printToTerminal(`v(0..${nvoices}) # select voice`);
   printToTerminal("w(0..999)     # select waveform");
   printToTerminal("a(-90..10)    # set amplitide (dB)");
@@ -1400,6 +1396,7 @@ let useWorklet = false;
 let workletReady = false;
 let workletFailed = false;
 let workletInitAttempted = false;
+let engineFeatures = "";
 
 async function initAudioWorklet() {
     if (workletInitAttempted) return;
@@ -1454,7 +1451,7 @@ async function initAudioWorklet() {
             } else if (data.type === "log") {
                 if (data.text) printToTerminal(data.text, 'info');
             } else if (data.type === "features") {
-                if (data.text) printToTerminal(data.text);
+                engineFeatures = (data.text || "").trim();
             } else if (data.type === "graph") {
                 handleVoiceGraphText(data.text);
             } else if (data.type === "error") {
@@ -1655,7 +1652,7 @@ function ensureBooted() {
         const result = Module._skred_start(bufsize, nvoices, 0); 
         statusSpan.innerText = `AUDIO ON ${nvoices} ${bufsize}`;
         const ptr = Module._skred_features();
-        printToTerminal(`${Module.UTF8ToString(ptr)}`);
+        engineFeatures = ptr ? Module.UTF8ToString(ptr).trim() : "";
         Module.ccall('skred_command', null, ['string'], ["log 1"]);
         centerSpan.innerText = "log 1";
         running = 1;
@@ -1767,6 +1764,239 @@ function saveRecordedFile(requestedName) {
     }
 }
 
+// ==========================================
+// Host Audio & MIDI Device Management
+// ==========================================
+let audioDevices = { outputs: [], inputs: [] };
+let activeAudioOutIdx = -1;
+let activeAudioInIdx = -1;
+let activeAudioInStream = null;
+
+async function refreshAudioDevices(quiet = false) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        if (!quiet) printToTerminal("Error: Audio device enumeration is not supported in this browser.", "error");
+        return;
+    }
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        audioDevices.outputs = devices.filter(d => d.kind === "audiooutput");
+        audioDevices.inputs = devices.filter(d => d.kind === "audioinput");
+
+        if (!quiet) {
+            printToTerminal("# output devices", "info");
+            if (audioDevices.outputs.length === 0) {
+                printToTerminal("  (default system output)", "system");
+            } else {
+                audioDevices.outputs.forEach((dev, idx) => {
+                    const label = dev.label || `Audio Output ${idx}`;
+                    const mark = idx === activeAudioOutIdx ? " [*]" : "";
+                    printToTerminal(`  ${idx} = ${label}${mark}`, "system");
+                });
+            }
+
+            printToTerminal("# input devices", "info");
+            if (audioDevices.inputs.length === 0) {
+                printToTerminal("  (none found or permission needed)", "system");
+            } else {
+                audioDevices.inputs.forEach((dev, idx) => {
+                    const label = dev.label || `Audio Input ${idx}`;
+                    const mark = idx === activeAudioInIdx ? " [*]" : "";
+                    printToTerminal(`  ${idx} = ${label}${mark}`, "system");
+                });
+            }
+        }
+    } catch (err) {
+        if (!quiet) printToTerminal(`Error refreshing audio devices: ${err.message || err}`, "error");
+    }
+}
+
+async function selectAudioOutput(idx) {
+    if (audioDevices.outputs.length === 0) {
+        await refreshAudioDevices(true);
+    }
+    const dev = audioDevices.outputs[idx];
+    if (!dev) {
+        printToTerminal(`Error: Audio output device index ${idx} not found. Run -als to view devices.`, "error");
+        return;
+    }
+    if (workletAudioContext && typeof workletAudioContext.setSinkId === "function") {
+        try {
+            await workletAudioContext.setSinkId(dev.deviceId);
+            activeAudioOutIdx = idx;
+            printToTerminal(`Audio output set to device ${idx} (${dev.label || dev.deviceId}).`, "system");
+        } catch (err) {
+            printToTerminal(`Error setting audio output device: ${err.message || err}`, "error");
+        }
+    } else {
+        printToTerminal(`Notice: Output device selection (setSinkId) is not supported by this browser.`, "system");
+    }
+}
+
+async function selectAudioInput(target) {
+    if (target === "off" || target === "-1") {
+        if (activeAudioInStream) {
+            activeAudioInStream.getTracks().forEach(t => t.stop());
+            activeAudioInStream = null;
+        }
+        activeAudioInIdx = -1;
+        printToTerminal("Audio input disabled.", "system");
+        return;
+    }
+    const idx = Number(target);
+    if (!Number.isInteger(idx) || idx < 0) {
+        printToTerminal("Usage: -ain <index|off>", "error");
+        return;
+    }
+    if (audioDevices.inputs.length === 0) {
+        await refreshAudioDevices(true);
+    }
+    const dev = audioDevices.inputs[idx];
+    try {
+        if (activeAudioInStream) {
+            activeAudioInStream.getTracks().forEach(t => t.stop());
+            activeAudioInStream = null;
+        }
+        const constraints = dev ? { audio: { deviceId: { exact: dev.deviceId } } } : { audio: true };
+        activeAudioInStream = await navigator.mediaDevices.getUserMedia(constraints);
+        activeAudioInIdx = idx;
+        await refreshAudioDevices(true);
+        const updatedLabel = audioDevices.inputs[idx] ? audioDevices.inputs[idx].label : (dev ? dev.label : `Device ${idx}`);
+        printToTerminal(`Audio input set to device ${idx} (${updatedLabel}).`, "system");
+    } catch (err) {
+        printToTerminal(`Error opening audio input device: ${err.message || err}`, "error");
+    }
+}
+
+let midiAccessInstance = null;
+let midiDevices = { inputs: [], outputs: [] };
+let activeMidiInput = null;
+let activeMidiOutput = null;
+let activeMidiInIdx = -1;
+let activeMidiOutIdx = -1;
+
+function sendRawMidiToEngine(data) {
+    const bytes = Array.from(data);
+    if (useWorklet && workletNode) {
+        workletNode.port.postMessage({ type: "midi", bytes: bytes });
+    } else if (typeof Module !== "undefined" && typeof Module._skred_midi_send_raw === "function") {
+        const ptr = Module._malloc(bytes.length);
+        if (ptr) {
+            Module.HEAPU8.set(bytes, ptr);
+            Module._skred_midi_send_raw(ptr, bytes.length);
+            Module._free(ptr);
+        }
+    }
+}
+
+async function initWebMidi(quiet = false) {
+    if (!navigator.requestMIDIAccess) {
+        if (!quiet) printToTerminal("Notice: Web MIDI is not supported in this browser.", "error");
+        return null;
+    }
+    if (!midiAccessInstance) {
+        try {
+            midiAccessInstance = await navigator.requestMIDIAccess({ sysex: true }).catch(() => navigator.requestMIDIAccess());
+            midiAccessInstance.onstatechange = () => {
+                refreshMidiDevices(true);
+            };
+        } catch (err) {
+            if (!quiet) printToTerminal(`MIDI Access denied or unavailable: ${err.message || err}`, "error");
+            return null;
+        }
+    }
+    midiDevices.inputs = Array.from(midiAccessInstance.inputs.values());
+    midiDevices.outputs = Array.from(midiAccessInstance.outputs.values());
+    return midiAccessInstance;
+}
+
+async function refreshMidiDevices(quiet = false) {
+    const access = await initWebMidi(quiet);
+    if (!access) return;
+
+    if (!quiet) {
+        printToTerminal("# midi inputs", "info");
+        if (midiDevices.inputs.length === 0) {
+            printToTerminal("  (no MIDI inputs found)", "system");
+        } else {
+            midiDevices.inputs.forEach((dev, idx) => {
+                const mark = idx === activeMidiInIdx ? " [*]" : "";
+                printToTerminal(`  ${idx} = ${dev.name || "MIDI Input " + idx}${mark}`, "system");
+            });
+        }
+
+        printToTerminal("# midi outputs", "info");
+        if (midiDevices.outputs.length === 0) {
+            printToTerminal("  (no MIDI outputs found)", "system");
+        } else {
+            midiDevices.outputs.forEach((dev, idx) => {
+                const mark = idx === activeMidiOutIdx ? " [*]" : "";
+                printToTerminal(`  ${idx} = ${dev.name || "MIDI Output " + idx}${mark}`, "system");
+            });
+        }
+    }
+}
+
+async function selectMidiInput(target) {
+    if (target === "off" || target === "-1") {
+        if (activeMidiInput) {
+            activeMidiInput.onmidimessage = null;
+            activeMidiInput = null;
+        }
+        activeMidiInIdx = -1;
+        printToTerminal("MIDI input closed.", "system");
+        return;
+    }
+    const idx = Number(target);
+    if (!Number.isInteger(idx) || idx < 0) {
+        printToTerminal("Usage: -min <port-index|off>", "error");
+        return;
+    }
+    await initWebMidi(true);
+    const dev = midiDevices.inputs[idx];
+    if (!dev) {
+        printToTerminal(`Error: MIDI input port ${idx} not found. Run -mls to list ports.`, "error");
+        return;
+    }
+    if (activeMidiInput) {
+        activeMidiInput.onmidimessage = null;
+    }
+    activeMidiInput = dev;
+    activeMidiInIdx = idx;
+    activeMidiInput.onmidimessage = (msg) => {
+        sendRawMidiToEngine(msg.data);
+    };
+    printToTerminal(`MIDI input connected to port ${idx} (${dev.name}).`, "system");
+}
+
+async function selectMidiOutput(target) {
+    if (target === "off" || target === "-1") {
+        activeMidiOutput = null;
+        activeMidiOutIdx = -1;
+        printToTerminal("MIDI output closed.", "system");
+        return;
+    }
+    const idx = Number(target);
+    if (!Number.isInteger(idx) || idx < 0) {
+        printToTerminal("Usage: -mout <port-index|off>", "error");
+        return;
+    }
+    await initWebMidi(true);
+    const dev = midiDevices.outputs[idx];
+    if (!dev) {
+        printToTerminal(`Error: MIDI output port ${idx} not found. Run -mls to list ports.`, "error");
+        return;
+    }
+    activeMidiOutput = dev;
+    activeMidiOutIdx = idx;
+    printToTerminal(`MIDI output connected to port ${idx} (${dev.name}).`, "system");
+}
+
+function showMidiStatus() {
+    const inName = activeMidiInput ? activeMidiInput.name : "none";
+    const outName = activeMidiOutput ? activeMidiOutput.name : "none";
+    printToTerminal(`MIDI: In=${inName} [idx=${activeMidiInIdx}], Out=${outName} [idx=${activeMidiOutIdx}]`, "system");
+}
+
 function processCommand(cmd) {
     const trimmed = cmd.trim();
     if (!trimmed) return;
@@ -1810,6 +2040,96 @@ function processCommand(cmd) {
                 }
             }
             ensureBooted();
+            break;
+
+        case '-start':
+        case '.start':
+            if (workletAudioContext && (workletAudioContext.state === "suspended" || workletAudioContext.state === "interrupted")) {
+                workletAudioContext.resume().then(() => {
+                    updateAudioStatus();
+                });
+            } else {
+                ensureBooted();
+            }
+            printToTerminal("System: Audio started.", "system");
+            break;
+
+        case '-panic':
+        case '.panic':
+            if (ensureBooted()) {
+                sendSkredCommand("all_voices_gate_off");
+            }
+            printToTerminal("System: Silence all voices.", "system");
+            break;
+
+        case '-status':
+        case '.status':
+        case '-astatus':
+        case '.astatus':
+        case '/a?': {
+            const sr = (workletAudioContext ? workletAudioContext.sampleRate : 48000);
+            const mode = useWorklet ? "worklet" : "main-thread";
+            printToTerminal(`System: skred v${skredVersion || "2.1.3"} (${mode}, ${sr}Hz, voices=${nvoices}, buf=${bufsize})`, "system");
+            break;
+        }
+
+        case '-als':
+        case '.als':
+        case '/als':
+            refreshAudioDevices();
+            break;
+
+        case '-aout':
+        case '.aout':
+        case '/aout':
+            if (arg.length > 1) {
+                selectAudioOutput(Number(arg[1]));
+            } else {
+                printToTerminal("Usage: -aout <device-index>", "error");
+            }
+            break;
+
+        case '-ain':
+        case '.ain':
+        case '/ain':
+            if (arg.length > 1) {
+                selectAudioInput(arg[1].toLowerCase());
+            } else {
+                printToTerminal("Usage: -ain <device-index|off>", "error");
+            }
+            break;
+
+        case '-mls':
+        case '.mls':
+        case '/mls':
+        case '/m?':
+            refreshMidiDevices();
+            break;
+
+        case '-min':
+        case '.min':
+        case '/min':
+            if (arg.length > 1) {
+                selectMidiInput(arg[1].toLowerCase());
+            } else {
+                printToTerminal("Usage: -min <port-index|off>", "error");
+            }
+            break;
+
+        case '-mout':
+        case '.mout':
+        case '/mout':
+            if (arg.length > 1) {
+                selectMidiOutput(arg[1].toLowerCase());
+            } else {
+                printToTerminal("Usage: -mout <port-index|off>", "error");
+            }
+            break;
+
+        case '-mstatus':
+        case '.mstatus':
+        case '/mstatus':
+            showMidiStatus();
             break;
 
         case '-stop':
@@ -1985,6 +2305,10 @@ function processCommand(cmd) {
           break;
 
         default:
+            if (action.startsWith('-') || action.startsWith('.')) {
+                printToTerminal(`Unknown host command: ${action}. Type -help for help.`, "error");
+                return;
+            }
             if (ensureBooted()) {
                 sendSkredCommand(cmd);
             }
