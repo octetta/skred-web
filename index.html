@@ -2202,15 +2202,21 @@ function processCommand(cmd) {
             if (arg.length > 1) {
                 const rest = trimmed.replace(/^[.\-]add\s*/i, '').trim();
                 if (rest.toLowerCase() === 'all') {
-                    if (cachedDirFiles.length === 0) listVirtualFiles('');
+                    if (cachedDirFiles.length === 0) scanVirtualFiles();
                     let count = 0;
                     for (const f of cachedDirFiles) {
-                        recordAttachedFile(f.name, f.size, f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.name.endsWith('.flac') ? 'wav' : 'file');
-                        count++;
+                        if (matchFilter(f.name, lastFilter)) {
+                            recordAttachedFile(f.name, f.size, f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.name.endsWith('.flac') ? 'wav' : 'file');
+                            count++;
+                        }
                     }
-                    printToTerminal(`Added ${count} file(s) to staging tray.`, 'system');
+                    if (lastFilter) {
+                        printToTerminal(`Added ${count} matching file(s) (filter: ${lastFilter}) to staging tray.`, 'system');
+                    } else {
+                        printToTerminal(`Added ${count} file(s) to staging tray.`, 'system');
+                    }
                 } else if (/^[\d\s.\-]+$/.test(rest)) {
-                    if (cachedDirFiles.length === 0) listVirtualFiles('');
+                    if (cachedDirFiles.length === 0) scanVirtualFiles();
                     const tokens = rest.split(/\s+/);
                     let count = 0;
                     for (const tok of tokens) {
@@ -2305,8 +2311,8 @@ function processCommand(cmd) {
                 }
                 let candidates = attachedFiles.filter(f => matchFilter(f.name, filter));
                 if (candidates.length === 0) {
-                    const { results } = listVirtualFiles(filter);
-                    candidates = results;
+                    const { results } = scanVirtualFiles();
+                    candidates = results.filter(f => matchFilter(f.name, filter));
                 }
                 if (candidates.length === 0) {
                     printToTerminal(`Error: No files found matching filter '${filter || '*'}'`, "error");
@@ -2387,14 +2393,30 @@ function processCommand(cmd) {
                 break;
             }
             const filter = arg.length > 1 ? arg[1] : null;
-            const { cwd, results } = listVirtualFiles(filter);
-            printToTerminal(`# [disk: ${cwd}] ${filter ? `(filter: ${filter}, ${results.length} files)` : `(${results.length} files)`}`, "info");
-            if (results.length === 0) {
-                printToTerminal("  (no matching files in working directory)", "system");
+            const { cwd, results } = scanVirtualFiles();
+            if (filter) {
+                lastFilter = filter;
+                const matchCount = results.filter(f => matchFilter(f.name, filter)).length;
+                printToTerminal(`# [disk: ${cwd}] (filter: ${filter}, ${matchCount} of ${results.length} files)`, "info");
+                if (matchCount === 0) {
+                    printToTerminal("  (no matching files in working directory)", "system");
+                } else {
+                    results.forEach((file, idx) => {
+                        if (matchFilter(file.name, filter)) {
+                            printToTerminal(`  ${idx}. [${file.name}] (${formatFileSize(file.size)})`, "system");
+                        }
+                    });
+                }
             } else {
-                results.forEach((file, idx) => {
-                    printToTerminal(`  ${idx}. [${file.name}] (${formatFileSize(file.size)})`, "system");
-                });
+                lastFilter = null;
+                printToTerminal(`# [disk: ${cwd}] (${results.length} files)`, "info");
+                if (results.length === 0) {
+                    printToTerminal("  (no files in working directory)", "system");
+                } else {
+                    results.forEach((file, idx) => {
+                        printToTerminal(`  ${idx}. [${file.name}] (${formatFileSize(file.size)})`, "system");
+                    });
+                }
             }
             break;
         }
@@ -2403,6 +2425,8 @@ function processCommand(cmd) {
             const rest = trimmed.replace(/^[.\-]cd\s*/i, '').trim();
             const target = rest.replace(/^['"]/, '').replace(/['"]$/, '').trim();
             const targetDir = (!target || target === "~") ? "/" : target;
+            cachedDirFiles = [];
+            lastFilter = null;
             if (typeof Module !== "undefined" && typeof Module._skred_chdir === "function") {
                 const ptr = Module.allocateUTF8(targetDir);
                 const ok = Module._skred_chdir(ptr);
@@ -2969,6 +2993,7 @@ function unmountZipBundle() {
 // Virtual Disk & Staging Crate Management
 // ==========================================
 let cachedDirFiles = [];
+let lastFilter = null;
 
 function matchFilter(name, filter) {
     if (!name) return false;
@@ -2993,7 +3018,7 @@ function matchFilter(name, filter) {
     return name.toLowerCase().includes(f);
 }
 
-function listVirtualFiles(filter) {
+function scanVirtualFiles() {
     const fs = window.FS || (typeof Module !== "undefined" ? Module.FS : null);
     const cwdPtr = (typeof Module !== "undefined" && Module._skred_getcwd) ? Module._skred_getcwd() : 0;
     const cwd = cwdPtr ? Module.UTF8ToString(cwdPtr) : "/";
@@ -3007,22 +3032,16 @@ function listVirtualFiles(filter) {
                     const fullPath = cwd.endsWith('/') ? cwd + entry : cwd + '/' + entry;
                     const stat = fs.stat(fullPath);
                     if (fs.isDir(stat.mode)) continue;
-                    if (matchFilter(entry, filter)) {
-                        results.push({ name: entry, size: stat.size });
-                    }
+                    results.push({ name: entry, size: stat.size });
                 } catch (e) {
-                    if (matchFilter(entry, filter)) {
-                        results.push({ name: entry, size: 0 });
-                    }
+                    results.push({ name: entry, size: 0 });
                 }
             }
         } catch (e) {}
     }
     if (results.length === 0 && attachedFiles.length > 0) {
         for (const f of attachedFiles) {
-            if (matchFilter(f.name, filter)) {
-                results.push({ name: f.name, size: f.size });
-            }
+            results.push({ name: f.name, size: f.size });
         }
     }
     results.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
