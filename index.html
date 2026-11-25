@@ -2844,13 +2844,17 @@ function executeEditorCode() {
         }
     }
 
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('#') && !l.startsWith('//'));
-    if (!lines.length) return;
+    text = text.trim();
+    if (!text) return;
 
-    lines.forEach(line => {
-        printToTerminal(line, 'dim');
-        processCommand(line);
-    });
+    if (!text.includes('\n') && (text.startsWith('-') || text.startsWith('.') || text.includes('/share') || text.includes('/load') || text === 'reset')) {
+        printToTerminal(text, 'dim');
+        processCommand(text);
+        return;
+    }
+
+    printToTerminal(text, 'dim');
+    sendSkredCommand(text);
 }
 
 initEditorSplit();
