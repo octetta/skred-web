@@ -2196,7 +2196,16 @@ function processCommand(cmd) {
             }
             break;
         case '-help':
-        case '.help': usage(); break;
+        case '.help':
+        case 'help':
+        case '-h':
+        case '.h':
+        case '-?':
+        case '.?':
+        case '/?':
+        case '/h':
+        case '/help':
+            usage(); break;
         case '-add':
         case '.add': {
             if (arg.length > 1) {
