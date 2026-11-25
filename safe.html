@@ -504,7 +504,40 @@ var bufsize = 256;
 var nvoices = 256;
 var running = 0;
 
-function usage() {
+function showMidiHowto() {
+  printToTerminal("HOW-TO: VMPK & MIDI KEYBOARD SETUP", 'info');
+  printToTerminal("1. Configure VMPK (Virtual MIDI Piano Keyboard):", 'system');
+  printToTerminal("   - Open VMPK -> Edit -> MIDI Connections (Ctrl+C)", 'system');
+  printToTerminal("   - Linux: Set MIDI OUT Driver to 'ALSA'", 'system');
+  printToTerminal("     Set Output MIDI Connection to 'Midi Through Port-0' or 'Virtual Keyboard'", 'dim');
+  printToTerminal("   - macOS/Windows: Set MIDI OUT to IAC Driver / loopMIDI / virtual port", 'dim');
+  printToTerminal("   - Web browser: Chrome/Brave/Edge support Web MIDI out of the box", 'dim');
+  printToTerminal("     (In Firefox: set dom.webmidi.enabled=true in about:config)", 'dim');
+  printToTerminal("2. Connect in skred-web:", 'system');
+  printToTerminal("   - Type '-mls' to list detected MIDI input ports", 'system');
+  printToTerminal("   - Type '-min <idx>' to connect (e.g. -min 0 for Midi Through)", 'system');
+  printToTerminal("   - Type '-mstatus' to verify active connection", 'system');
+  printToTerminal("3. Patch an ADSR Voice & Route MIDI:", 'system');
+  printToTerminal("   - Configure voice 0 with saw wave and ADSR envelope (Attack, Decay, Sustain, Release):", 'system');
+  printToTerminal("       v0 w1 a-6 t 0.02 0.2 0.7 0.3", 'dim');
+  printToTerminal("   - Route incoming MIDI (. = any channel) to voice 0:", 'system');
+  printToTerminal("       /mv . 0", 'dim');
+  printToTerminal("4. Play:", 'system');
+  printToTerminal("   - Play keys in VMPK: Note-on triggers attack/decay/sustain at note velocity", 'system');
+  printToTerminal("   - Note-off sets velocity to 0 and enters release (0.3s)", 'system');
+  printToTerminal("   - Use '/mR' to view routes, '/mC' to clear, '-panic' to silence all", 'dim');
+}
+
+function usage(topic) {
+  if (topic) {
+    const t = topic.toLowerCase().trim();
+    if (t === 'midi' || t === 'vmpk' || t === 'keyboard') {
+      showMidiHowto();
+      return;
+    }
+    printToTerminal(`Unknown help topic: "${topic}". Try: -help, -help midi`, 'error');
+    return;
+  }
   printToTerminal("QUICK REF", 'info');
   printToTerminal("-restart (voice-count) (frame-count)");
   printToTerminal("/als # refresh and list audio devices");
@@ -512,6 +545,11 @@ function usage() {
   printToTerminal("/ain 1 # select input device");
   printToTerminal("/ain off # disable input");
   printToTerminal("/a? # show audio status");
+  printToTerminal("-mls                       # list MIDI input ports");
+  printToTerminal("-min <idx>                 # connect to MIDI port (e.g. VMPK / Midi Through)");
+  printToTerminal("/mv <ch> <voice> [bend]    # route MIDI channel (. = any) to voice");
+  printToTerminal("/mvd <ch> <voice>          # unroute MIDI voice");
+  printToTerminal("/mR                        # display active MIDI routes (/mC to clear)");
   printToTerminal("-graph (voice) (depth) # draw voice dependencies");
   printToTerminal("-logo # display pixel art logo");
   printToTerminal("-font [2p|mono] # toggle terminal font & line spacing");
@@ -526,6 +564,8 @@ function usage() {
   printToTerminal("-zip # select and mount a zip asset bundle");
   printToTerminal("-unzip # unmount zip asset bundle");
   printToTerminal("-save [filename] # download recorded wav file");
+  printToTerminal("-help [topic]              # show command reference or topic (-help midi)");
+  printToTerminal("-howto <topic>             # show step-by-step how-to guide (-howto midi)");
   printToTerminal(`v(0..${nvoices}) # select voice`);
   printToTerminal("w(0..999)     # select waveform");
   printToTerminal("a(-90..10)    # set amplitide (dB)");
@@ -536,15 +576,8 @@ function usage() {
   printToTerminal("p(-1..1)      # pan in stereo");
   printToTerminal("[v0l1]e>0     # store [string] to macro-0");
   printToTerminal("(played when '0' button pressed)");
-  printToTerminal("MIDI & VMPK KEYBOARD SETUP", 'info');
-  printToTerminal("-mls                       # list MIDI input ports");
-  printToTerminal("-min <idx>                 # connect to MIDI port (e.g. VMPK / Midi Through)");
-  printToTerminal("/mv <ch> <voice> [bend]    # route MIDI channel (. = any) to voice");
-  printToTerminal("/mvd <ch> <voice>          # unroute MIDI voice");
-  printToTerminal("/mR                        # display active MIDI routes (/mC to clear)");
-  printToTerminal("Example: VMPK note-on/off with ADSR envelope on voice 0:", 'system');
-  printToTerminal("  v0 w1 a-6 t 0.02 0.2 0.7 0.3", 'dim');
-  printToTerminal("  /mv . 0", 'dim');
+  printToTerminal("HOW-TO GUIDES", 'info');
+  printToTerminal("Type '-help midi' (or -howto midi) for VMPK keyboard setup & ADSR routing.", 'dim');
 }
 
 const B = '\u2588';
@@ -1225,7 +1258,22 @@ function processCommand(cmd) {
             }
             break;
         case '-help':
-        case '.help': usage(); break;
+        case '.help':
+        case 'help':
+        case '-h':
+        case '.h':
+        case '-?':
+        case '.?':
+        case '/?':
+        case '/h':
+        case '/help':
+        case '-howto':
+        case '.howto':
+        case 'howto':
+        case '-how-to':
+        case '.how-to':
+        case 'how-to':
+            usage(arg[1]); break;
         case '-add':
         case '.add':
             if (!ensureBooted()) return;
