@@ -957,8 +957,9 @@ function usage() {
   printToTerminal("-mout <idx|off>            # open or close MIDI output port");
   printToTerminal("-mstatus                   # show active MIDI connections");
   printToTerminal("-add                       # attach file to virtual filesystem");
-  printToTerminal("-rm [file]                 # remove file from virtual filesystem");
-  printToTerminal("-ls                        # list attached files in virtual filesystem");
+  printToTerminal("-del <name|idx>            # remove attached file by name or 0-based index");
+  printToTerminal("-ls [idx [cmd]]            # list files or select by 0-based index");
+  printToTerminal("-pick <idx> [cmd]          # load file at 0-based index into string buffer");
   printToTerminal("-cd [dir]                  # change virtual filesystem directory");
   printToTerminal("-pwd                       # print current directory");
   printToTerminal("-clear                     # clear terminal output");
@@ -2208,9 +2209,48 @@ function processCommand(cmd) {
             const rest = trimmed.replace(/^[.\-](?:rm|del|remove)\s*/i, '').trim();
             if (rest.length > 0) {
                 const target = rest.replace(/^['"\[{]/, '').replace(/['"\]}]$/, '').trim();
-                removeAttachedFile(target);
+                if (/^\d+$/.test(target)) {
+                    const idx = Number(target);
+                    if (idx >= 0 && idx < attachedFiles.length) {
+                        removeAttachedFile(attachedFiles[idx].name);
+                    } else {
+                        printToTerminal(`Error: Index ${idx} out of range (0..${attachedFiles.length > 0 ? attachedFiles.length - 1 : 0}). Run -ls to view files.`, "error");
+                    }
+                } else {
+                    removeAttachedFile(target);
+                }
             } else {
-                printToTerminal("Usage: -del <filename>", "error");
+                printToTerminal("Usage: -del <filename|index>", "error");
+            }
+            break;
+        }
+        case '-pick':
+        case '.pick':
+        case '-get':
+        case '.get':
+        case '-use':
+        case '.use':
+        case '-file':
+        case '.file': {
+            if (arg.length < 2 || !/^\d+$/.test(arg[1])) {
+                printToTerminal("Usage: -pick <index> [command] (e.g. -pick 0 or -pick 0 /ws 900)", "error");
+                break;
+            }
+            const idx = Number(arg[1]);
+            if (idx < 0 || idx >= attachedFiles.length) {
+                printToTerminal(`Error: Index ${idx} out of range (0..${attachedFiles.length > 0 ? attachedFiles.length - 1 : 0}). Run -ls to view files.`, "error");
+                break;
+            }
+            const file = attachedFiles[idx];
+            centerSpan.innerText = `[${file.name}]`;
+            
+            const tail = trimmed.replace(/^[.\-](?:pick|get|use|file)\s+\d+\s*/i, '').trim();
+            if (tail.length > 0) {
+                printToTerminal(`String buffer: [${file.name}] -> executing '${tail}'`, "system");
+                sendSkredCommand(`[${file.name}] ${tail}`);
+            } else {
+                sendSkredCommand(`[${file.name}]`);
+                printToTerminal(`String buffer: [${file.name}] (ready for /w, ks, /ls, etc.)`, "system");
             }
             break;
         }
@@ -2218,12 +2258,30 @@ function processCommand(cmd) {
         case '.ls':
         case '-staged':
         case '.staged': {
+            if (arg.length > 1 && /^\d+$/.test(arg[1])) {
+                const idx = Number(arg[1]);
+                if (idx >= 0 && idx < attachedFiles.length) {
+                    const file = attachedFiles[idx];
+                    centerSpan.innerText = `[${file.name}]`;
+                    const tail = trimmed.replace(/^[.\-](?:ls|staged|files)\s+\d+\s*/i, '').trim();
+                    if (tail.length > 0) {
+                        printToTerminal(`String buffer: [${file.name}] -> executing '${tail}'`, "system");
+                        sendSkredCommand(`[${file.name}] ${tail}`);
+                    } else {
+                        sendSkredCommand(`[${file.name}]`);
+                        printToTerminal(`String buffer: [${file.name}] (ready for /w, ks, /ls, etc.)`, "system");
+                    }
+                } else {
+                    printToTerminal(`Error: Index ${idx} out of range (0..${attachedFiles.length > 0 ? attachedFiles.length - 1 : 0}). Run -ls to view files.`, "error");
+                }
+                break;
+            }
             printToTerminal("# attached files in virtual filesystem:", "info");
             if (attachedFiles.length === 0) {
                 printToTerminal("  (no attached files in virtual filesystem)", "system");
             } else {
                 attachedFiles.forEach((file, idx) => {
-                    printToTerminal(`  ${idx + 1}. [${file.name}] (${formatFileSize(file.size)})`, "system");
+                    printToTerminal(`  ${idx}. [${file.name}] (${formatFileSize(file.size)})`, "system");
                 });
             }
             const vfsStatus = (typeof Module !== "undefined" && Module._skred_vfs_status) ? Module.UTF8ToString(Module._skred_vfs_status()) : "disk::/";
