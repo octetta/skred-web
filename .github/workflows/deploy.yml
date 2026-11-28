@@ -39,7 +39,7 @@ jobs:
           VERSION=$(cat WASM_VERSION.txt)
           sed -i "s/<span class=\"app-hash\">[^<]*<\/span>/<span class=\"app-hash\">${SHORT_HASH}<\/span>/g" index.html safe.html || true
           sed -i "s/<span class=\"skred-version\">[^<]*<\/span>/<span class=\"skred-version\">${VERSION}<\/span>/g" index.html safe.html || true
-          sed -i -E "s/(\.js|\.wasm)\?v=[0-9a-zA-Z\.\-]+/\\1?v=${VERSION}/g" index.html safe.html help.html codebeam.html tokyo-adc-stage.html learn.html l[0-5].html || true
+          sed -i -E "s/(\.js|\.wasm|\.png|\.ico)\?v=[0-9a-zA-Z\.\-]+/\\1?v=${VERSION}/g" index.html safe.html help.html codebeam.html tokyo-adc-stage.html learn.html l[0-5].html || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
